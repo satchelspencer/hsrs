@@ -1,0 +1,12 @@
+{
+  "name": "@hsrs/lib",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "fsrs-browser": "^1.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.2"
+  }
+}
