@@ -49,8 +49,8 @@ export default function CodeInput(props: CodeInputProps) {
 
   const extension = useMemo(() => {
     const highlightStyle = HighlightStyle.define([
-      { tag: tags.variableName, color: props.varColor ?? '#076678' },
-      { tag: tags.propertyName, color: props.varColor ?? '#076678' },
+      { tag: tags.variableName, color: props.varColor ?? '#468588' },
+      { tag: tags.propertyName, color: props.varColor ?? '#468588' },
       { tag: tags.operator, color: '#458588' },
       { tag: tags.literal, color: '#7c6f64' },
     ])

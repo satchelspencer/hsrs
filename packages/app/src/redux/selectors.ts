@@ -1,3 +1,4 @@
+import { resolveProps } from '@hsrs/lib/props'
 import { createSelector } from './store'
 
 export const selectedElement = createSelector(
@@ -15,5 +16,12 @@ export const selectedType = createSelector(
     return selection?.type === 'type'
       ? { id: selection.id, type: types[selection.id] }
       : undefined
+  }
+)
+
+export const typeProps = createSelector(
+  [(s) => s.deck.types, (s, typeIds?: string[]) => typeIds],
+  (types, typeIds) => {
+    return resolveProps(typeIds ?? [], types)
   }
 )

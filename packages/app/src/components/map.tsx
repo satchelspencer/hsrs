@@ -12,6 +12,7 @@ interface MapEditorRenderProps<P> {
   value: P
   onChange: (value: P) => void
   onDelete: () => void
+  placeholder?: P
 }
 
 interface MapEditorProps<T extends t.IdMap<any>> {
@@ -20,6 +21,7 @@ interface MapEditorProps<T extends t.IdMap<any>> {
   renderInput: (props: MapEditorRenderProps<T[keyof T]>) => React.ReactNode
   placeholder?: string
   defaultValue: T[keyof T]
+  fixed?: T
 }
 
 export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
@@ -38,9 +40,22 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
   return (
     <div className={mapWrapper}>
       <LabelGroup
-        items={Object.keys(props.value).map((propId) => {
+        items={[
+          ...Object.keys(props.value),
+          ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
+        ].map((propId) => {
           return [
-            <div className={propName}>{propId}</div>,
+            <div className={propName}>
+              {propId}
+              <span
+                style={{
+                  color: '#9d0006',
+                  opacity: props.fixed?.[propId] && !props.value[propId] ? 0.5 : 0,
+                }}
+              >
+                *
+              </span>
+            </div>,
             props.renderInput({
               value: props.value[propId],
               onChange: (value) => {
@@ -53,6 +68,7 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
                 delete dupe[propId]
                 props.onChange(dupe)
               },
+              placeholder: props.fixed?.[propId],
             }),
           ]
         })}
@@ -87,6 +103,7 @@ const mapWrapper = cx(css`
 
 const propName = cx(css`
   color: #919191;
+  font-size: 13px;
 `)
 
 const mapEditorAddWrapper = cx(css`

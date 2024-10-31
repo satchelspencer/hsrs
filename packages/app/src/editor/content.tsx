@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -49,6 +49,12 @@ interface ElementEditorProps {
 }
 
 function ElementEditor(props: ElementEditorProps) {
+  const typeSelector = useCallback(
+      (s) => r.selectors.typeProps(s, props.value.types),
+      [props.value.types + '']
+    ),
+    typeProps = r.useSelector(typeSelector)
+
   return (
     <div className={editorWrapper}>
       <LabelGroup
@@ -79,6 +85,7 @@ function ElementEditor(props: ElementEditorProps) {
             <PropsEditor
               value={props.value.props}
               onChange={(p) => props.onChange?.({ ...props.value, props: p })}
+              fixed={typeProps}
             />,
           ],
           [
@@ -101,6 +108,12 @@ interface TypeEditorProps {
 }
 
 function TypeEditor(props: TypeEditorProps) {
+  const typeSelector = useCallback(
+      (s) => r.selectors.typeProps(s, props.value.extends),
+      [props.value.extends]
+    ),
+    typeProps = r.useSelector(typeSelector)
+
   return (
     <div className={editorWrapper}>
       <LabelGroup
@@ -131,6 +144,8 @@ function TypeEditor(props: TypeEditorProps) {
             <PropsEditor
               value={props.value.props}
               onChange={(p) => props.onChange?.({ ...props.value, props: p })}
+              fixed={typeProps}
+              varColor="#888"
             />,
           ],
         ]}
@@ -180,7 +195,7 @@ function TypePicker(props: TypePickerProps) {
       onBlur={() => setFocused(false)}
       variables={Object.values(types).map((t) => t.name)}
       onClear={props.onClear}
-      varColor='#689d6a'
+      varColor="#689d6a"
       onChange={(str) => {
         setRaw(str ?? '')
         props.onChange(raw2tl(str ?? '', types))
@@ -192,6 +207,8 @@ function TypePicker(props: TypePickerProps) {
 interface PropsEditorProps {
   value: t.Props
   onChange: (props: t.Props) => void
+  fixed?: t.Props
+  varColor?: string
 }
 
 function PropsEditor(props: PropsEditorProps) {
@@ -199,13 +216,16 @@ function PropsEditor(props: PropsEditorProps) {
     <MapEditor
       value={props.value}
       onChange={props.onChange}
+      fixed={props.fixed}
       defaultValue={''}
       placeholder="new property name..."
-      renderInput={({ value, onChange, onDelete }) => (
+      renderInput={({ value, onChange, onDelete, placeholder }) => (
         <CodeInput
           value={value}
           onChange={(value) => onChange(value ?? '')}
           onClear={onDelete}
+          placeholder={placeholder}
+          varColor={props.varColor}
         />
       )}
     />
