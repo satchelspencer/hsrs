@@ -30,3 +30,10 @@ export function resolveProps(typeId: string | string[], types: t.IdMap<t.Type>) 
 
   return res
 }
+
+export function resolveChildProps(children: t.IdMap<string[]>, types: t.IdMap<t.Type>) {
+  return _.mapValues(children, (childId) => {
+    const props = resolveProps(childId, types)
+    return props
+  })
+}

@@ -51,9 +51,14 @@ interface ElementEditorProps {
 function ElementEditor(props: ElementEditorProps) {
   const typeSelector = useCallback(
       (s) => r.selectors.typeProps(s, props.value.types),
-      [props.value.types + '']
+      [props.value.types]
     ),
-    typeProps = r.useSelector(typeSelector)
+    typeProps = r.useSelector(typeSelector),
+    childPropsSelector = useCallback(
+      (s) => r.selectors.childProps(s, props.value.children),
+      [props.value.children]
+    ),
+    childProps = r.useSelector(childPropsSelector)
 
   return (
     <div className={editorWrapper}>
@@ -86,6 +91,9 @@ function ElementEditor(props: ElementEditorProps) {
               value={props.value.props}
               onChange={(p) => props.onChange?.({ ...props.value, props: p })}
               fixed={typeProps}
+              variables={Object.keys(childProps).flatMap((prop) =>
+                _.keys(childProps[prop]).map((k) => prop + '.' + k)
+              )}
             />,
           ],
           [
@@ -209,6 +217,7 @@ interface PropsEditorProps {
   onChange: (props: t.Props) => void
   fixed?: t.Props
   varColor?: string
+  variables?: string[]
 }
 
 function PropsEditor(props: PropsEditorProps) {
@@ -226,6 +235,7 @@ function PropsEditor(props: PropsEditorProps) {
           onClear={onDelete}
           placeholder={placeholder}
           varColor={props.varColor}
+          variables={props.variables}
         />
       )}
     />
