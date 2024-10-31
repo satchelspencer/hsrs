@@ -14,6 +14,7 @@
     "rootDir": ".",
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false
   },
   "include": ["packages/**/*.ts", "packages/**/*.tsx"]
 }

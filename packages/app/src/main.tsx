@@ -1,15 +1,15 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { fsrs } from '@hsrs/lib/fsrs'
 
-const App = () => <div>m</div>
+import { Editor } from './editor/index'
+import { StoreProvider } from './redux'
 
 const container = document.getElementById('root')
 if (container) {
   const root = createRoot(container)
-  root.render(<App />)
+  root.render(
+    <StoreProvider>
+      <Editor />
+    </StoreProvider>
+  )
 }
-
-fsrs().then((f) => {
-  console.log('!', f.memoryState([1] as any, [0] as any))
-})

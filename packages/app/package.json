@@ -4,13 +4,25 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+    "dev": "vite src",
+    "build": "vite build src"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.18.2",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/view": "^6.34.1",
+    "@emotion/css": "^11.13.4",
     "@hsrs/lib": "*",
+    "@reduxjs/toolkit": "^2.3.0",
+    "@types/culori": "^2.1.1",
+    "@uiw/react-codemirror": "^4.23.6",
     "@vitejs/plugin-react": "^4.3.3",
+    "codemirror": "^6.0.1",
+    "culori": "^4.0.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-codemirror2": "^8.0.0",
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.1.2",
+    "redux-persist": "^6.0.0"
   }
 }
