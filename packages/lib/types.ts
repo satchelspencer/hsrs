@@ -1,9 +1,3 @@
-export interface Type {
-  name: string
-  extends?: string[]
-  props: Props
-}
-
 export interface Element {
   name: string
   types: string[]
@@ -41,7 +35,6 @@ export interface ElementOverride extends ElementInstance {
 export type IdMap<T> = { [id: string]: T }
 
 export interface Deck {
-  types: IdMap<Type>
   elements: IdMap<Element>
   views: IdMap<View>
 }

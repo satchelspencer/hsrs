@@ -1,16 +1,16 @@
 import _ from 'lodash'
 import * as t from './types'
 
-export function resolveTypes(typeId: string | string[], types: t.IdMap<t.Type>) {
+export function resolveTypes(elementIds: string | string[], elements: t.IdMap<t.Element>) {
   const res: string[] = [],
-    stack: string[] = [..._.castArray(typeId)]
+    stack: string[] = [..._.castArray(elementIds)]
 
   while (stack.length) {
     const id = stack.pop()!,
-      type = types[id]
-    if (!type) continue
+      element = elements[id]
+    if (!element) continue
     res.push(id)
-    for (const etype of type.extends ?? []) {
+    for (const etype of element.types ?? []) {
       if (!res.includes(etype)) stack.push(etype)
     }
   }
@@ -18,40 +18,42 @@ export function resolveTypes(typeId: string | string[], types: t.IdMap<t.Type>) 
   return res
 }
 
-export function resolveProps(typeId: string | string[], types: t.IdMap<t.Type>) {
-  const typeIds = resolveTypes(typeId, types),
+export function resolveProps(typeId: string | string[], elements: t.IdMap<t.Element>) {
+  const elementIds = resolveTypes(typeId, elements),
     res: t.Props = {}
 
-  for (const typeId of typeIds) {
-    const type = types[typeId]
-    if (!type) continue
-    for (const propId in type.props) {
-      if (!res[propId]) res[propId] = type.props[propId]
+  for (const elementId of elementIds) {
+    const element = elements[elementId]
+    if (!element) continue
+    for (const propId in element.props) {
+      if (!res[propId]) res[propId] = element.props[propId]
     }
   }
 
   return res
 }
 
-export function resolveChildProps(children: t.IdMap<string[]>, types: t.IdMap<t.Type>) {
+export function resolveChildProps(
+  children: t.IdMap<string[]>,
+  elements: t.IdMap<t.Element>
+) {
   return _.mapValues(children, (childId) => {
-    const props = resolveProps(childId, types)
+    const props = resolveProps(childId, elements)
     return props
   })
 }
 
 export function getElementInstances(
   id: string,
-  elements: t.IdMap<t.Element>,
-  types: t.IdMap<t.Type>
+  elements: t.IdMap<t.Element>
 ): t.ElementInstance {
   const children = _.mapValues(elements[id].children, (ctypes) => {
     const matchingEl = _.shuffle(Object.keys(elements)).find(
-      (id) => _.intersection(ctypes, resolveTypes(elements[id].types, types)).length
+      (id) => _.intersection(ctypes, resolveTypes(elements[id].types, elements)).length
     )
-    return matchingEl ? getElementInstances(matchingEl, elements, types) : undefined
+    return matchingEl ? getElementInstances(matchingEl, elements) : undefined
   })
   const instance: t.ElementInstance = { element: id }
-  if(Object.keys(children).length) instance.children = children
+  if (Object.keys(children).length) instance.children = children
   return instance
 }

@@ -12,35 +12,26 @@ export const selectedElement = createSelector(
   }
 )
 
-export const selectedType = createSelector(
-  [(s) => s.deck.types, (s) => s.ui.selection],
-  (types, selection) => {
-    return selection?.type === 'type'
-      ? { id: selection.id, type: types[selection.id] }
-      : undefined
-  }
-)
-
-export const typeProps = createSelector(
-  [(s) => s.deck.types, (s, typeIds?: string[]) => typeIds],
-  (types, typeIds) => {
-    return resolveProps(typeIds ?? [], types)
+export const elementProps = createSelector(
+  [(s) => s.deck.elements, (s, elementIds?: string[]) => elementIds],
+  (elements, typeIds) => {
+    return resolveProps(typeIds ?? [], elements)
   }
 )
 
 export const childProps = createSelector(
-  [(s) => s.deck.types, (s, children?: t.IdMap<string[]>) => children],
-  (types, children) => {
-    return resolveChildProps(children ?? {}, types)
+  [(s) => s.deck.elements, (s, children?: t.IdMap<string[]>) => children],
+  (elements, children) => {
+    return resolveChildProps(children ?? {}, elements)
   }
 )
 
 export const selectedElementInstances = createSelector(
-  [selectedElement, (s) => s.deck.elements, (s) => s.deck.types],
-  (element, elements, types) => {
+  [selectedElement, (s) => s.deck.elements],
+  (element, elements) => {
     return (
       element &&
-      computeElementInstance(getElementInstances(element.id, elements, types), elements)
+      computeElementInstance(getElementInstances(element.id, elements), elements)
     )
   }
 )

@@ -12,7 +12,6 @@ import { WarnButton } from '../components/button'
 
 export function Content() {
   const selectedEl = r.useSelector(r.selectors.selectedElement),
-    selectedType = r.useSelector(r.selectors.selectedType),
     dispatch = r.useDispatch()
   return (
     <div className={content}>
@@ -25,19 +24,6 @@ export function Content() {
               element
                 ? r.actions.updateElement({ ...selectedEl, element })
                 : r.actions.deleteElement(selectedEl)
-            )
-          }
-        />
-      )}
-      {selectedType?.type && (
-        <TypeEditor
-          id={selectedType.id}
-          value={selectedType.type}
-          onChange={(type) =>
-            dispatch(
-              type
-                ? r.actions.updateType({ ...selectedType, type })
-                : r.actions.deleteType(selectedType)
             )
           }
         />
@@ -61,7 +47,7 @@ interface ElementEditorProps {
 
 function ElementEditor(props: ElementEditorProps) {
   const typeSelector = useCallback(
-      (s) => r.selectors.typeProps(s, props.value.types),
+      (s) => r.selectors.elementProps(s, props.value.types),
       [props.value.types]
     ),
     typeProps = r.useSelector(typeSelector),
@@ -72,7 +58,7 @@ function ElementEditor(props: ElementEditorProps) {
     childProps = r.useSelector(childPropsSelector)
 
   const instances = r.useSelector(r.selectors.selectedElementInstances)
-    console.log(instances)
+  console.log(instances)
 
   return (
     <div className={editorWrapper}>
@@ -89,7 +75,7 @@ function ElementEditor(props: ElementEditorProps) {
           ],
           [
             'Types',
-            <TypePicker
+            <ElListPicker
               value={props.value.types}
               onChange={(value) => props.onChange?.({ ...props.value, types: value })}
             />,
@@ -126,62 +112,6 @@ function ElementEditor(props: ElementEditorProps) {
   )
 }
 
-interface TypeEditorProps {
-  id: string
-  value: t.Type
-  onChange?: (e: t.Type | undefined) => void
-}
-
-function TypeEditor(props: TypeEditorProps) {
-  const typeSelector = useCallback(
-      (s) => r.selectors.typeProps(s, props.value.extends),
-      [props.value.extends]
-    ),
-    typeProps = r.useSelector(typeSelector)
-
-  return (
-    <div className={editorWrapper}>
-      <LabelGroup
-        items={[
-          [
-            'Name',
-            <CodeInput
-              value={props.value.name}
-              onChange={(elname) =>
-                props.onChange?.({ ...props.value, name: elname ?? '' })
-              }
-            />,
-          ],
-          [
-            'Extends',
-            <TypePicker
-              value={props.value.extends ?? []}
-              onChange={(value) => props.onChange?.({ ...props.value, extends: value })}
-            />,
-          ],
-        ]}
-      />
-      <LabelGroup
-        vert
-        items={[
-          [
-            'Type properties',
-            <PropsEditor
-              value={props.value.props}
-              onChange={(p) => props.onChange?.({ ...props.value, props: p })}
-              fixed={typeProps}
-              varColor="#888"
-            />,
-          ],
-        ]}
-      />
-      <div className={deleteWrapper}>
-        <WarnButton onClick={() => props.onChange?.(undefined)}>delete</WarnButton>
-      </div>
-    </div>
-  )
-}
-
 const editorWrapper = cx(css`
   display: flex;
   flex-direction: column;
@@ -191,26 +121,26 @@ const editorWrapper = cx(css`
   width: 550px;
 `)
 
-interface TypePickerProps {
+interface ElListPickerProps {
   value: string[]
   onChange: (value: string[]) => void
   onClear?: () => void
 }
 
-const tl2raw = (tl: string[], types: t.IdMap<t.Type>) =>
+const tl2raw = (tl: string[], types: t.IdMap<t.Element>) =>
     tl.map((t) => types[t]?.name).join(','),
-  raw2tl = (str: string, types: t.IdMap<t.Type>) =>
+  raw2tl = (str: string, types: t.IdMap<t.Element>) =>
     _.compact(
       (str?.split(',') ?? []).map((name) =>
         Object.keys(types).find((id) => types[id]?.name === name.trim())
       )
     )
 
-function TypePicker(props: TypePickerProps) {
-  const types = r.useSelector((s) => s.deck.types),
+function ElListPicker(props: ElListPickerProps) {
+  const elements = r.useSelector((s) => s.deck.elements),
     [raw, setRaw] = useState(''),
     [focused, setFocused] = useState(false),
-    trueRaw = tl2raw(props.value, types)
+    trueRaw = tl2raw(props.value, elements)
 
   useEffect(() => {
     if (!focused) setRaw(trueRaw)
@@ -221,12 +151,12 @@ function TypePicker(props: TypePickerProps) {
       value={raw}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      variables={Object.values(types).map((t) => t.name)}
+      variables={Object.values(elements).map((e) => e.name)}
       onClear={props.onClear}
       varColor="#689d6a"
       onChange={(str) => {
         setRaw(str ?? '')
-        props.onChange(raw2tl(str ?? '', types))
+        props.onChange(raw2tl(str ?? '', elements))
       }}
     />
   )
@@ -275,7 +205,7 @@ function ElementChildEditor(props: ElementChildEditorProps) {
       defaultValue={[]}
       placeholder="new child name..."
       renderInput={({ value, onChange, onDelete }) => (
-        <TypePicker
+        <ElListPicker
           value={value}
           onChange={(value) => onChange(value)}
           onClear={onDelete}

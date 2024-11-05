@@ -8,7 +8,7 @@ import { uid } from '@hsrs/lib/uid'
 import { Button } from '../components/button'
 
 export function SideBar() {
-  const { elements, types } = r.useSelector((s) => s.deck),
+  const elements = r.useSelector((s) => s.deck.elements),
     selection = r.useSelector((s) => s.ui.selection),
     dispatch = r.useDispatch()
 
@@ -29,23 +29,6 @@ export function SideBar() {
             onClick={() => dispatch(r.actions.setSelection({ type: 'element', id: id }))}
             key={id}
             name={elements[id].name}
-          />
-        ))}
-      </SideBarList>
-      <SideBarList
-        title="Types"
-        onAdd={() => {
-          const id = uid()
-          dispatch(r.actions.createType({ id }))
-          dispatch(r.actions.setSelection({ type: 'type', id }))
-        }}
-      >
-        {Object.keys(types).map((id) => (
-          <SideBarListItem
-            selected={selection?.type === 'type' && selection.id === id}
-            onClick={() => dispatch(r.actions.setSelection({ type: 'type', id: id }))}
-            key={id}
-            name={types[id].name}
           />
         ))}
       </SideBarList>
