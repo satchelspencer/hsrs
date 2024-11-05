@@ -4,7 +4,7 @@ import { css, cx } from '@emotion/css'
 import * as styles from '../styles'
 
 interface LabelGroupProps {
-  items: [React.ReactNode, React.ReactNode][]
+  items: ([React.ReactNode, React.ReactNode]|false)[]
   vert?: boolean
 }
 

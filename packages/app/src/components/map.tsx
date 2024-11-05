@@ -50,7 +50,7 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
               <span
                 style={{
                   color: '#9d0006',
-                  opacity: props.fixed?.[propId] && !props.value[propId] ? 0.5 : 0,
+                  opacity: props.fixed?.[propId] ? 0.5 : 0,
                 }}
               >
                 *

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -9,120 +9,105 @@ import CodeInput from '../components/code'
 import { MapEditor } from '../components/map'
 import { LabelGroup } from '../components/labels'
 import { WarnButton } from '../components/button'
-
-export function Content() {
-  const selectedEl = r.useSelector(r.selectors.selectedElement),
-    dispatch = r.useDispatch()
-  return (
-    <div className={content}>
-      {selectedEl?.element && (
-        <ElementEditor
-          id={selectedEl.id}
-          value={selectedEl.element}
-          onChange={(element) =>
-            dispatch(
-              element
-                ? r.actions.updateElement({ ...selectedEl, element })
-                : r.actions.deleteElement(selectedEl)
-            )
-          }
-        />
-      )}
-    </div>
-  )
-}
-
-const content = cx(
-  styles.surface,
-  css`
-    flex: 1;
-  `
-)
+import { ElementsList } from './el-list'
 
 interface ElementEditorProps {
   id: string
-  value: t.Element
-  onChange?: (e: t.Element | undefined) => void
+  index: number
 }
 
-function ElementEditor(props: ElementEditorProps) {
-  const elementPropsSelector = useCallback(
-      (s) => r.selectors.elementProps(s, props.id),
-      [props.value.parents]
+export function ElementEditor(props: ElementEditorProps) {
+  const element = r.useSelector((state) =>
+      r.selectors.selectElementById(state, props.id)
     ),
-    elementProps = r.useSelector(elementPropsSelector),
-    paramPropsSelector = useCallback(
-      (s) => r.selectors.paramProps(s, props.value.params),
-      [props.value.params]
+    elementProps = r.useSelector((state) =>
+      r.selectors.selectElementPropsById(state, props.id)
     ),
-    paramProps = r.useSelector(paramPropsSelector)
+    paramProps = r.useSelector((state) =>
+      r.selectors.selectElementParamPropsById(state, props.id)
+    )
 
-  const instances = r.useSelector(r.selectors.selectedElementInstances)
-  console.log(instances)
+  const dispatch = r.useDispatch(),
+    handleChange = (element: t.Element | undefined) =>
+      dispatch(
+        element
+          ? r.actions.updateElement({ id: props.id, element })
+          : r.actions.deleteElement({ id: props.id })
+      )
+
+  const instances = r.useSelector((state) =>
+    r.selectors.selectElementInstancesById(state, props.id)
+  )
+  if (!element.virtual) console.log(instances)
 
   return (
-    <div className={editorWrapper}>
-      <LabelGroup
-        items={[
-          [
-            'Name',
-            <CodeInput
-              value={props.value.name}
-              onChange={(elname) =>
-                props.onChange?.({ ...props.value, name: elname ?? '' })
-              }
-            />,
-          ],
-          [
-            'Types',
-            <ElListPicker
-              value={props.value.parents}
-              onChange={(value) => props.onChange?.({ ...props.value, parents: value })}
-            />,
-          ],
-          [
-            'Virtual',
-            <input
-              type="checkbox"
-              checked={!!props.value.virtual}
-              onChange={() => {
-                props.onChange?.(
-                  props.value.virtual
-                    ? _.omit(props.value, 'virtual')
-                    : { ...props.value, virtual: true }
-                )
-              }}
-            />,
-          ],
-        ]}
-      />
-      <LabelGroup
-        vert
-        items={[
-          [
-            'Properties',
-            <PropsEditor
-              value={props.value.props}
-              onChange={(p) => props.onChange?.({ ...props.value, props: p })}
-              fixed={elementProps}
-              variables={Object.keys(paramProps).flatMap((prop) =>
-                _.keys(paramProps[prop]).map((k) => prop + '.' + k)
-              )}
-            />,
-          ],
-          [
-            'Params',
-            <ElementParamsEditor
-              value={props.value.params ?? {}}
-              onChange={(p) => props.onChange?.({ ...props.value, params: p })}
-            />,
-          ],
-        ]}
-      />
-      <div className={deleteWrapper}>
-        <WarnButton onClick={() => props.onChange?.(undefined)}>delete</WarnButton>
+    <>
+      <div className={editorWrapper}>
+        <LabelGroup
+          items={[
+            [
+              'Name',
+              <CodeInput
+                value={element.name}
+                onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
+              />,
+            ],
+            [
+              'Types',
+              <ElListPicker
+                value={element.parents}
+                onChange={(value) => handleChange({ ...element, parents: value })}
+              />,
+            ],
+            [
+              'Virtual',
+              <input
+                type="checkbox"
+                checked={!!element.virtual}
+                onChange={() =>
+                  handleChange(
+                    element.virtual
+                      ? _.omit(element, 'virtual')
+                      : { ...element, virtual: true }
+                  )
+                }
+              />,
+            ],
+          ]}
+        />
+        <LabelGroup
+          vert
+          items={[
+            [
+              'Properties',
+              <PropsEditor
+                value={element.props}
+                onChange={(p) => handleChange({ ...element, props: p })}
+                fixed={
+                  element.virtual
+                    ? {}
+                    : _.omit(elementProps, Object.keys(element.props ?? {}))
+                }
+                variables={Object.keys(paramProps).flatMap((prop) =>
+                  _.keys(paramProps[prop]).map((k) => prop + '.' + k)
+                )}
+              />,
+            ],
+            !element.virtual && [
+              'Params',
+              <ElementParamsEditor
+                value={element.params ?? {}}
+                onChange={(p) => handleChange({ ...element, params: p })}
+              />,
+            ],
+          ]}
+        />
+        <div className={deleteWrapper}>
+          <WarnButton onClick={() => handleChange(undefined)}>delete</WarnButton>
+        </div>
       </div>
-    </div>
+      {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
+    </>
   )
 }
 
@@ -132,7 +117,9 @@ const editorWrapper = cx(css`
   gap: 8px;
   padding: 12px;
   align-items: stretch;
-  width: 550px;
+  &:not(:last-child) {
+    border-bottom: 1px solid ${styles.color(0.93)};
+  }
 `)
 
 interface ElListPickerProps {
