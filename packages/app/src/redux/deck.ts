@@ -16,20 +16,14 @@ export const deck = createSlice({
     ) => {
       state.elements[action.payload.id] = {
         name: 'untitled element',
-        types: [],
+        parents: [],
         props: {},
         ...action.payload.element,
       }
     },
-    updateElement: (
-      state,
-      action: PayloadAction<{ id: string; element?: Partial<t.Element> }>
-    ) => {
+    updateElement: (state, action: PayloadAction<{ id: string; element: t.Element }>) => {
       if (!state.elements[action.payload.id]) throw 'element does not exist'
-      state.elements[action.payload.id] = {
-        ...state.elements[action.payload.id],
-        ...action.payload.element,
-      }
+      state.elements[action.payload.id] = action.payload.element
     },
     deleteElement: (state, action: PayloadAction<{ id: string }>) => {
       if (!state.elements[action.payload.id]) throw 'element does not exist'

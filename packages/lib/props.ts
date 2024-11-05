@@ -1,16 +1,16 @@
 import _ from 'lodash'
 import * as t from './types'
 
-export function resolveTypes(elementIds: string | string[], elements: t.IdMap<t.Element>) {
+export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
   const res: string[] = [],
-    stack: string[] = [..._.castArray(elementIds)]
+    stack: string[] = [..._.castArray(elementId)]
 
   while (stack.length) {
     const id = stack.pop()!,
       element = elements[id]
     if (!element) continue
     res.push(id)
-    for (const etype of element.types ?? []) {
+    for (const etype of element.parents ?? []) {
       if (!res.includes(etype)) stack.push(etype)
     }
   }
@@ -18,8 +18,8 @@ export function resolveTypes(elementIds: string | string[], elements: t.IdMap<t.
   return res
 }
 
-export function resolveProps(typeId: string | string[], elements: t.IdMap<t.Element>) {
-  const elementIds = resolveTypes(typeId, elements),
+export function getElementProps(elementId: string, elements: t.IdMap<t.Element>) {
+  const elementIds = getElementAndParents(elementId, elements),
     res: t.Props = {}
 
   for (const elementId of elementIds) {
@@ -33,12 +33,9 @@ export function resolveProps(typeId: string | string[], elements: t.IdMap<t.Elem
   return res
 }
 
-export function resolveChildProps(
-  children: t.IdMap<string[]>,
-  elements: t.IdMap<t.Element>
-) {
-  return _.mapValues(children, (childId) => {
-    const props = resolveProps(childId, elements)
+export function getParamsProps(params: t.IdMap<string>, elements: t.IdMap<t.Element>) {
+  return _.mapValues(params, (paramElId) => {
+    const props = getElementProps(paramElId, elements)
     return props
   })
 }
@@ -47,13 +44,14 @@ export function getElementInstances(
   id: string,
   elements: t.IdMap<t.Element>
 ): t.ElementInstance {
-  const children = _.mapValues(elements[id].children, (ctypes) => {
+  const params = _.mapValues(elements[id].params, (paramElId) => {
     const matchingEl = _.shuffle(Object.keys(elements)).find(
-      (id) => _.intersection(ctypes, resolveTypes(elements[id].types, elements)).length
+      (id) =>
+        !elements[id].virtual && getElementAndParents(id, elements).includes(paramElId)
     )
     return matchingEl ? getElementInstances(matchingEl, elements) : undefined
   })
   const instance: t.ElementInstance = { element: id }
-  if (Object.keys(children).length) instance.children = children
+  if (Object.keys(params).length) instance.params = params
   return instance
 }

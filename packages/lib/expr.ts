@@ -27,11 +27,11 @@ export function computeElementInstance(
   instace: t.ElementInstance,
   elements: t.IdMap<t.Element>
 ): t.Props {
-  const children = _.mapValues(instace.children, (child) => {
-      if (!child) return child
-      return computeElementInstance(child, elements)
+  const params = _.mapValues(instace.params, (paramElInstance) => {
+      if (!paramElInstance) return paramElInstance
+      return computeElementInstance(paramElInstance, elements)
     }),
     element = elements[instace.element]
 
-  return _.mapValues(element.props, (prop) => run(prop, children))
+  return _.mapValues(element.props, (prop) => run(prop, params))
 }

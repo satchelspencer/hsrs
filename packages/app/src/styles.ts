@@ -44,7 +44,7 @@ export const fill = css`
 
 export const surface = css`
   ${box}
-  background:${color(0.99)};
+  background:${color(1)};
   color: ${color(0.3)};
 `
 

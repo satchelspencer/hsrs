@@ -1,8 +1,9 @@
 export interface Element {
   name: string
-  types: string[]
+  parents: string[]
   props: Props
-  children?: IdMap<string[]>
+  params?: IdMap<string>
+  virtual?: true
 }
 
 export type Props = IdMap<string>
@@ -23,7 +24,7 @@ export interface Recall {
 
 export interface ElementInstance {
   element: string
-  children?: IdMap<ElementInstance | undefined>
+  params?: IdMap<ElementInstance | undefined>
 }
 
 export interface RecallInstance extends Recall, ElementInstance {}

@@ -46,16 +46,16 @@ interface ElementEditorProps {
 }
 
 function ElementEditor(props: ElementEditorProps) {
-  const typeSelector = useCallback(
-      (s) => r.selectors.elementProps(s, props.value.types),
-      [props.value.types]
+  const elementPropsSelector = useCallback(
+      (s) => r.selectors.elementProps(s, props.id),
+      [props.value.parents]
     ),
-    typeProps = r.useSelector(typeSelector),
-    childPropsSelector = useCallback(
-      (s) => r.selectors.childProps(s, props.value.children),
-      [props.value.children]
+    elementProps = r.useSelector(elementPropsSelector),
+    paramPropsSelector = useCallback(
+      (s) => r.selectors.paramProps(s, props.value.params),
+      [props.value.params]
     ),
-    childProps = r.useSelector(childPropsSelector)
+    paramProps = r.useSelector(paramPropsSelector)
 
   const instances = r.useSelector(r.selectors.selectedElementInstances)
   console.log(instances)
@@ -76,8 +76,22 @@ function ElementEditor(props: ElementEditorProps) {
           [
             'Types',
             <ElListPicker
-              value={props.value.types}
-              onChange={(value) => props.onChange?.({ ...props.value, types: value })}
+              value={props.value.parents}
+              onChange={(value) => props.onChange?.({ ...props.value, parents: value })}
+            />,
+          ],
+          [
+            'Virtual',
+            <input
+              type="checkbox"
+              checked={!!props.value.virtual}
+              onChange={() => {
+                props.onChange?.(
+                  props.value.virtual
+                    ? _.omit(props.value, 'virtual')
+                    : { ...props.value, virtual: true }
+                )
+              }}
             />,
           ],
         ]}
@@ -90,17 +104,17 @@ function ElementEditor(props: ElementEditorProps) {
             <PropsEditor
               value={props.value.props}
               onChange={(p) => props.onChange?.({ ...props.value, props: p })}
-              fixed={typeProps}
-              variables={Object.keys(childProps).flatMap((prop) =>
-                _.keys(childProps[prop]).map((k) => prop + '.' + k)
+              fixed={elementProps}
+              variables={Object.keys(paramProps).flatMap((prop) =>
+                _.keys(paramProps[prop]).map((k) => prop + '.' + k)
               )}
             />,
           ],
           [
-            'Children',
-            <ElementChildEditor
-              value={props.value.children ?? {}}
-              onChange={(p) => props.onChange?.({ ...props.value, children: p })}
+            'Params',
+            <ElementParamsEditor
+              value={props.value.params ?? {}}
+              onChange={(p) => props.onChange?.({ ...props.value, params: p })}
             />,
           ],
         ]}
@@ -127,12 +141,12 @@ interface ElListPickerProps {
   onClear?: () => void
 }
 
-const tl2raw = (tl: string[], types: t.IdMap<t.Element>) =>
-    tl.map((t) => types[t]?.name).join(','),
-  raw2tl = (str: string, types: t.IdMap<t.Element>) =>
+const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
+    els.map((t) => elements[t]?.name).join(','),
+  raw2els = (str: string, elements: t.IdMap<t.Element>) =>
     _.compact(
       (str?.split(',') ?? []).map((name) =>
-        Object.keys(types).find((id) => types[id]?.name === name.trim())
+        Object.keys(elements).find((id) => elements[id]?.name === name.trim())
       )
     )
 
@@ -140,7 +154,7 @@ function ElListPicker(props: ElListPickerProps) {
   const elements = r.useSelector((s) => s.deck.elements),
     [raw, setRaw] = useState(''),
     [focused, setFocused] = useState(false),
-    trueRaw = tl2raw(props.value, elements)
+    trueRaw = els2raw(props.value, elements)
 
   useEffect(() => {
     if (!focused) setRaw(trueRaw)
@@ -156,7 +170,29 @@ function ElListPicker(props: ElListPickerProps) {
       varColor="#689d6a"
       onChange={(str) => {
         setRaw(str ?? '')
-        props.onChange(raw2tl(str ?? '', elements))
+        props.onChange(raw2els(str ?? '', elements))
+      }}
+    />
+  )
+}
+
+interface ElPickerProps {
+  value: string | undefined
+  onChange: (value: string | undefined) => void
+  onClear?: () => void
+}
+
+function ElPicker(props: ElPickerProps) {
+  const elements = r.useSelector((s) => s.deck.elements)
+
+  return (
+    <CodeInput
+      value={elements[props.value ?? '']?.name}
+      variables={Object.values(elements).map((e) => e.name)}
+      onClear={props.onClear}
+      varColor="#689d6a"
+      onChange={(str) => {
+        props.onChange(Object.keys(elements).find((e) => elements[e]?.name === str))
       }}
     />
   )
@@ -192,22 +228,22 @@ function PropsEditor(props: PropsEditorProps) {
   )
 }
 
-interface ElementChildEditorProps {
-  value: t.IdMap<string[]>
-  onChange: (props: t.IdMap<string[]>) => void
+interface ElementParamsEditorProps {
+  value: t.IdMap<string>
+  onChange: (props: t.IdMap<string>) => void
 }
 
-function ElementChildEditor(props: ElementChildEditorProps) {
+function ElementParamsEditor(props: ElementParamsEditorProps) {
   return (
     <MapEditor
       value={props.value}
       onChange={props.onChange}
-      defaultValue={[]}
-      placeholder="new child name..."
+      defaultValue={''}
+      placeholder="new param name..."
       renderInput={({ value, onChange, onDelete }) => (
-        <ElListPicker
+        <ElPicker
           value={value}
-          onChange={(value) => onChange(value)}
+          onChange={(value) => onChange(value ?? '')}
           onClear={onDelete}
         />
       )}
