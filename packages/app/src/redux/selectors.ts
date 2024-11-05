@@ -1,6 +1,7 @@
-import { resolveProps, resolveChildProps } from '@hsrs/lib/props'
+import { resolveProps, resolveChildProps, getElementInstances } from '@hsrs/lib/props'
 import * as t from '@hsrs/lib/types'
 import { createSelector } from './store'
+import { computeElementInstance } from '@hsrs/lib/expr'
 
 export const selectedElement = createSelector(
   [(s) => s.deck.elements, (s) => s.ui.selection],
@@ -31,5 +32,15 @@ export const childProps = createSelector(
   [(s) => s.deck.types, (s, children?: t.IdMap<string[]>) => children],
   (types, children) => {
     return resolveChildProps(children ?? {}, types)
+  }
+)
+
+export const selectedElementInstances = createSelector(
+  [selectedElement, (s) => s.deck.elements, (s) => s.deck.types],
+  (element, elements, types) => {
+    return (
+      element &&
+      computeElementInstance(getElementInstances(element.id, elements, types), elements)
+    )
   }
 )

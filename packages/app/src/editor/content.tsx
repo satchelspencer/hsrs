@@ -8,6 +8,7 @@ import * as r from '../redux'
 import CodeInput from '../components/code'
 import { MapEditor } from '../components/map'
 import { LabelGroup } from '../components/labels'
+import { WarnButton } from '../components/button'
 
 export function Content() {
   const selectedEl = r.useSelector(r.selectors.selectedElement),
@@ -15,20 +16,30 @@ export function Content() {
     dispatch = r.useDispatch()
   return (
     <div className={content}>
-      {selectedEl && (
+      {selectedEl?.element && (
         <ElementEditor
           id={selectedEl.id}
           value={selectedEl.element}
           onChange={(element) =>
-            dispatch(r.actions.updateElement({ ...selectedEl, element }))
+            dispatch(
+              element
+                ? r.actions.updateElement({ ...selectedEl, element })
+                : r.actions.deleteElement(selectedEl)
+            )
           }
         />
       )}
-      {selectedType && (
+      {selectedType?.type && (
         <TypeEditor
           id={selectedType.id}
           value={selectedType.type}
-          onChange={(type) => dispatch(r.actions.updateType({ ...selectedType, type }))}
+          onChange={(type) =>
+            dispatch(
+              type
+                ? r.actions.updateType({ ...selectedType, type })
+                : r.actions.deleteType(selectedType)
+            )
+          }
         />
       )}
     </div>
@@ -45,7 +56,7 @@ const content = cx(
 interface ElementEditorProps {
   id: string
   value: t.Element
-  onChange?: (e: t.Element) => void
+  onChange?: (e: t.Element | undefined) => void
 }
 
 function ElementEditor(props: ElementEditorProps) {
@@ -59,6 +70,9 @@ function ElementEditor(props: ElementEditorProps) {
       [props.value.children]
     ),
     childProps = r.useSelector(childPropsSelector)
+
+  const instances = r.useSelector(r.selectors.selectedElementInstances)
+    console.log(instances)
 
   return (
     <div className={editorWrapper}>
@@ -105,6 +119,9 @@ function ElementEditor(props: ElementEditorProps) {
           ],
         ]}
       />
+      <div className={deleteWrapper}>
+        <WarnButton onClick={() => props.onChange?.(undefined)}>delete</WarnButton>
+      </div>
     </div>
   )
 }
@@ -112,7 +129,7 @@ function ElementEditor(props: ElementEditorProps) {
 interface TypeEditorProps {
   id: string
   value: t.Type
-  onChange?: (e: t.Type) => void
+  onChange?: (e: t.Type | undefined) => void
 }
 
 function TypeEditor(props: TypeEditorProps) {
@@ -158,6 +175,9 @@ function TypeEditor(props: TypeEditorProps) {
           ],
         ]}
       />
+      <div className={deleteWrapper}>
+        <WarnButton onClick={() => props.onChange?.(undefined)}>delete</WarnButton>
+      </div>
     </div>
   )
 }
@@ -264,3 +284,9 @@ function ElementChildEditor(props: ElementChildEditorProps) {
     />
   )
 }
+
+const deleteWrapper = cx(css`
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0.5;
+`)

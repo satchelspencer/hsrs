@@ -29,7 +29,7 @@ export interface Recall {
 
 export interface ElementInstance {
   element: string
-  children?: IdMap<ElementInstance>
+  children?: IdMap<ElementInstance | undefined>
 }
 
 export interface RecallInstance extends Recall, ElementInstance {}
