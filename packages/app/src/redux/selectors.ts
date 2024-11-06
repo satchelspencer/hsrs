@@ -6,15 +6,17 @@ import { Selection } from './ui'
 
 export const selectSelections = createSelector(
   [(state) => state.ui.selections, (state) => state.deck.elements],
-  (selections, elements): Selection[] =>
+  (selections, elements): Selection[][] =>
     _.takeWhile(selections, (selection) =>
-      selection && selection.type === 'element' ? !!elements[selection.id] : false
+      _.every(selection, (selection) =>
+        selection && selection.type === 'element' ? !!elements[selection.id] : false
+      )
     )
 )
 
 export const selectSelectionByIndex = createSelector(
   [selectSelections, (state, index: number) => index],
-  (selections, index): Selection | undefined => {
+  (selections, index): Selection[] => {
     return selections[index]
   }
 )

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { css, cx } from '@emotion/css'
+import _ from 'lodash'
 
 import * as styles from '../styles'
 import * as r from '../redux'
@@ -25,12 +26,14 @@ export function Column(props: ColumnProps) {
     <div ref={wrapperRef} className={columnWrapper(props.index === -1)}>
       {props.index === -1 ? (
         <ElementsList index={props.index} />
-      ) : (
-        selection &&
-        selection.type === 'element' && (
-          <ElementEditor id={selection.id} index={props.index} />
+      ) : selection.length === 1 ? (
+        selection.map(
+          (selection) =>
+            selection.type === 'element' && (
+              <ElementEditor key={selection.id} id={selection.id} index={props.index} />
+            )
         )
-      )}
+      ) : null}
     </div>
   )
 }
@@ -39,13 +42,15 @@ const columnWrapper = (first: boolean) =>
   cx(
     styles.surface,
     css`
-      width: ${first ? 450 : 450}px;
+      width: ${first ? 250 : 450}px;
       border-right: 1px solid ${styles.color(0.93)};
       display: flex;
       flex-direction: column;
       z-index: 1;
       flex: none;
-      box-shadow: 1px 0px 10px #00000010;
-      background: ${styles.color(0.99)};
+      &:not(:first-child){
+        box-shadow: 1px 0px 10px #00000010;
+      }
+      background: ${styles.color(0.985)};
     `
   )

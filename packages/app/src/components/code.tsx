@@ -27,6 +27,10 @@ injectGlobal`
     border-radius: 2px;  
     border: 1px solid ${styles.color(0.85)} !important;
   }
+
+  .cm-content{
+    padding:3px 0px !important;
+  }
 `
 
 const language = LRLanguage.define({ parser: parser.configure({ dialect: 'jsx' }) })

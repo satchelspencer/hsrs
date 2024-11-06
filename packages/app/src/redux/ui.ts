@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 export type UiState = {
-  selections: Selection[]
+  selections: Selection[][]
 }
 
 export type Selection = { type: 'element' | 'view'; id: string }
@@ -16,10 +16,10 @@ export const ui = createSlice({
   reducers: {
     setSelection: (
       state,
-      action: PayloadAction<{ selection: Selection | undefined; index: number }>
+      action: PayloadAction<{ selection: Selection[]; index: number }>
     ) => {
       const newSelections = state.selections.slice(0, action.payload.index)
-      if (action.payload.selection)
+      if (action.payload.selection.length)
         newSelections[action.payload.index] = action.payload.selection
       state.selections = newSelections
     },

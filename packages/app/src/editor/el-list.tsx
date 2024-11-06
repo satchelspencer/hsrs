@@ -1,11 +1,15 @@
-import React, { useCallback } from 'react'
+import React, { useState } from 'react'
 import { css, cx } from '@emotion/css'
+import _ from 'lodash'
 
 import * as styles from '../styles'
 import { Icon } from '../components/icon'
 import * as r from '../redux'
 import { uid } from '@hsrs/lib/uid'
 import { Button } from '../components/button'
+import { Selection } from '../redux/ui'
+import { Element } from '@hsrs/lib/types'
+import CodeInput from '../components/code'
 
 interface ElementsListProps {
   parentId?: string
@@ -16,13 +20,10 @@ export function ElementsList(props: ElementsListProps) {
   const elementIds = r.useSelector((state) =>
       r.selectors.selectElementIdsByParent(state, props.parentId)
     ),
-    elements = r.useSelector((s) => s.deck.elements)
-
-  const selectNextSelection = useCallback(
-      (s) => r.selectors.selectSelectionByIndex(s, props.index + 1),
-      [props.index]
+    elements = r.useSelector((s) => s.deck.elements),
+    nextSelection = r.useSelector((s) =>
+      r.selectors.selectSelectionByIndex(s, props.index + 1)
     ),
-    nextSelection = r.useSelector(selectNextSelection),
     dispatch = r.useDispatch()
 
   return (
@@ -31,43 +32,50 @@ export function ElementsList(props: ElementsListProps) {
         <div className={sideBarListInner}>
           <div>{props.parentId ? 'Children' : 'Base'}</div>
         </div>
-        <Button
-          onClick={() => {
-            const id = uid()
-            dispatch(
-              r.actions.createElement({
-                id,
-                element: { parents: props.parentId ? [props.parentId] : [] },
-              })
-            )
-            dispatch(
-              r.actions.setSelection({
-                selection: { type: 'element', id },
-                index: props.index + 1,
-              })
-            )
-          }}
-        >
-          <Icon name="plus" />
-        </Button>
+        <ElListActions {...props} />
       </div>
       <div className={elementsListInner}>
-        {elementIds.map((elementId) => {
+        {elementIds.map((elementId, index) => {
           const element = elements[elementId],
-            selected = nextSelection?.id === elementId
+            selected = !!nextSelection?.find((s) => s.id === elementId)
           return (
             <ElementListItem
               key={elementId}
               name={element.name}
               selected={selected}
-              onClick={() =>
+              onClick={(e) => {
+                const otherSelected =
+                  e.shiftKey || e.metaKey
+                    ? nextSelection.filter((s) => s.id !== elementId)
+                    : []
+
+                const lastOther = _.last(otherSelected),
+                  lastOtherIndex = lastOther && elementIds.indexOf(lastOther.id),
+                  rangeMin = Math.min(lastOtherIndex ?? 0, index),
+                  rangeMax = Math.max(lastOtherIndex ?? 0, index),
+                  inRange =
+                    lastOther && e.shiftKey
+                      ? elementIds.slice(rangeMin + 1, rangeMax)
+                      : [],
+                  rangeSelected: Selection[] = inRange.map((id) => ({
+                    id: id,
+                    type: 'element',
+                  })),
+                  thisSelected: Selection[] =
+                    selected && nextSelection.length === 1
+                      ? []
+                      : [{ id: elementId, type: 'element' }]
+
                 dispatch(
                   r.actions.setSelection({
-                    selection: selected ? undefined : { id: elementId, type: 'element' },
+                    selection: [...otherSelected, ...rangeSelected, ...thisSelected],
                     index: props.index + 1,
                   })
                 )
-              }
+                e.preventDefault()
+                e.stopPropagation()
+                window.getSelection()?.removeAllRanges()
+              }}
             />
           )
         })}
@@ -76,11 +84,17 @@ export function ElementsList(props: ElementsListProps) {
   )
 }
 
+const actionsWrapper = cx(css`
+  display: flex;
+  align-items: center;
+`)
+
 const sideBarListInner = cx(
   css`
     display: flex;
     align-items: center;
     font-weight: 500;
+    padding: 6px 8px;
   `
 )
 
@@ -90,7 +104,6 @@ const sidebarListHeader = cx(
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 6px;
     gap: 4px;
     border-bottom: 1px solid ${styles.color(0.93)};
   `
@@ -135,3 +148,156 @@ const elementListItem = (selected: boolean) =>
       ${selected && `background:${styles.color(0.96)};`}
     `
   )
+
+interface ElListActionsProps extends ElementsListProps {}
+
+type ElListAction = {
+  string?: { variables?: string[]; placeholder: string }
+  callback: (string: string) => void
+}
+
+function ElListActions(props: ElListActionsProps) {
+  const nextSelection = r.useSelector((s) =>
+      r.selectors.selectSelectionByIndex(s, props.index + 1)
+    ),
+    dispatch = r.useDispatch(),
+    elements = r.useSelector((s) => s.deck.elements)
+
+  const handleAdd = (virtual: boolean, name: string) => {
+    const id = uid(),
+      element: Partial<Element> = {
+        parents: props.parentId ? [props.parentId] : [],
+        name,
+      }
+    if (virtual) element.virtual = true
+    dispatch(r.actions.createElement({ id, element }))
+    dispatch(
+      r.actions.setSelection({
+        selection: [{ type: 'element', id }],
+        index: props.index + 1,
+      })
+    )
+  }
+
+  const actions: { [id: string]: ElListAction } = {
+    del: {
+      callback: () => {
+        for (const selection of nextSelection) {
+          dispatch(
+            r.actions.deleteElement({ id: selection.id, fromParentId: props.parentId })
+          )
+        }
+      },
+    },
+    addVirtual: {
+      callback: (name) => handleAdd(true, name),
+      string: { placeholder: 'New folder name...' },
+    },
+    addNew: {
+      callback: (name) => {
+        const existing = Object.keys(elements).find((id) => elements[id].name === name)
+        if (existing) {
+          dispatch(
+            r.actions.updateElement({
+              id: existing,
+              element: {
+                ...elements[existing],
+                parents: _.uniq(
+                  _.compact([...elements[existing].parents, props.parentId])
+                ),
+              },
+            })
+          )
+        } else handleAdd(false, name)
+      },
+      string: {
+        placeholder: 'Element name...',
+        variables: Object.keys(elements).map((id) => elements[id].name),
+      },
+    },
+    move: {
+      callback: (name) => {
+        const dest = Object.keys(elements).find((id) => elements[id].name === name)
+        if (!dest) return
+        for (const selection of nextSelection) {
+          const el = elements[selection.id]
+          if (el)
+            dispatch(
+              r.actions.updateElement({
+                id: selection.id,
+                element: {
+                  ...el,
+                  parents: [..._.without(el.parents, props.parentId ?? ''), dest],
+                },
+              })
+            )
+        }
+      },
+      string: {
+        placeholder: 'Move to...',
+        variables: Object.keys(elements)
+          .filter((e) => elements[e].virtual)
+          .map((id) => elements[id].name),
+      },
+    },
+  }
+
+  const [string, setString] = useState<string | undefined>(),
+    [activeAction, setActiveAction] = useState<string | undefined>()
+
+  const handleAction = (id: string) => {
+      const action = actions[id]
+      if (!action.string) action.callback('')
+      else {
+        setActiveAction(id)
+      }
+    },
+    cancelAction = () => {
+      setString(undefined)
+      setActiveAction(undefined)
+    }
+
+  return !activeAction ? (
+    <div className={actionsWrapper}>
+      {nextSelection && (
+        <>
+          <Button onClick={() => handleAction('del')}>
+            <Icon name="delete" />
+          </Button>
+          <Button onClick={() => handleAction('move')}>
+            <Icon name="move" />
+          </Button>
+        </>
+      )}
+      <Button onClick={() => handleAction('addVirtual')}>
+        <Icon name="new-folder" />
+      </Button>
+      <Button onClick={() => handleAction('addNew')}>
+        <Icon name="plus" />
+      </Button>
+    </div>
+  ) : (
+    <div className={actionInputWrapper}>
+      <CodeInput
+        autoFocus
+        value={string}
+        onChange={setString}
+        onBlur={cancelAction}
+        onClear={cancelAction}
+        variables={activeAction ? actions[activeAction].string?.variables ?? [] : []}
+        placeholder={actions[activeAction].string?.placeholder}
+        onEnter={() => {
+          actions[activeAction].callback(string!)
+          cancelAction()
+        }}
+      />
+    </div>
+  )
+}
+
+const actionInputWrapper = cx(css`
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  width: 150px;
+`)

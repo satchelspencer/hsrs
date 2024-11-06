@@ -101,7 +101,7 @@ const mapWrapper = cx(css`
   gap: 8px;
 `)
 
-const propName = cx(css`
+export const propName = cx(css`
   color: #919191;
   font-size: 13px;
 `)

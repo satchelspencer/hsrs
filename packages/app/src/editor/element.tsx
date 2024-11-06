@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -6,10 +6,13 @@ import * as t from '@hsrs/lib/types'
 import * as styles from '../styles'
 import * as r from '../redux'
 import CodeInput from '../components/code'
-import { MapEditor } from '../components/map'
+import { MapEditor, propName } from '../components/map'
 import { LabelGroup } from '../components/labels'
-import { WarnButton } from '../components/button'
+import { Button } from '../components/button'
 import { ElementsList } from './el-list'
+import { Icon } from '../components/icon'
+import { computeElementInstance } from '@hsrs/lib/expr'
+import { getElementInstances } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -35,14 +38,23 @@ export function ElementEditor(props: ElementEditorProps) {
           : r.actions.deleteElement({ id: props.id })
       )
 
-  const instances = r.useSelector((state) =>
-    r.selectors.selectElementInstancesById(state, props.id)
-  )
-  if (!element.virtual) console.log(instances)
+  const elements = r.useSelector((state) => state.deck.elements),
+    [exampleSeed, setExampleSeed] = useState(0),
+    example = useMemo(() => {
+      return computeElementInstance(getElementInstances(props.id, elements), elements)
+    }, [element.params, exampleSeed])
 
   return (
     <>
       <div className={editorWrapper}>
+        <Button
+          className={backButton}
+          onClick={() =>
+            dispatch(r.actions.setSelection({ index: props.index, selection: [] }))
+          }
+        >
+          <Icon name="back" />
+        </Button>
         <LabelGroup
           items={[
             [
@@ -59,20 +71,20 @@ export function ElementEditor(props: ElementEditorProps) {
                 onChange={(value) => handleChange({ ...element, parents: value })}
               />,
             ],
-            [
-              'Virtual',
-              <input
-                type="checkbox"
-                checked={!!element.virtual}
-                onChange={() =>
-                  handleChange(
-                    element.virtual
-                      ? _.omit(element, 'virtual')
-                      : { ...element, virtual: true }
-                  )
-                }
-              />,
-            ],
+            // [
+            //   'Virtual',
+            //   <input
+            //     type="checkbox"
+            //     checked={!!element.virtual}
+            //     onChange={() =>
+            //       handleChange(
+            //         element.virtual
+            //           ? _.omit(element, 'virtual')
+            //           : { ...element, virtual: true }
+            //       )
+            //     }
+            //   />,
+            // ],
           ]}
         />
         <LabelGroup
@@ -98,18 +110,44 @@ export function ElementEditor(props: ElementEditorProps) {
               <ElementParamsEditor
                 value={element.params ?? {}}
                 onChange={(p) => handleChange({ ...element, params: p })}
+                onOpenElement={(id) =>
+                  dispatch(
+                    r.actions.setSelection({
+                      selection: [{ id, type: 'element' }],
+                      index: props.index + 1,
+                    })
+                  )
+                }
               />,
             ],
+            !element.virtual &&
+              !!element.params &&
+              example && [
+                'Example',
+                <>
+                  <LabelGroup
+                    items={Object.keys(example).map((id) => [
+                      <div className={propName}>{id}</div>,
+                      example[id],
+                    ])}
+                  />
+                  <Button onClick={() => setExampleSeed(Math.random())}>
+                    <Icon name='refresh' />
+                  </Button>
+                </>,
+              ],
           ]}
         />
-        <div className={deleteWrapper}>
-          <WarnButton onClick={() => handleChange(undefined)}>delete</WarnButton>
-        </div>
       </div>
       {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
     </>
   )
 }
+
+const backButton = cx(css`
+  align-self: flex-start;
+  font-size: 16px;
+`)
 
 const editorWrapper = cx(css`
   display: flex;
@@ -218,6 +256,7 @@ function PropsEditor(props: PropsEditorProps) {
 interface ElementParamsEditorProps {
   value: t.IdMap<string>
   onChange: (props: t.IdMap<string>) => void
+  onOpenElement?: (id: string) => void
 }
 
 function ElementParamsEditor(props: ElementParamsEditorProps) {
@@ -228,18 +267,21 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
       defaultValue={''}
       placeholder="new param name..."
       renderInput={({ value, onChange, onDelete }) => (
-        <ElPicker
-          value={value}
-          onChange={(value) => onChange(value ?? '')}
-          onClear={onDelete}
-        />
+        <div className={paramInnerWrapper}>
+          <ElPicker
+            value={value}
+            onChange={(value) => onChange(value ?? '')}
+            onClear={onDelete}
+          />
+          <Button onClick={() => props.onOpenElement?.(value)}>
+            <Icon name="caret-right" />
+          </Button>
+        </div>
       )}
     />
   )
 }
 
-const deleteWrapper = cx(css`
+const paramInnerWrapper = cx(css`
   display: flex;
-  justify-content: flex-end;
-  opacity: 0.5;
 `)

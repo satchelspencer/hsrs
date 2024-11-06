@@ -42,14 +42,17 @@ export function getParamsProps(params: t.IdMap<string>, elements: t.IdMap<t.Elem
 
 export function getElementInstances(
   id: string,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  depth = 10
 ): t.ElementInstance {
   const params = _.mapValues(elements[id].params, (paramElId) => {
     const matchingEl = _.shuffle(Object.keys(elements)).find(
       (id) =>
         !elements[id].virtual && getElementAndParents(id, elements).includes(paramElId)
     )
-    return matchingEl ? getElementInstances(matchingEl, elements) : undefined
+    return matchingEl && depth
+      ? getElementInstances(matchingEl, elements, depth - 1)
+      : undefined
   })
   const instance: t.ElementInstance = { element: id }
   if (Object.keys(params).length) instance.params = params
