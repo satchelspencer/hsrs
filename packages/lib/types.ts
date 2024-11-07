@@ -2,9 +2,11 @@ export interface Element {
   name: string
   parents: string[]
   props: Props
-  params?: IdMap<string>
+  params?: Params
   virtual?: true
 }
+
+export type Params = IdMap<string>
 
 export type Props = IdMap<string>
 

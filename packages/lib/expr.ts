@@ -1,6 +1,7 @@
 import jexl from 'jexl'
 import _ from 'lodash'
 import * as t from './types'
+import { getElementProps } from './props'
 
 jexl.addTransform('replace', (val: string, search, replace) =>
   (val + '').replaceAll(search, replace)
@@ -16,9 +17,9 @@ export function isValid(expr: string) {
 }
 
 export function run(expr: string, context: any) {
-  try{
+  try {
     return jexl.evalSync(expr, context) ?? expr
-  }catch{
+  } catch {
     return expr
   }
 }
@@ -28,10 +29,20 @@ export function computeElementInstance(
   elements: t.IdMap<t.Element>
 ): t.Props {
   const params = _.mapValues(instace.params, (paramElInstance) => {
-      if (!paramElInstance) return paramElInstance
-      return computeElementInstance(paramElInstance, elements)
-    }),
-    element = elements[instace.element]
+    if (!paramElInstance) return paramElInstance
+    return computeElementInstance(paramElInstance, elements)
+  })
 
-  return _.mapValues(element.props, (prop) => run(prop, params))
+  const elProps = getElementProps(instace.element, elements),
+    result: t.Props = {},
+    execOrder = _.sortBy(Object.keys(elProps), (prop) =>
+      elProps[prop].includes('_.') ? 1 : 0
+    )
+
+
+  for (const prop of execOrder) {
+    result[prop] = run(elProps[prop], { ...params, _: result })
+  }
+
+  return result
 }

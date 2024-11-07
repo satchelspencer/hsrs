@@ -10,6 +10,7 @@ import { LabelGroup } from './labels'
 
 interface MapEditorRenderProps<P> {
   value: P
+  key: string
   onChange: (value: P) => void
   onDelete: () => void
   placeholder?: P
@@ -40,10 +41,10 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
   return (
     <div className={mapWrapper}>
       <LabelGroup
-        items={[
-          ...Object.keys(props.value),
+        items={_.sortBy([
           ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
-        ].map((propId) => {
+          ...Object.keys(props.value),
+        ]).map((propId) => {
           return [
             <div className={propName}>
               {propId}
@@ -57,6 +58,7 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
               </span>
             </div>,
             props.renderInput({
+              key: propId,
               value: props.value[propId],
               onChange: (value) => {
                 const dupe = { ...props.value } as any

@@ -26,7 +26,22 @@ export function getElementProps(elementId: string, elements: t.IdMap<t.Element>)
     const element = elements[elementId]
     if (!element) continue
     for (const propId in element.props) {
-      if (!res[propId]) res[propId] = element.props[propId]
+      if (element.props[propId] || !res[propId]) res[propId] = element.props[propId]
+    }
+  }
+
+  return res
+}
+
+export function getElementParams(elementId: string, elements: t.IdMap<t.Element>) {
+  const elementIds = getElementAndParents(elementId, elements).reverse(),
+    res: t.Params = {}
+
+  for (const elementId of elementIds) {
+    const element = elements[elementId]
+    if (!element) continue
+    for (const propId in element.params) {
+      if (element.params[propId]) res[propId] = element.params[propId]
     }
   }
 
@@ -45,7 +60,7 @@ export function getElementInstances(
   elements: t.IdMap<t.Element>,
   depth = 10
 ): t.ElementInstance {
-  const params = _.mapValues(elements[id].params, (paramElId) => {
+  const params = _.mapValues(getElementParams(id, elements), (paramElId) => {
     const matchingEl = _.shuffle(Object.keys(elements)).find(
       (id) =>
         !elements[id].virtual && getElementAndParents(id, elements).includes(paramElId)

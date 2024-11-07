@@ -26,6 +26,9 @@ export function ElementEditor(props: ElementEditorProps) {
     elementProps = r.useSelector((state) =>
       r.selectors.selectElementPropsById(state, props.id)
     ),
+    elementParams = r.useSelector((state) =>
+      r.selectors.selectElementParamsById(state, props.id)
+    ),
     paramProps = r.useSelector((state) =>
       r.selectors.selectElementParamPropsById(state, props.id)
     )
@@ -41,7 +44,9 @@ export function ElementEditor(props: ElementEditorProps) {
   const elements = r.useSelector((state) => state.deck.elements),
     [exampleSeed, setExampleSeed] = useState(0),
     example = useMemo(() => {
-      return computeElementInstance(getElementInstances(props.id, elements), elements)
+      return element.virtual
+        ? undefined
+        : computeElementInstance(getElementInstances(props.id, elements), elements)
     }, [element.params, exampleSeed])
 
   return (
@@ -71,20 +76,20 @@ export function ElementEditor(props: ElementEditorProps) {
                 onChange={(value) => handleChange({ ...element, parents: value })}
               />,
             ],
-            // [
-            //   'Virtual',
-            //   <input
-            //     type="checkbox"
-            //     checked={!!element.virtual}
-            //     onChange={() =>
-            //       handleChange(
-            //         element.virtual
-            //           ? _.omit(element, 'virtual')
-            //           : { ...element, virtual: true }
-            //       )
-            //     }
-            //   />,
-            // ],
+            [
+              'Virtual',
+              <input
+                type="checkbox"
+                checked={!!element.virtual}
+                onChange={() =>
+                  handleChange(
+                    element.virtual
+                      ? _.omit(element, 'virtual')
+                      : { ...element, virtual: true }
+                  )
+                }
+              />,
+            ],
           ]}
         />
         <LabelGroup
@@ -95,21 +100,18 @@ export function ElementEditor(props: ElementEditorProps) {
               <PropsEditor
                 value={element.props}
                 onChange={(p) => handleChange({ ...element, props: p })}
-                fixed={
-                  element.virtual
-                    ? {}
-                    : _.omit(elementProps, Object.keys(element.props ?? {}))
-                }
+                fixed={elementProps}
                 variables={Object.keys(paramProps).flatMap((prop) =>
                   _.keys(paramProps[prop]).map((k) => prop + '.' + k)
                 )}
               />,
             ],
-            !element.virtual && [
+            [
               'Params',
               <ElementParamsEditor
                 value={element.params ?? {}}
                 onChange={(p) => handleChange({ ...element, params: p })}
+                fixed={elementParams}
                 onOpenElement={(id) =>
                   dispatch(
                     r.actions.setSelection({
@@ -120,9 +122,8 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
-            !element.virtual &&
-              !!element.params &&
-              example && [
+            !!example &&
+              !element.virtual && [
                 'Example',
                 <>
                   <LabelGroup
@@ -132,7 +133,7 @@ export function ElementEditor(props: ElementEditorProps) {
                     ])}
                   />
                   <Button onClick={() => setExampleSeed(Math.random())}>
-                    <Icon name='refresh' />
+                    <Icon name="refresh" />
                   </Button>
                 </>,
               ],
@@ -205,6 +206,7 @@ interface ElPickerProps {
   value: string | undefined
   onChange: (value: string | undefined) => void
   onClear?: () => void
+  placeholder?: string
 }
 
 function ElPicker(props: ElPickerProps) {
@@ -216,6 +218,7 @@ function ElPicker(props: ElPickerProps) {
       variables={Object.values(elements).map((e) => e.name)}
       onClear={props.onClear}
       varColor="#689d6a"
+      placeholder={elements[props.placeholder ?? '']?.name}
       onChange={(str) => {
         props.onChange(Object.keys(elements).find((e) => elements[e]?.name === str))
       }}
@@ -232,6 +235,10 @@ interface PropsEditorProps {
 }
 
 function PropsEditor(props: PropsEditorProps) {
+  const allVariables = [
+    ...(props.variables ?? []),
+    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => '_.' + v),
+  ]
   return (
     <MapEditor
       value={props.value}
@@ -239,14 +246,14 @@ function PropsEditor(props: PropsEditorProps) {
       fixed={props.fixed}
       defaultValue={''}
       placeholder="new property name..."
-      renderInput={({ value, onChange, onDelete, placeholder }) => (
+      renderInput={({ value, onChange, onDelete, placeholder, key }) => (
         <CodeInput
           value={value}
           onChange={(value) => onChange(value ?? '')}
           onClear={onDelete}
           placeholder={placeholder}
           varColor={props.varColor}
-          variables={props.variables}
+          variables={_.without(allVariables, '_.' + key)}
         />
       )}
     />
@@ -257,6 +264,7 @@ interface ElementParamsEditorProps {
   value: t.IdMap<string>
   onChange: (props: t.IdMap<string>) => void
   onOpenElement?: (id: string) => void
+  fixed?: t.Params
 }
 
 function ElementParamsEditor(props: ElementParamsEditorProps) {
@@ -264,14 +272,16 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
     <MapEditor
       value={props.value}
       onChange={props.onChange}
+      fixed={props.fixed}
       defaultValue={''}
       placeholder="new param name..."
-      renderInput={({ value, onChange, onDelete }) => (
+      renderInput={({ value, onChange, onDelete, placeholder }) => (
         <div className={paramInnerWrapper}>
           <ElPicker
             value={value}
             onChange={(value) => onChange(value ?? '')}
             onClear={onDelete}
+            placeholder={placeholder}
           />
           <Button onClick={() => props.onOpenElement?.(value)}>
             <Icon name="caret-right" />

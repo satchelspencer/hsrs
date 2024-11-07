@@ -1,4 +1,4 @@
-import { getElementProps, getParamsProps, getElementInstances } from '@hsrs/lib/props'
+import { getElementProps, getParamsProps, getElementInstances, getElementParams } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import { computeElementInstance } from '@hsrs/lib/expr'
 import _ from 'lodash'
@@ -32,6 +32,13 @@ export const selectElementPropsById = createSelector(
   [(s) => s.deck.elements, (s, elementId: string) => elementId],
   (elements, elementId) => {
     return getElementProps(elementId, elements)
+  }
+)
+
+export const selectElementParamsById = createSelector(
+  [(s) => s.deck.elements, (s, elementId: string) => elementId],
+  (elements, elementId) => {
+    return getElementParams(elementId, elements)
   }
 )
 
