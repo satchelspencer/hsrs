@@ -36,12 +36,18 @@ export function computeElementInstance(
   const elProps = getElementProps(instace.element, elements),
     result: t.Props = {},
     execOrder = _.sortBy(Object.keys(elProps), (prop) =>
-      elProps[prop].includes('_.') ? 1 : 0
+      Object.keys(elProps).find((otherProp) => elProps[prop].includes(otherProp)) ? 1 : 0
     )
 
-
   for (const prop of execOrder) {
-    result[prop] = run(elProps[prop], { ...params, _: result })
+    result[prop] = elProps[prop].map(
+      (p, index) =>
+        p &&
+        run(p, {
+          ..._.mapValues(params, (param) => _.mapValues(param, (p) => p && p[index])),
+          ..._.mapValues(result, (p) => p && p[index]),
+        })
+    )
   }
 
   return result

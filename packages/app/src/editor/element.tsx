@@ -12,7 +12,7 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
-import { getElementInstances } from '@hsrs/lib/props'
+import { getElementInstances, getNonVirtualDescendents } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -43,11 +43,16 @@ export function ElementEditor(props: ElementEditorProps) {
 
   const elements = r.useSelector((state) => state.deck.elements),
     [exampleSeed, setExampleSeed] = useState(0),
+    exampleElement = useMemo(() => {
+      const desc = getNonVirtualDescendents(props.id, elements)
+      return _.sample(desc)
+    }, [exampleSeed]),
     example = useMemo(() => {
-      return element.virtual
-        ? undefined
-        : computeElementInstance(getElementInstances(props.id, elements), elements)
-    }, [element.params, exampleSeed])
+      return (
+        exampleElement &&
+        computeElementInstance(getElementInstances(exampleElement, elements), elements)
+      )
+    }, [element.params, exampleElement, exampleSeed])
 
   return (
     <>
@@ -122,21 +127,23 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
-            !!example &&
-              !element.virtual && [
-                'Example',
-                <>
-                  <LabelGroup
-                    items={Object.keys(example).map((id) => [
-                      <div className={propName}>{id}</div>,
-                      example[id],
-                    ])}
-                  />
-                  <Button onClick={() => setExampleSeed(Math.random())}>
-                    <Icon name="refresh" />
-                  </Button>
-                </>,
-              ],
+            !!example && [
+              <div className={exampleHead}>
+                Example
+                <Button onClick={() => setExampleSeed(Math.random())}>
+                  <Icon name="refresh" />
+                </Button>
+              </div>,
+
+              <LabelGroup
+                items={Object.keys(example).map((id) => [
+                  <div className={propName}>{id}</div>,
+                  <div>
+                    {example[id][0]} {example[id][1]}
+                  </div>,
+                ])}
+              />,
+            ],
           ]}
         />
       </div>
@@ -144,6 +151,11 @@ export function ElementEditor(props: ElementEditorProps) {
     </>
   )
 }
+
+const exampleHead = cx(css`
+  display:flex;
+  align-items:center;
+`)
 
 const backButton = cx(css`
   align-self: flex-start;
@@ -237,28 +249,55 @@ interface PropsEditorProps {
 function PropsEditor(props: PropsEditorProps) {
   const allVariables = [
     ...(props.variables ?? []),
-    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => '_.' + v),
+    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => v),
   ]
   return (
     <MapEditor
+    vert
       value={props.value}
       onChange={props.onChange}
       fixed={props.fixed}
-      defaultValue={''}
+      defaultValue={[]}
       placeholder="new property name..."
       renderInput={({ value, onChange, onDelete, placeholder, key }) => (
-        <CodeInput
-          value={value}
-          onChange={(value) => onChange(value ?? '')}
-          onClear={onDelete}
-          placeholder={placeholder}
-          varColor={props.varColor}
-          variables={_.without(allVariables, '_.' + key)}
-        />
+        <div className={propTupleWrapper}>
+          {[0, 1].map((index) => (
+            <div key={index} className={propTupleInnerWrapper}>
+              <CodeInput
+                value={value?.[index] ?? ''}
+                onChange={(v) => {
+                  const newValue = [...(value ?? [null, null])]
+                  newValue[index] = v || null
+                  onChange(newValue)
+                }}
+                onClear={() => {
+                  if (!value?.find((v) => !!v)) onDelete()
+                }}
+                placeholder={placeholder?.[index] ?? ''}
+                varColor={props.varColor}
+                variables={_.without(allVariables, key)}
+              />
+            </div>
+          ))}
+        </div>
       )}
     />
   )
 }
+
+const propTupleWrapper = cx(css`
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+`)
+
+const propTupleInnerWrapper = cx(css`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 50%;
+  
+`)
 
 interface ElementParamsEditorProps {
   value: t.IdMap<string>
@@ -283,7 +322,7 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
             onClear={onDelete}
             placeholder={placeholder}
           />
-          <Button onClick={() => props.onOpenElement?.(value)}>
+          <Button onClick={() => props.onOpenElement?.(value ?? placeholder)}>
             <Icon name="caret-right" />
           </Button>
         </div>

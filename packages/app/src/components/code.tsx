@@ -106,7 +106,7 @@ export default function CodeInput(props: CodeInputProps) {
       onChange={(v) => setTimeout(() => props.onChange?.(v))}
       extensions={extensions}
       indentWithTab={false}
-      style={{ fontSize: 12, flex: 1 }}
+      style={{ fontSize: 12, flex: 1, minHeight: 25 }}
       onFocus={props.onFocus}
       onBlur={props.onBlur}
       placeholder={props.placeholder}

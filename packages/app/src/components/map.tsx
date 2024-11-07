@@ -23,6 +23,7 @@ interface MapEditorProps<T extends t.IdMap<any>> {
   placeholder?: string
   defaultValue: T[keyof T]
   fixed?: T
+  vert?: boolean
 }
 
 export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
@@ -41,6 +42,8 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
   return (
     <div className={mapWrapper}>
       <LabelGroup
+        vert={props.vert}
+        flush={props.vert}
         items={_.sortBy([
           ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
           ...Object.keys(props.value),

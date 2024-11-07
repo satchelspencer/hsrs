@@ -4,7 +4,6 @@ import _ from 'lodash'
 
 const deckInit: t.Deck = {
   elements: {},
-  views: {},
 }
 
 export const deck = createSlice({

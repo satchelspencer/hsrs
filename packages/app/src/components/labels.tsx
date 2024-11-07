@@ -4,8 +4,9 @@ import { css, cx } from '@emotion/css'
 import * as styles from '../styles'
 
 interface LabelGroupProps {
-  items: ([React.ReactNode, React.ReactNode]|false)[]
+  items: ([React.ReactNode, React.ReactNode] | false)[]
   vert?: boolean
+  flush?: boolean
 }
 
 export function LabelGroup(props: LabelGroupProps) {
@@ -13,7 +14,13 @@ export function LabelGroup(props: LabelGroupProps) {
   return (
     <>
       {props.items.map((item, i) => (
-        <LabelField vert={props.vert} key={i} title={item[0]} altNames={altItems}>
+        <LabelField
+          vert={props.vert}
+          flush={props.flush}
+          key={i}
+          title={item[0]}
+          altNames={altItems}
+        >
           {item[1]}
         </LabelField>
       ))}
@@ -26,6 +33,7 @@ interface LabelFieldProps {
   children: React.ReactNode
   altNames?: React.ReactNode[]
   vert?: boolean
+  flush?: boolean
 }
 
 function LabelField(props: LabelFieldProps) {
@@ -40,7 +48,9 @@ function LabelField(props: LabelFieldProps) {
             </div>
           ))}
       </div>
-      <div className={labelFieldChildren(!!props.vert)}>{props.children}</div>
+      <div className={labelFieldChildren(!!props.vert, !!props.flush)}>
+        {props.children}
+      </div>
     </div>
   )
 }
@@ -53,7 +63,7 @@ const labelFieldWrapper = (vert: boolean) =>
     css`
       flex-direction: column;
       align-items: stretch;
-      gap:5px;
+      gap: 5px;
     `}
   `)
 
@@ -63,13 +73,17 @@ const labelFieldTitle = cx(css`
   padding: 4px 6px;
 `)
 
-const labelFieldChildren = (vert: boolean) =>
+const labelFieldChildren = (vert: boolean, flush: boolean) =>
   cx(css`
     flex: 1;
     ${vert &&
     css`
-      margin-left: 8px;
-      padding-left: 8px;
-      border-left: 1px solid ${styles.color(0.92)};
+      margin-left: 4px;
+
+      ${!flush &&
+      css`
+        border-left: 1px solid ${styles.color(0.92)};
+        padding-left: 4px;
+      `}
     `}
   `)

@@ -19,14 +19,18 @@ export function getElementAndParents(elementId: string, elements: t.IdMap<t.Elem
 }
 
 export function getElementProps(elementId: string, elements: t.IdMap<t.Element>) {
-  const elementIds = getElementAndParents(elementId, elements),
+  const elementIds = getElementAndParents(elementId, elements).reverse(),
     res: t.Props = {}
 
   for (const elementId of elementIds) {
     const element = elements[elementId]
     if (!element) continue
     for (const propId in element.props) {
-      if (element.props[propId] || !res[propId]) res[propId] = element.props[propId]
+      res[propId] ??= [null, null]
+      for (const index in element.props[propId]) {
+        if (element.props[propId][index] || !res[propId][index])
+          res[propId][index] = element.props[propId][index]
+      }
     }
   }
 
@@ -72,4 +76,25 @@ export function getElementInstances(
   const instance: t.ElementInstance = { element: id }
   if (Object.keys(params).length) instance.params = params
   return instance
+}
+
+export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element>) {
+  const thisEl = elements[id]
+  if (!thisEl.virtual) return [id]
+
+  const output: string[] = [],
+    parents: string[] = [id]
+
+  while (parents.length) {
+    const parent = parents.pop()!
+    for (const elId in elements) {
+      const el = elements[elId]
+      if (el.parents.includes(parent)) {
+        if (el.virtual) parents.push(elId)
+        else if (!output.includes(elId)) output.push(elId)
+      }
+    }
+  }
+
+  return output
 }

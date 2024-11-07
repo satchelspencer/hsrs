@@ -8,17 +8,7 @@ export interface Element {
 
 export type Params = IdMap<string>
 
-export type Props = IdMap<string>
-
-type Expr = string
-
-export interface View {
-  name: string
-  elements: Expr
-  front: Expr
-  back: Expr
-}
-
+export type Props = IdMap<(string | null)[]>
 export interface Recall {
   view: string
   element: string
@@ -39,5 +29,4 @@ export type IdMap<T> = { [id: string]: T }
 
 export interface Deck {
   elements: IdMap<Element>
-  views: IdMap<View>
 }
