@@ -62,15 +62,17 @@ export function getParamsProps(params: t.IdMap<string>, elements: t.IdMap<t.Elem
 export function getElementInstances(
   id: string,
   elements: t.IdMap<t.Element>,
-  depth = 10
+  parents: string[] = []
 ): t.ElementInstance {
   const params = _.mapValues(getElementParams(id, elements), (paramElId) => {
     const matchingEl = _.shuffle(Object.keys(elements)).find(
       (id) =>
-        !elements[id].virtual && getElementAndParents(id, elements).includes(paramElId)
+        !elements[id].virtual &&
+        getElementAndParents(id, elements).includes(paramElId) &&
+        !parents.includes(id)
     )
-    return matchingEl && depth
-      ? getElementInstances(matchingEl, elements, depth - 1)
+    return matchingEl && parents.length < 10
+      ? getElementInstances(matchingEl, elements, [...parents, id])
       : undefined
   })
   const instance: t.ElementInstance = { element: id }
@@ -97,4 +99,24 @@ export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element
   }
 
   return output
+}
+
+export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
+  const cards: t.Card[] = []
+
+  for (const elId in elements) {
+    cards.push(...getElementCards(elId, elements))
+  }
+
+  return cards
+}
+
+export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
+  const cards: t.Card[] = [],
+    el = elements[id]
+  for (const propId in el.props) {
+    const prop = el.props[propId]
+    if (prop?.[1]) cards.push({ root: id, property: propId, reverse: false })
+  }
+  return cards
 }

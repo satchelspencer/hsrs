@@ -136,16 +136,28 @@ export function ElementEditor(props: ElementEditorProps) {
               </div>,
 
               <LabelGroup
-                items={Object.keys(example).map((id) => [
-                  <div className={propName}>{id}</div>,
-                  <div>
-                    {example[id][0]} {example[id][1]}
-                  </div>,
-                ])}
+                items={Object.keys(example)
+                  .filter((l) => _.every(example[l]))
+                  .map((id) => [
+                    <div className={propName}>{id}</div>,
+                    <div>
+                      {example[id][0]} {example[id][1]}
+                    </div>,
+                  ])}
               />,
             ],
           ]}
         />
+        <Button
+          onClick={() => {
+            if (!exampleElement) return
+            const instance = getElementInstances(exampleElement, elements)
+
+            console.log(instance, computeElementInstance(instance, elements))
+          }}
+        >
+          <Icon name="test" />
+        </Button>
       </div>
       {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
     </>
@@ -153,8 +165,8 @@ export function ElementEditor(props: ElementEditorProps) {
 }
 
 const exampleHead = cx(css`
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
 `)
 
 const backButton = cx(css`
@@ -249,11 +261,11 @@ interface PropsEditorProps {
 function PropsEditor(props: PropsEditorProps) {
   const allVariables = [
     ...(props.variables ?? []),
-    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => v),
+    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => '_.' + v),
   ]
   return (
     <MapEditor
-    vert
+      vert
       value={props.value}
       onChange={props.onChange}
       fixed={props.fixed}
@@ -275,7 +287,7 @@ function PropsEditor(props: PropsEditorProps) {
                 }}
                 placeholder={placeholder?.[index] ?? ''}
                 varColor={props.varColor}
-                variables={_.without(allVariables, key)}
+                variables={_.without(allVariables, '_.' + key)}
               />
             </div>
           ))}
@@ -296,7 +308,6 @@ const propTupleInnerWrapper = cx(css`
   display: flex;
   flex-direction: column;
   max-width: 50%;
-  
 `)
 
 interface ElementParamsEditorProps {
