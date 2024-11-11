@@ -18,6 +18,33 @@ export function getElementAndParents(elementId: string, elements: t.IdMap<t.Elem
   return res
 }
 
+export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
+  const res: string[] = []
+  for (const key in instance) {
+    const value = instance[key]
+    if (_.isArray(value)) res.push((prefix ? '' : '_.') + key)
+    else res.push(...getVariables(value, key))
+  }
+  return prefix ? res.map((p) => prefix + '.' + p) : res
+}
+
+export function getElementParamsAndProps(
+  elementId: string,
+  elements: t.IdMap<t.Element>
+): t.PropsInstance {
+  const res: t.PropsInstance = {}
+
+  Object.assign(res, getElementProps(elementId, elements))
+
+  const params = _.mapValues(getElementParams(elementId, elements), (paramElement) =>
+    getElementParamsAndProps(paramElement, elements)
+  )
+
+  Object.assign(res, params)
+
+  return res
+}
+
 export function getElementProps(elementId: string, elements: t.IdMap<t.Element>) {
   const elementIds = getElementAndParents(elementId, elements).reverse(),
     res: t.Props = {}
@@ -50,13 +77,6 @@ export function getElementParams(elementId: string, elements: t.IdMap<t.Element>
   }
 
   return res
-}
-
-export function getParamsProps(params: t.IdMap<string>, elements: t.IdMap<t.Element>) {
-  return _.mapValues(params, (paramElId) => {
-    const props = getElementProps(paramElId, elements)
-    return props
-  })
 }
 
 export function getElementInstances(

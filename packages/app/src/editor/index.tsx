@@ -13,7 +13,7 @@ export function Editor() {
         (c) => `${s.deck.elements[c.root].name}:${c.property}`
       )
     )
-  console.log(cards.join('\n'))
+  //console.log(cards.join('\n'))
   return (
     <Wrapper>
       {new Array(selDepth + 1).fill(0).map((v, index) => {

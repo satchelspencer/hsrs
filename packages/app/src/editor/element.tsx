@@ -29,8 +29,8 @@ export function ElementEditor(props: ElementEditorProps) {
     elementParams = r.useSelector((state) =>
       r.selectors.selectElementParamsById(state, props.id)
     ),
-    paramProps = r.useSelector((state) =>
-      r.selectors.selectElementParamPropsById(state, props.id)
+    elementPropVariables = r.useSelector((state) =>
+      r.selectors.selectElementPropVariables(state, props.id)
     )
 
   const dispatch = r.useDispatch(),
@@ -106,9 +106,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 value={element.props}
                 onChange={(p) => handleChange({ ...element, props: p })}
                 fixed={elementProps}
-                variables={Object.keys(paramProps).flatMap((prop) =>
-                  _.keys(paramProps[prop]).map((k) => prop + '.' + k)
-                )}
+                variables={elementPropVariables}
               />,
             ],
             [
@@ -141,24 +139,14 @@ export function ElementEditor(props: ElementEditorProps) {
                   .map((id) => [
                     <div className={propName}>{id}</div>,
                     <div>
-                      {example[id][0]} {example[id][1]}
+                      {example[id]?.[0]} {example[id]?.[1]}
                     </div>,
                   ])}
               />,
             ],
           ]}
         />
-        <Button
-          onClick={() => {
-            if (!exampleElement) return
-            const instance = getElementInstances(exampleElement, elements)
-
-            console.log(
-              JSON.stringify(instance, null, 2),
-              computeElementInstance(instance, elements)
-            )
-          }}
-        >
+        <Button onClick={() => {}}>
           <Icon name="test" />
         </Button>
       </div>
@@ -262,10 +250,6 @@ interface PropsEditorProps {
 }
 
 function PropsEditor(props: PropsEditorProps) {
-  const allVariables = [
-    ...(props.variables ?? []),
-    ...Object.keys({ ...props.value, ...props.fixed }).map((v) => '_.' + v),
-  ]
   return (
     <MapEditor
       vert
@@ -290,7 +274,7 @@ function PropsEditor(props: PropsEditorProps) {
                 }}
                 placeholder={placeholder?.[index] ?? ''}
                 varColor={props.varColor}
-                variables={_.without(allVariables, '_.' + key)}
+                variables={_.without(props.variables, '_.' + key)}
               />
             </div>
           ))}
