@@ -9,6 +9,9 @@ export interface Element {
 export type Params = IdMap<string>
 
 export type Props = IdMap<(string | null)[]>
+
+export type PropsInstance = { [paramName: string]: PropsInstance | Props[string] }
+
 export interface ElementInstance {
   element: string
   params?: IdMap<ElementInstance | undefined>
@@ -21,10 +24,6 @@ export interface Card {
 }
 
 export interface CardInstance extends Card, ElementInstance {}
-
-export interface ElementOverride extends ElementInstance {
-  props: Props
-}
 
 export type IdMap<T> = { [id: string]: T }
 

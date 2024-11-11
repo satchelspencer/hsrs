@@ -136,7 +136,7 @@ export function ElementEditor(props: ElementEditorProps) {
               </div>,
 
               <LabelGroup
-                items={Object.keys(example)
+                items={Object.keys(element.props)
                   .filter((l) => _.every(example[l]))
                   .map((id) => [
                     <div className={propName}>{id}</div>,
@@ -153,7 +153,10 @@ export function ElementEditor(props: ElementEditorProps) {
             if (!exampleElement) return
             const instance = getElementInstances(exampleElement, elements)
 
-            console.log(instance, computeElementInstance(instance, elements))
+            console.log(
+              JSON.stringify(instance, null, 2),
+              computeElementInstance(instance, elements)
+            )
           }}
         >
           <Icon name="test" />

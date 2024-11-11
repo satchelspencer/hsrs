@@ -17,7 +17,7 @@ export function isValid(expr: string) {
 }
 
 export function run(expr: string, context: any) {
-  if(expr === 'null') return undefined
+  if (expr === 'null') return undefined
   try {
     return jexl.evalSync(expr, context) ?? expr
   } catch {
@@ -53,15 +53,25 @@ function getPropExecOrder(props: t.Props): string[] {
   return result
 }
 
+function selectIndex(t: t.PropsInstance, index: number) {
+  return _.mapValues(t, (v) => {
+    if (!_.isArray(v)) return selectIndex(v, index)
+    else return v[index]
+  })
+}
+
 export function computeElementInstance(
   instace: t.ElementInstance,
   elements: t.IdMap<t.Element>
-): t.Props {
-  const params = _.mapValues(instace.params, (paramElInstance) => {
-    if (!paramElInstance) return paramElInstance
-    return computeElementInstance(paramElInstance, elements)
-  })
- 
+): t.PropsInstance {
+  const params: t.PropsInstance = _.pickBy(
+    _.mapValues(instace.params, (paramElInstance) => {
+      if (!paramElInstance) return paramElInstance
+      return computeElementInstance(paramElInstance, elements)
+    }),
+    (a) => !!a
+  )
+
   const elProps = getElementProps(instace.element, elements),
     result: t.Props = {},
     execOrder = getPropExecOrder(elProps)
@@ -69,12 +79,9 @@ export function computeElementInstance(
   for (const prop of execOrder) {
     result[prop] = elProps[prop].map((p, index) => {
       if (!p) return p
-      return run(p, {
-        ..._.mapValues(params, (param) => _.mapValues(param, (p) => p && p[index])),
-        _: _.mapValues(result, (p) => p && p[index]),
-      })
+      return run(p, selectIndex({ ...params, ...result }, index))
     })
   }
 
-  return result
+  return { ...result, ...params }
 }
