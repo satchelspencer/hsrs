@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react'
+import _ from 'lodash'
+import React, { useEffect, useMemo, useRef } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import {
   autocompletion,
@@ -99,11 +100,23 @@ export default function CodeInput(props: CodeInputProps) {
     ),
   ]
 
+  const onChangeRef = useRef(props.onChange),
+    throttleOnChange = useMemo(
+      () =>
+        _.debounce((value) => {
+          onChangeRef.current?.(value)
+        }, 500),
+      []
+    )
+  useEffect(() => {
+    onChangeRef.current = props.onChange
+  }, [props.onChange])
+
   return (
     <CodeMirror
       ref={editorRef}
       value={props.value}
-      onChange={(v) => setTimeout(() => props.onChange?.(v))}
+      onChange={throttleOnChange}
       extensions={extensions}
       indentWithTab={false}
       style={{ fontSize: 12, flex: 1, minHeight: 25 }}
