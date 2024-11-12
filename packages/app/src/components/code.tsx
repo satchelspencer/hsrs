@@ -63,11 +63,12 @@ export default function CodeInput(props: CodeInputProps) {
   }, [props.varColor])
 
   function variableAutocomplete(context: CompletionContext) {
-    const word = context.matchBefore(/\w*/)
-    if (!word || (word.from === word.to && !context.explicit)) return null
+    const word = context.matchBefore(/\w*/),
+      fullWord = context.matchBefore(/[\w\.]*/)
+    if (!fullWord || !word || (word.from === word.to && !context.explicit)) return null
 
     return {
-      from: word.from,
+      from: fullWord.from,
       options: (props.variables ?? []).map((name) => ({ label: name })),
       validFor: /^\w*$/,
     }

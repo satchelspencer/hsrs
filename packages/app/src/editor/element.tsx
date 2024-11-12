@@ -134,8 +134,8 @@ export function ElementEditor(props: ElementEditorProps) {
               </div>,
 
               <LabelGroup
-                items={Object.keys(element.props)
-                  .filter((l) => _.every(example[l]))
+                items={Object.keys(example)
+                  .filter((l) => _.isArray(example[l]) && _.every(example[l]))
                   .map((id) => [
                     <div className={propName}>{id}</div>,
                     <div>
@@ -146,7 +146,16 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        <Button onClick={() => {}}>
+        <Button
+          onClick={() => {
+            // if (!exampleElement) return
+            // computeElementInstance(
+            //   getElementInstances(exampleElement, elements),
+            //   elements
+            // )
+            console.log(exampleElement && getElementInstances(exampleElement, elements))
+          }}
+        >
           <Icon name="test" />
         </Button>
       </div>

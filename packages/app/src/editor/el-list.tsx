@@ -269,9 +269,6 @@ function ElListActions(props: ElListActionsProps) {
           </Button>
         </>
       )}
-      <Button onClick={() => handleAction('addVirtual')}>
-        <Icon name="new-folder" />
-      </Button>
       <Button onClick={() => handleAction('addNew')}>
         <Icon name="plus" />
       </Button>
