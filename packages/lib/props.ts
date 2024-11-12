@@ -113,6 +113,20 @@ function* arrayGenerator<T>(arr: T[]): Generator<T> {
   }
 }
 
+function getAllElements(instance: t.ElementInstance): string[] {
+  return [
+    instance.element,
+    ...Object.keys(instance.params ?? {}).flatMap((k) =>
+      getAllElements(instance.params![k]!)
+    ),
+  ]
+}
+
+function hasDuplicateElements(instance: t.ElementInstance, exclude: string[]) {
+  const all = _.difference(getAllElements(instance), exclude)
+  return all.length !== _.uniq(all).length
+}
+
 export function* generateElementInstances(
   id: string,
   elements: t.IdMap<t.Element>,
@@ -173,8 +187,18 @@ export function* generateElementInstances(
             (param) => () => generateElementInstances(param, elements, fixedParams)
           )
           for (const child of generatorMapValues(childGenerators)) {
-            yielded = true
-            yield Object.keys(child).length ? { ...instance, params: child } : instance
+            const thisInstance = Object.keys(child).length
+                ? { ...instance, params: child }
+                : instance,
+              hasDupes = hasDuplicateElements(
+                thisInstance,
+                Object.values({ ...childParams, ...fixedParams })
+              )
+
+            if (!hasDupes) {
+              yield thisInstance
+              yielded = true
+            }
           }
         }
       }

@@ -160,12 +160,16 @@ export function ElementEditor(props: ElementEditorProps) {
                       </div>,
                     ])}
                 />
-                <LabelGroup
-                  items={Object.keys(exampleInstance.params ?? {}).map((id) => [
-                    <div className={propName}>{id}</div>,
-                    <div>{elements[exampleInstance.params[id].element].name}</div>,
-                  ])}
-                />
+                {!Object.keys(
+                  _.omit(example, Object.keys(exampleInstance.params ?? {}))
+                ).length && (
+                  <LabelGroup
+                    items={Object.keys(exampleInstance.params ?? {}).map((id) => [
+                      <div className={propName}>{id}</div>,
+                      <div>{elements[exampleInstance.params[id].element].name}</div>,
+                    ])}
+                  />
+                )}
               </>,
             ],
           ]}
