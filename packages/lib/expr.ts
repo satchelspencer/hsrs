@@ -25,6 +25,27 @@ export function run(expr: string, context: any) {
   }
 }
 
+type depsTree = { [propName: string]: string[] }
+
+export function topoSort(deps: depsTree): string[] {
+  const result: string[] = []
+
+  for (const propName in deps) {
+    const toVisit = [propName],
+      order: string[] = []
+
+    while (toVisit.length) {
+      const p = toVisit.pop()!
+      if (result.includes(p) || order.includes(p) || !deps[p]) continue
+      order.push(p)
+      toVisit.push(...deps[p])
+    }
+    result.push(...order.reverse())
+  }
+
+  return result
+}
+
 function getPropExecOrder(props: t.Props): string[] {
   const depsTree: { [propName: string]: string[] } = {}
   for (const propName in props) {
@@ -35,22 +56,7 @@ function getPropExecOrder(props: t.Props): string[] {
     depsTree[propName] = deps
   }
 
-  const result: string[] = []
-
-  for (const propName in depsTree) {
-    const toVisit = [propName],
-      order: string[] = []
-
-    while (toVisit.length) {
-      const p = toVisit.pop()!
-      if (result.includes(p) || order.includes(p)) continue
-      order.push(p)
-      toVisit.push(...depsTree[p])
-    }
-    result.push(...order.reverse())
-  }
-
-  return result
+  return topoSort(depsTree)
 }
 
 function selectIndex(t: t.PropsInstance, index: number) {
@@ -79,7 +85,7 @@ export function computeElementInstance(
   for (const prop of execOrder) {
     result[prop] = elProps[prop].map((p, index) => {
       if (!p) return p
-      return run(p, selectIndex({ ...params, ...result }, index))
+      return run(p, selectIndex({ ...params, _: result }, index))
     })
   }
 
