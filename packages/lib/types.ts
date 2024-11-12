@@ -4,6 +4,7 @@ export interface Element {
   props: Props
   params?: Params
   virtual?: true
+  constraint?: string
 }
 
 export type Params = IdMap<string>

@@ -12,7 +12,6 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
-import { getElementInstances, getNonVirtualDescendents } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -33,6 +32,10 @@ export function ElementEditor(props: ElementEditorProps) {
       r.selectors.selectElementPropVariables(state, props.id)
     )
 
+  const elementInstanceGenerator = r.useSelector((s) =>
+    r.selectors.selectElementInstanceGenerator(s, props.id)
+  )
+
   const dispatch = r.useDispatch(),
     handleChange = (element: t.Element | undefined) =>
       dispatch(
@@ -43,16 +46,13 @@ export function ElementEditor(props: ElementEditorProps) {
 
   const elements = r.useSelector((state) => state.deck.elements),
     [exampleSeed, setExampleSeed] = useState(0),
-    exampleElement = useMemo(() => {
-      const desc = getNonVirtualDescendents(props.id, elements)
-      return _.sample(desc)
-    }, [exampleSeed]),
-    example = useMemo(() => {
-      return (
-        exampleElement &&
-        computeElementInstance(getElementInstances(exampleElement, elements), elements)
-      )
-    }, [element.params, exampleElement, exampleSeed])
+    { example, exampleInstance } = useMemo(() => {
+      const next = elementInstanceGenerator.next().value
+      return {
+        example: next && computeElementInstance(next, elements),
+        exampleInstance: next,
+      }
+    }, [element.params, exampleSeed])
 
   return (
     <>
@@ -112,8 +112,8 @@ export function ElementEditor(props: ElementEditorProps) {
             [
               'Params',
               <ElementParamsEditor
-                value={element.params ?? {}}
-                onChange={(p) => handleChange({ ...element, params: p })}
+                value={element}
+                onChange={handleChange}
                 fixed={elementParams}
                 onOpenElement={(id) =>
                   dispatch(
@@ -125,6 +125,23 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
+            !!Object.keys(element.params ?? {}).length && [
+              'Constrain',
+              element.constraint === undefined ? (
+                <Button onClick={() => handleChange({ ...element, constraint: '' })}>
+                  <Icon name="plus" />
+                  Add
+                </Button>
+              ) : (
+                <CodeInput
+                  value={element.constraint}
+                  placeholder="Enter parameters..."
+                  onChange={(constraint) => handleChange({ ...element, constraint })}
+                  onClear={() => handleChange(_.omit(element, 'constraint'))}
+                />
+              ),
+              false,
+            ],
             !!example && [
               <div className={exampleHead}>
                 Example
@@ -132,28 +149,35 @@ export function ElementEditor(props: ElementEditorProps) {
                   <Icon name="refresh" />
                 </Button>
               </div>,
-
-              <LabelGroup
-                items={Object.keys(example)
-                  .filter((l) => _.isArray(example[l]) && _.every(example[l]))
-                  .map((id) => [
+              <>
+                <LabelGroup
+                  items={Object.keys(example)
+                    .filter((l) => _.isArray(example[l]) && _.every(example[l]))
+                    .map((id) => [
+                      <div className={propName}>{id}</div>,
+                      <div>
+                        {example[id]?.[0]} {example[id]?.[1]}
+                      </div>,
+                    ])}
+                />
+                <LabelGroup
+                  items={Object.keys(exampleInstance.params ?? {}).map((id) => [
                     <div className={propName}>{id}</div>,
-                    <div>
-                      {example[id]?.[0]} {example[id]?.[1]}
-                    </div>,
+                    <div>{elements[exampleInstance.params[id].element].name}</div>,
                   ])}
-              />,
+                />
+              </>,
             ],
           ]}
         />
         <Button
           onClick={() => {
-            // if (!exampleElement) return
-            // computeElementInstance(
-            //   getElementInstances(exampleElement, elements),
-            //   elements
-            // )
-            console.log(exampleElement && getElementInstances(exampleElement, elements))
+            console.log(example)
+            // const gen = generateElementInstances(props.id, elements)
+            // let i = 0
+            // while (i++ < 10) {
+            //   console.log(JSON.stringify(gen.next().value))
+            // }
           }}
         >
           <Icon name="test" />
@@ -307,21 +331,28 @@ const propTupleInnerWrapper = cx(css`
 `)
 
 interface ElementParamsEditorProps {
-  value: t.IdMap<string>
-  onChange: (props: t.IdMap<string>) => void
+  value: t.Element
+  onChange: (props: t.Element) => void
   onOpenElement?: (id: string) => void
   fixed?: t.Params
 }
 
 function ElementParamsEditor(props: ElementParamsEditorProps) {
+  const handleChange = (value: t.Element) => {
+    const params = value.params ?? {}
+    const newValue: t.Element = { ...value, params }
+    if (!Object.keys(params).length) delete newValue.params
+    props.onChange(newValue)
+  }
+
   return (
     <MapEditor
-      value={props.value}
-      onChange={props.onChange}
+      value={props.value.params ?? {}}
+      onChange={(params) => handleChange({ ...props.value, params })}
       fixed={props.fixed}
       defaultValue={''}
       placeholder="new param name..."
-      renderInput={({ value, onChange, onDelete, placeholder }) => (
+      renderInput={({ value, onChange, onDelete, placeholder, key }) => (
         <div className={paramInnerWrapper}>
           <ElPicker
             value={value}

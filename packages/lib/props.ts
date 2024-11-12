@@ -30,14 +30,17 @@ export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
 
 export function getElementParamsAndProps(
   elementId: string,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  depth = 10
 ): t.PropsInstance {
   const res: t.PropsInstance = {}
+
+  if (!depth) return res
 
   Object.assign(res, getElementProps(elementId, elements))
 
   const params = _.mapValues(getElementParams(elementId, elements), (paramElement) =>
-    getElementParamsAndProps(paramElement, elements)
+    getElementParamsAndProps(paramElement, elements, depth - 1)
   )
 
   Object.assign(res, params)
@@ -79,27 +82,6 @@ export function getElementParams(elementId: string, elements: t.IdMap<t.Element>
   return res
 }
 
-export function getElementInstances(
-  id: string,
-  elements: t.IdMap<t.Element>,
-  parents: string[] = []
-): t.ElementInstance {
-  const params = _.mapValues(getElementParams(id, elements), (paramElId) => {
-    const matchingEl = _.shuffle(Object.keys(elements)).find(
-      (id) =>
-        !elements[id].virtual &&
-        getElementAndParents(id, elements).includes(paramElId) &&
-        !parents.includes(id)
-    )
-    return matchingEl && parents.length < 10
-      ? getElementInstances(matchingEl, elements, [...parents, id])
-      : undefined
-  })
-  const instance: t.ElementInstance = { element: id }
-  if (Object.keys(params).length) instance.params = params
-  return instance
-}
-
 export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
   const ap = getElementAndParents(a, elements),
     bp = getElementAndParents(b, elements)
@@ -133,17 +115,28 @@ function* arrayGenerator<T>(arr: T[]): Generator<T> {
 
 export function* generateElementInstances(
   id: string,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  fixedParams?: t.Params
 ): Generator<t.ElementInstance> {
   const descendents = _.shuffle(getNonVirtualDescendents(id, elements))
+
+  let yielded = false
   for (const elementId of descendents) {
-    const instance: t.ElementInstance = { element: elementId }
+    const instance: t.ElementInstance = { element: elementId },
+      constraint = elements[elementId].constraint ?? ''
 
     const params = getElementParams(elementId, elements)
     const descOptions: { [paramName: string]: () => Generator<string> } = {}
     for (const paramName in params)
       descOptions[paramName] = () =>
-        arrayGenerator(_.shuffle(getNonVirtualDescendents(params[paramName], elements)))
+        arrayGenerator(
+          _.shuffle(
+            getNonVirtualDescendents(
+              fixedParams?.[paramName] ?? params[paramName],
+              elements
+            )
+          )
+        )
 
     for (const selectedOptions of generatorMapValues(descOptions)) {
       const childParams: t.Params = {}
@@ -152,6 +145,8 @@ export function* generateElementInstances(
       for (const paramName in selectedOptions) {
         const thisChildParams = getElementParams(selectedOptions[paramName], elements)
         for (const cParamName in thisChildParams) {
+          if (!constraint.includes(cParamName)) continue
+
           const cParamValue = thisChildParams[cParamName],
             common = childParams[cParamName]
               ? satisfies(childParams[cParamName], cParamValue, elements)
@@ -167,16 +162,29 @@ export function* generateElementInstances(
       }
 
       if (!failed) {
-        const childGenerators = _.mapValues(
-          selectedOptions,
-          (param) => () => generateElementInstances(param, elements)
+        const fixedGenerators = _.mapValues(
+          childParams,
+          (param) => () =>
+            arrayGenerator(_.shuffle(getNonVirtualDescendents(param, elements)))
         )
-        for (const child of generatorMapValues(childGenerators)) {
-          yield Object.keys(child).length ? { ...instance, params: child } : instance
+        for (const fixedParams of generatorMapValues(fixedGenerators)) {
+          const childGenerators = _.mapValues(
+            selectedOptions,
+            (param) => () => generateElementInstances(param, elements, fixedParams)
+          )
+          for (const child of generatorMapValues(childGenerators)) {
+            yielded = true
+            yield Object.keys(child).length ? { ...instance, params: child } : instance
+          }
         }
       }
     }
   }
+
+  if (yielded && !fixedParams)
+    for (const looped of generateElementInstances(id, elements)) {
+      yield looped
+    }
 }
 
 export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element>) {

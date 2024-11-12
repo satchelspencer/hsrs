@@ -4,7 +4,11 @@ import { css, cx } from '@emotion/css'
 import * as styles from '../styles'
 
 interface LabelGroupProps {
-  items: ([React.ReactNode, React.ReactNode] | false)[]
+  items: (
+    | [React.ReactNode, React.ReactNode]
+    | [React.ReactNode, React.ReactNode, boolean]
+    | false
+  )[]
   vert?: boolean
   flush?: boolean
 }
@@ -16,6 +20,7 @@ export function LabelGroup(props: LabelGroupProps) {
       {props.items.map((item, i) => (
         <LabelField
           vert={props.vert}
+          vertOverride={item[2]}
           flush={props.flush}
           key={i}
           title={item[0]}
@@ -33,12 +38,14 @@ interface LabelFieldProps {
   children: React.ReactNode
   altNames?: React.ReactNode[]
   vert?: boolean
+  vertOverride?: boolean
   flush?: boolean
 }
 
 function LabelField(props: LabelFieldProps) {
+  const ownVert = !!(props.vertOverride ?? props.vert)
   return (
-    <div className={labelFieldWrapper(!!props.vert)}>
+    <div className={labelFieldWrapper(ownVert)}>
       <div className={labelFieldTitle}>
         {props.title}
         {!props.vert &&
@@ -48,9 +55,7 @@ function LabelField(props: LabelFieldProps) {
             </div>
           ))}
       </div>
-      <div className={labelFieldChildren(!!props.vert, !!props.flush)}>
-        {props.children}
-      </div>
+      <div className={labelFieldChildren(ownVert, !!props.flush)}>{props.children}</div>
     </div>
   )
 }

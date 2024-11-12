@@ -78,6 +78,7 @@ export default function CodeInput(props: CodeInputProps) {
     const editorState = editorRef.current?.view?.state
     if (editorState && editorState.doc.length === 0) {
       props.onClear?.()
+      throttleOnChange.cancel()
     }
     return false
   }

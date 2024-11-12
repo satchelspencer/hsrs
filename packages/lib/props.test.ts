@@ -1,7 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import { getElementAndParents, getElementProps, generateElementInstances } from './props'
-import { Element, IdMap } from './types'
+import { Element, ElementInstance, IdMap } from './types'
 import _ from 'lodash'
+
+const renderInstance = (instance: ElementInstance, depth = 0) => {
+  const pad = new Array(depth).fill('  ').join('')
+  return `${instance.element}${
+    !instance.params
+      ? ''
+      : `(\n${Object.keys(instance.params)
+          .map(
+            (pname) =>
+              `${pad}  ${pname}: ${renderInstance(instance.params![pname]!, depth + 1)}`
+          )
+          .join(',\n')}\n${pad})`
+  }`
+}
 
 describe('getElementAndParents', () => {
   it('should resolve deep parents with circular refz', async () => {
@@ -31,7 +45,7 @@ describe('resolveProps', () => {
 })
 
 describe('elementInstances', () => {
-  it.only('should resolve deep props ', async () => {
+  it('should resolve deep props ', async () => {
     const elements: IdMap<Element> = {
         verb: { name: 'verb', virtual: true, parents: [], props: {} },
         eat: { name: 'eat', parents: ['verb'], props: {} },
@@ -109,19 +123,26 @@ describe('elementInstances', () => {
           parents: [],
           props: {},
           params: { vsub: 'verbSubject', vobj: 'verbObject' },
+          constraint: 'verb'
+        },
+        sentenceB: {
+          name: 'sent',
+          parents: [],
+          props: {},
+          params: { vobj: 'pouncePillow' },
         },
         condition: {
           name: 'condition',
           parents: [],
           props: {},
-          params: { because: 'sentence', this: 'sentence' },
+          params: { this: 'sentenceB', because: 'sentence',  },
         },
       },
       id = 'condition'
     let i = 0
     for (const g of generateElementInstances(id, elements)) {
-      console.log(JSON.stringify(g, null, 2))
-      //break
+      console.log(renderInstance(g))
+      break
     }
 
     expect({}).toEqual({})

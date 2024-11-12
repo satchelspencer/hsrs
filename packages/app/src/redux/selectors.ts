@@ -1,6 +1,6 @@
 import {
   getElementProps,
-  getElementInstances,
+  generateElementInstances,
   getElementParams,
   getElementParamsAndProps,
   getVariables,
@@ -55,10 +55,10 @@ export const selectElementPropVariables = createSelector(
   }
 )
 
-export const selectElementInstancesById = createSelector(
+export const selectElementInstanceGenerator = createSelector(
   [(state, id: string) => id, (s) => s.deck.elements],
   (elementId, elements) => {
-    return computeElementInstance(getElementInstances(elementId, elements), elements)
+    return generateElementInstances(elementId, elements)
   }
 )
 
