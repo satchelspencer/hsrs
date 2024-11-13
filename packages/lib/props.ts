@@ -113,17 +113,15 @@ function* arrayGenerator<T>(arr: T[]): Generator<T> {
   }
 }
 
-function getAllElements(instance: t.ElementInstance): string[] {
-  return [
-    instance.element,
-    ...Object.keys(instance.params ?? {}).flatMap((k) =>
-      getAllElements(instance.params![k]!)
-    ),
-  ]
+function getAllLeafElements(instance: t.ElementInstance): string[] {
+  const params = Object.keys(instance.params ?? {})
+  return params.length
+    ? params.flatMap((k) => getAllLeafElements(instance.params![k]!))
+    : [instance.element]
 }
 
 function hasDuplicateElements(instance: t.ElementInstance, exclude: string[]) {
-  const all = _.difference(getAllElements(instance), exclude)
+  const all = _.difference(getAllLeafElements(instance), exclude)
   return all.length !== _.uniq(all).length
 }
 
