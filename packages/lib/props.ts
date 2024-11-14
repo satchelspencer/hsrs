@@ -249,3 +249,55 @@ export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Car
   }
   return cards
 }
+
+function getResolvedElements(
+  id: string,
+  elements: t.IdMap<t.Element>,
+  paramName: string
+): string[] {
+  const paramValue = getElementParams(id, elements)
+  const element = elements[id]
+  if (!element.virtual) return paramValue[paramName] ? [paramValue[paramName]] : []
+  const res: string[] = []
+  for (const cid in elements) {
+    const cel = elements[cid]
+    if (cel.parents.includes(id)) {
+      res.push(...getResolvedElements(cid, elements, paramName))
+    }
+  }
+  return _.uniq(res)
+}
+
+function findMissingElements(
+  id: string,
+  elements: t.IdMap<t.Element>,
+  resolved: string[]
+): string[] {
+  const element = elements[id],
+    parents = getElementAndParents(id, elements)
+  if (!element.virtual) return _.intersection(resolved, parents).length ? [] : [id]
+  const res: string[] = []
+  let whollyMissing = true
+  for (const cid in elements) {
+    const cel = elements[cid]
+    if (cel.parents.includes(id)) {
+      const missing = findMissingElements(cid, elements, resolved)
+      if (missing.length !== 1 || missing[0] !== cid) whollyMissing = false
+      res.push(...missing)
+    }
+  }
+  return whollyMissing && res.length ? [id] : res
+}
+
+export function findMissingInstances(id: string, elements: t.IdMap<t.Element>) {
+  const params = getElementParams(id, elements)
+  for (const paramName in params) {
+    const resolved = getResolvedElements(id, elements, paramName),
+      missing = findMissingElements(params[paramName], elements, resolved)
+    console.log(
+      paramName,
+      missing.map((e) => elements[e].name)
+    )
+  }
+  return {}
+}

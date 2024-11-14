@@ -4,9 +4,9 @@ import {
   getElementParams,
   getElementParamsAndProps,
   getVariables,
+  getNonVirtualDescendents,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
-import { computeElementInstance } from '@hsrs/lib/expr'
 import _ from 'lodash'
 import { Selection } from './ui'
 
@@ -72,5 +72,12 @@ export const selectElementIdsByParent = createSelector(
         keys.push(key)
     }
     return keys
+  }
+)
+
+export const selectNonVirtialElementIdsByParent = createSelector(
+  [(state) => state.deck.elements, (state, parentId?: string) => parentId],
+  (elements, parentId) => {
+    return parentId ? getNonVirtualDescendents(parentId, elements) : []
   }
 )

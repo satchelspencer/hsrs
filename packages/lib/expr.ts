@@ -3,7 +3,7 @@ import _ from 'lodash'
 import * as t from './types'
 import { getElementProps } from './props'
 
-jexl.addTransform('replace', (val: string, search, replace) =>
+jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replaceAll(search, replace)
 )
 

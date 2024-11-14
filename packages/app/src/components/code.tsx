@@ -65,8 +65,8 @@ export default function CodeInput(props: CodeInputProps) {
   }, [props.varColor])
 
   function variableAutocomplete(context: CompletionContext) {
-    const word = context.matchBefore(/\w*/),
-      fullWord = context.matchBefore(/[\w\.]*/)
+    const word = context.matchBefore(/[\w-]*/),
+      fullWord = context.matchBefore(/[\w-\.]*/)
     if (!fullWord || !word || (word.from === word.to && !context.explicit)) return null
 
     return {

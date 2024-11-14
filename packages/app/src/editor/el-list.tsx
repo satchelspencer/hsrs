@@ -17,9 +17,14 @@ interface ElementsListProps {
 }
 
 export function ElementsList(props: ElementsListProps) {
-  const elementIds = r.useSelector((state) =>
+  const [showVirtual, setShowVirtual] = useState(true),
+    allElementIds = r.useSelector((state) =>
       r.selectors.selectElementIdsByParent(state, props.parentId)
     ),
+    nonVirtualElementIds = r.useSelector((state) =>
+      r.selectors.selectNonVirtialElementIdsByParent(state, props.parentId)
+    ),
+    elementIds = showVirtual ? allElementIds : nonVirtualElementIds,
     elements = r.useSelector((s) => s.deck.elements),
     nextSelection = r.useSelector((s) =>
       r.selectors.selectSelectionByIndex(s, props.index + 1)
@@ -31,6 +36,9 @@ export function ElementsList(props: ElementsListProps) {
       <div className={sidebarListHeader}>
         <div className={sideBarListInner}>
           <div>{props.parentId ? 'Children' : 'Base'}</div>
+          <Button onClick={() => setShowVirtual((v) => !v)}>
+            <Icon name={showVirtual ? 'folder-eye' : 'folder-off'} />
+          </Button>
         </div>
         <ElListActions {...props} />
       </div>
@@ -163,11 +171,12 @@ function ElListActions(props: ElListActionsProps) {
     dispatch = r.useDispatch(),
     elements = r.useSelector((s) => s.deck.elements)
 
-  const handleAdd = (virtual: boolean, name: string) => {
+  const handleAdd = (virtual: boolean, name: string, copy?: string) => {
     const id = uid(),
       element: Partial<Element> = {
+        ...(copy ? elements[copy] : {}),
         parents: props.parentId ? [props.parentId] : [],
-        name,
+        name: copy ? elements[copy].name + '-copy' : name,
       }
     if (virtual) element.virtual = true
     dispatch(r.actions.createElement({ id, element }))
@@ -186,6 +195,13 @@ function ElListActions(props: ElListActionsProps) {
           dispatch(
             r.actions.deleteElement({ id: selection.id, fromParentId: props.parentId })
           )
+        }
+      },
+    },
+    copy: {
+      callback: (name) => {
+        for (const selection of nextSelection) {
+          handleAdd(false, '', selection.id)
         }
       },
     },
@@ -251,6 +267,9 @@ function ElListActions(props: ElListActionsProps) {
           </Button>
           <Button onClick={() => handleAction('move')}>
             <Icon name="move" />
+          </Button>
+          <Button onClick={() => handleAction('copy')}>
+            <Icon name="copy" />
           </Button>
         </>
       )}

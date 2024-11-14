@@ -12,6 +12,7 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
+import { findMissingInstances } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -174,18 +175,21 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        <Button
+        {/* <Button
           onClick={() => {
-            console.log(example)
-            // const gen = generateElementInstances(props.id, elements)
-            // let i = 0
-            // while (i++ < 10) {
-            //   console.log(JSON.stringify(gen.next().value))
-            // }
+            console.log(
+              JSON.stringify(
+                _.mapValues(findMissingInstances(props.id, elements), (v) =>
+                  v.map((i) => elements[i].name)
+                ),
+                null,
+                2
+              )
+            )
           }}
         >
           <Icon name="test" />
-        </Button>
+        </Button> */}
       </div>
       {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
     </>
@@ -277,6 +281,7 @@ function ElPicker(props: ElPickerProps) {
       onChange={(str) => {
         props.onChange(Object.keys(elements).find((e) => elements[e]?.name === str))
       }}
+      throttle
     />
   )
 }
@@ -300,7 +305,7 @@ function PropsEditor(props: PropsEditorProps) {
       placeholder="new property name..."
       renderInput={({ value, onChange, onDelete, placeholder, key }) => {
         const vert = _.some(value, (v) => {
-          const m = v??placeholder
+          const m = v ?? placeholder
           return m && m.length > 25
         })
         return (
