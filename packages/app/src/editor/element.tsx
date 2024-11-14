@@ -71,6 +71,7 @@ export function ElementEditor(props: ElementEditorProps) {
               'Name',
               <CodeInput
                 value={element.name}
+                throttle
                 onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
               />,
             ],
@@ -160,9 +161,8 @@ export function ElementEditor(props: ElementEditorProps) {
                       </div>,
                     ])}
                 />
-                {!Object.keys(
-                  _.omit(example, Object.keys(exampleInstance.params ?? {}))
-                ).length && (
+                {!Object.keys(_.omit(example, Object.keys(exampleInstance.params ?? {})))
+                  .length && (
                   <LabelGroup
                     items={Object.keys(exampleInstance.params ?? {}).map((id) => [
                       <div className={propName}>{id}</div>,
@@ -243,9 +243,12 @@ function ElListPicker(props: ElListPickerProps) {
       value={raw}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      variables={Object.values(elements).map((e) => e.name)}
+      variables={Object.values(elements)
+        .filter((e) => e.virtual)
+        .map((e) => e.name)}
       onClear={props.onClear}
       varColor="#689d6a"
+      throttle
       onChange={(str) => {
         setRaw(str ?? '')
         props.onChange(raw2els(str ?? '', elements))
@@ -295,44 +298,57 @@ function PropsEditor(props: PropsEditorProps) {
       fixed={props.fixed}
       defaultValue={[]}
       placeholder="new property name..."
-      renderInput={({ value, onChange, onDelete, placeholder, key }) => (
-        <div className={propTupleWrapper}>
-          {[0, 1].map((index) => (
-            <div key={index} className={propTupleInnerWrapper}>
-              <CodeInput
-                value={value?.[index] ?? ''}
-                onChange={(v) => {
-                  const newValue = [...(value ?? [null, null])]
-                  newValue[index] = v || null
-                  onChange(newValue)
-                }}
-                onClear={() => {
-                  if (!value?.find((v) => !!v)) onDelete()
-                }}
-                placeholder={placeholder?.[index] ?? ''}
-                varColor={props.varColor}
-                variables={_.without(props.variables, '_.' + key)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      renderInput={({ value, onChange, onDelete, placeholder, key }) => {
+        const vert = _.some(value, (v) => {
+          const m = v??placeholder
+          return m && m.length > 25
+        })
+        return (
+          <div className={propTupleWrapper(vert)}>
+            {[0, 1].map((index) => (
+              <div key={index} className={propTupleInnerWrapper(vert)}>
+                <CodeInput
+                  value={value?.[index] ?? ''}
+                  onChange={(v) => {
+                    const newValue = [...(value ?? [null, null])]
+                    newValue[index] = v || null
+                    onChange(newValue)
+                  }}
+                  onClear={() => {
+                    if (!value?.find((v) => !!v)) onDelete()
+                  }}
+                  placeholder={placeholder?.[index] ?? ''}
+                  varColor={props.varColor}
+                  variables={_.without(props.variables, '_.' + key)}
+                  throttle
+                  multiline
+                />
+              </div>
+            ))}
+          </div>
+        )
+      }}
     />
   )
 }
 
-const propTupleWrapper = cx(css`
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
-`)
+const propTupleWrapper = (vert: boolean) =>
+  cx(css`
+    display: flex;
+    flex-direction: ${vert ? 'column' : 'row'};
+    gap: 6px;
+  `)
 
-const propTupleInnerWrapper = cx(css`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 50%;
-`)
+const propTupleInnerWrapper = (vert: boolean) =>
+  cx(css`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    ${!vert &&
+    css`
+      max-width: 50%;
+    `}
+  `)
 
 interface ElementParamsEditorProps {
   value: t.Element

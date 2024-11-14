@@ -196,24 +196,9 @@ function ElListActions(props: ElListActionsProps) {
     addNew: {
       callback: (name) => {
         const existing = Object.keys(elements).find((id) => elements[id].name === name)
-        if (existing) {
-          dispatch(
-            r.actions.updateElement({
-              id: existing,
-              element: {
-                ...elements[existing],
-                parents: _.uniq(
-                  _.compact([...elements[existing].parents, props.parentId])
-                ),
-              },
-            })
-          )
-        } else handleAdd(false, name)
+        if (!existing) handleAdd(false, name)
       },
-      string: {
-        placeholder: 'Element name...',
-        variables: Object.keys(elements).map((id) => elements[id].name),
-      },
+      string: { placeholder: 'New element name...' },
     },
     move: {
       callback: (name) => {

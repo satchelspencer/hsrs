@@ -8,7 +8,7 @@ import {
 } from '@codemirror/autocomplete'
 import { LRLanguage, LanguageSupport } from '@codemirror/language'
 import { parser } from '@lezer/javascript'
-import { keymap } from '@codemirror/view'
+import { keymap, EditorView } from '@codemirror/view'
 import { injectGlobal } from '@emotion/css'
 import * as styles from '../styles'
 import { tags } from '@lezer/highlight'
@@ -47,6 +47,8 @@ interface CodeInputProps {
   placeholder?: string
   autoFocus?: boolean
   varColor?: string
+  throttle?: boolean
+  multiline?: boolean
 }
 
 export default function CodeInput(props: CodeInputProps) {
@@ -87,12 +89,11 @@ export default function CodeInput(props: CodeInputProps) {
     if (props.onEnter) {
       props.onEnter?.()
       return true
-    } else return false
+    } else return props.multiline ? false : true
   }
 
   const extensions = [
     extension,
-    autocompletion({ override: [variableAutocomplete] }),
     Prec.highest(
       keymap.of([
         { key: 'Tab', run: acceptCompletion },
@@ -100,14 +101,19 @@ export default function CodeInput(props: CodeInputProps) {
         { key: 'Enter', run: handleEnter },
       ])
     ),
+    autocompletion({ override: [variableAutocomplete], activateOnTypingDelay: 500 }),
   ]
+  if (props.multiline) extensions.push(EditorView.lineWrapping)
 
   const onChangeRef = useRef(props.onChange),
     throttleOnChange = useMemo(
       () =>
-        _.debounce((value) => {
-          onChangeRef.current?.(value)
-        }, 500),
+        _.debounce(
+          (value) => {
+            onChangeRef.current?.(value)
+          },
+          props.throttle ? 500 : 0
+        ),
       []
     )
   useEffect(() => {
