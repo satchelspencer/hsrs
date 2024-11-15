@@ -125,6 +125,46 @@ function hasDuplicateElements(instance: t.ElementInstance, exclude: string[]) {
   return all.length !== _.uniq(all).length
 }
 
+export function generateElementParams(
+  elementId: string,
+  elements: t.IdMap<t.Element>,
+  fixedParams?: t.Params
+) {
+  const params = getElementParams(elementId, elements)
+  const descOptions: { [paramName: string]: () => Generator<string> } = {}
+  for (const paramName in params)
+    descOptions[paramName] = () =>
+      arrayGenerator(
+        _.shuffle(
+          getNonVirtualDescendents(
+            fixedParams?.[paramName] ?? params[paramName],
+            elements
+          )
+        )
+      )
+  return generatorMapValues(descOptions)
+}
+
+export function* shuffleGenerator<T>(
+  generator: Generator<T>,
+  blockSize = 100
+): Generator<T> {
+  let done = false
+  while (!done) {
+    let items: T[] = []
+    for (let i = 0; i < blockSize; i++) {
+      const next = generator.next()
+      if (next.done) {
+        done = true
+        break
+      }
+      items.push(next.value)
+    }
+    items = _.shuffle(items)
+    for (const item of items) yield item
+  }
+}
+
 export function* generateElementInstances(
   id: string,
   elements: t.IdMap<t.Element>,
@@ -137,52 +177,45 @@ export function* generateElementInstances(
     const instance: t.ElementInstance = { element: elementId },
       constraint = elements[elementId].constraint ?? ''
 
-    const params = getElementParams(elementId, elements)
-    const descOptions: { [paramName: string]: () => Generator<string> } = {}
-    for (const paramName in params)
-      descOptions[paramName] = () =>
-        arrayGenerator(
-          _.shuffle(
-            getNonVirtualDescendents(
-              fixedParams?.[paramName] ?? params[paramName],
-              elements
-            )
-          )
-        )
-
-    for (const selectedOptions of generatorMapValues(descOptions)) {
+    for (const selectedOptions of generateElementParams(
+      elementId,
+      elements,
+      fixedParams
+    )) {
       const childParams: t.Params = {}
 
-      let failed = false
-      for (const paramName in selectedOptions) {
-        const thisChildParams = getElementParams(selectedOptions[paramName], elements)
-        for (const cParamName in thisChildParams) {
-          if (!constraint.includes(cParamName)) continue
-
-          const cParamValue = thisChildParams[cParamName],
-            common = childParams[cParamName]
-              ? satisfies(childParams[cParamName], cParamValue, elements)
-              : cParamValue
-
-          if (common) childParams[cParamName] = common
-          else {
-            failed = true
-            break
-          }
-        }
-        if (failed) break
-      }
-
-      if (!failed) {
-        const fixedGenerators = _.mapValues(
-          childParams,
-          (param) => () =>
-            arrayGenerator(_.shuffle(getNonVirtualDescendents(param, elements)))
+      const childParamsGenerator = generatorMapValues(
+        _.mapValues(
+          selectedOptions,
+          (option) => () => generateElementParams(option, elements)
         )
-        for (const fixedParams of generatorMapValues(fixedGenerators)) {
+      )
+
+      for (const nestedChildParams of childParamsGenerator) {
+        let failed = false
+        for (const paramName in nestedChildParams) {
+          const thisChildParams = nestedChildParams[paramName]
+          for (const cParamName in thisChildParams) {
+            if (!constraint.includes(cParamName)) continue
+
+            const cParamValue = thisChildParams[cParamName],
+              common = childParams[cParamName]
+                ? satisfies(childParams[cParamName], cParamValue, elements)
+                : cParamValue
+
+            if (common) childParams[cParamName] = common
+            else {
+              failed = true
+              break
+            }
+          }
+          if (failed) break
+        }
+        if (!failed) {
           const childGenerators = _.mapValues(
             selectedOptions,
-            (param) => () => generateElementInstances(param, elements, fixedParams)
+            (param, paramName) => () =>
+              generateElementInstances(param, elements, nestedChildParams[paramName])
           )
           for (const child of generatorMapValues(childGenerators)) {
             const thisInstance = Object.keys(child).length
@@ -191,9 +224,12 @@ export function* generateElementInstances(
               hasDupes = hasDuplicateElements(
                 thisInstance,
                 Object.values({ ...childParams, ...fixedParams })
+              ),
+              hasEmptyProps = _.some(elements[thisInstance.element].props, (p) =>
+                _.some(p, (p) => p === 'null')
               )
 
-            if (!hasDupes) {
+            if (!hasDupes && !hasEmptyProps) {
               yield thisInstance
               yielded = true
             }
@@ -291,13 +327,11 @@ function findMissingElements(
 
 export function findMissingInstances(id: string, elements: t.IdMap<t.Element>) {
   const params = getElementParams(id, elements)
+  const res: { [n: string]: string[] } = {}
   for (const paramName in params) {
     const resolved = getResolvedElements(id, elements, paramName),
       missing = findMissingElements(params[paramName], elements, resolved)
-    console.log(
-      paramName,
-      missing.map((e) => elements[e].name)
-    )
+    res[paramName] = missing
   }
-  return {}
+  return res
 }
