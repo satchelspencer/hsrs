@@ -5,6 +5,7 @@ import {
   getElementParamsAndProps,
   getVariables,
   getNonVirtualDescendents,
+  shuffleGenerator,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import _ from 'lodash'
@@ -24,6 +25,15 @@ export const selectSelectionByIndex = createSelector(
   [selectSelections, (state, index: number) => index],
   (selections, index): Selection[] => {
     return selections[index]
+  }
+)
+
+export const selectLastJumpSelectionByIndex = createSelector(
+  [selectSelections, (state, index: number) => index],
+  (selections, index): Selection[] | undefined => {
+    return selections[
+      _.take(selections, index).findLastIndex((s) => s.length === 1 && s[0].jump) - 1
+    ]
   }
 )
 
@@ -58,7 +68,7 @@ export const selectElementPropVariables = createSelector(
 export const selectElementInstanceGenerator = createSelector(
   [(state, id: string) => id, (s) => s.deck.elements],
   (elementId, elements) => {
-    return generateElementInstances(elementId, elements)
+    return shuffleGenerator(generateElementInstances(elementId, elements))
   }
 )
 

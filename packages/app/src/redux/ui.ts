@@ -4,7 +4,7 @@ export type UiState = {
   selections: Selection[][]
 }
 
-export type Selection = { type: 'element' | 'view'; id: string }
+export type Selection = { type: 'element' | 'view'; id: string; jump?: boolean }
 
 const uiInit: UiState = {
   selections: [],

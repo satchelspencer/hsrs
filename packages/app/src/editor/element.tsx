@@ -55,17 +55,47 @@ export function ElementEditor(props: ElementEditorProps) {
       }
     }, [element.params, exampleSeed])
 
+  const [searching, setSearching] = useState(false)
+
   return (
     <>
       <div className={editorWrapper}>
-        <Button
-          className={backButton}
-          onClick={() =>
-            dispatch(r.actions.setSelection({ index: props.index, selection: [] }))
-          }
-        >
-          <Icon name="back" />
-        </Button>
+        <div className={editorHeader}>
+          <Button
+            className={backButton}
+            onClick={() =>
+              dispatch(r.actions.setSelection({ index: props.index, selection: [] }))
+            }
+          >
+            <Icon name="back" />
+          </Button>
+          {searching ? (
+            <div style={{ minWidth: 150, display: 'flex' }}>
+              <ElPicker
+                value={undefined}
+                autoFocus
+                onChange={(value) => {
+                  if (value) {
+                    dispatch(
+                      r.actions.setSelection({
+                        index: props.index + 1,
+                        selection: [{ id: value, type: 'element', jump: true }],
+                      })
+                    )
+                    setSearching(false)
+                  }
+                }}
+                onClear={() => setSearching(false)}
+                onBlur={() => setSearching(false)}
+                placeholder={'Open element...'}
+              />
+            </div>
+          ) : (
+            <Button className={backButton} onClick={() => setSearching(true)}>
+              <Icon name="caret-right" />
+            </Button>
+          )}
+        </div>
         <LabelGroup
           items={[
             [
@@ -175,7 +205,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        {/* <Button
+        <Button
           onClick={() => {
             console.log(
               JSON.stringify(
@@ -189,7 +219,7 @@ export function ElementEditor(props: ElementEditorProps) {
           }}
         >
           <Icon name="test" />
-        </Button> */}
+        </Button>
       </div>
       {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
     </>
@@ -215,6 +245,13 @@ const editorWrapper = cx(css`
   &:not(:last-child) {
     border-bottom: 1px solid ${styles.color(0.93)};
   }
+`)
+
+const editorHeader = cx(css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 25px;
 `)
 
 interface ElListPickerProps {
@@ -253,6 +290,7 @@ function ElListPicker(props: ElListPickerProps) {
       onClear={props.onClear}
       varColor="#689d6a"
       throttle
+      multiline
       onChange={(str) => {
         setRaw(str ?? '')
         props.onChange(raw2els(str ?? '', elements))
@@ -265,7 +303,9 @@ interface ElPickerProps {
   value: string | undefined
   onChange: (value: string | undefined) => void
   onClear?: () => void
+  onBlur?: () => void
   placeholder?: string
+  autoFocus?: boolean
 }
 
 function ElPicker(props: ElPickerProps) {
@@ -273,11 +313,13 @@ function ElPicker(props: ElPickerProps) {
 
   return (
     <CodeInput
+      autoFocus={props.autoFocus}
       value={elements[props.value ?? '']?.name}
       variables={Object.values(elements).map((e) => e.name)}
       onClear={props.onClear}
+      onBlur={props.onBlur}
       varColor="#689d6a"
-      placeholder={elements[props.placeholder ?? '']?.name}
+      placeholder={elements[props.placeholder ?? '']?.name ?? props.placeholder}
       onChange={(str) => {
         props.onChange(Object.keys(elements).find((e) => elements[e]?.name === str))
       }}

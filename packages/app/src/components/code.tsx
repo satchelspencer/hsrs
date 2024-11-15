@@ -4,6 +4,7 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import {
   autocompletion,
   acceptCompletion,
+  startCompletion,
   CompletionContext,
 } from '@codemirror/autocomplete'
 import { LRLanguage, LanguageSupport } from '@codemirror/language'
@@ -49,6 +50,7 @@ interface CodeInputProps {
   varColor?: string
   throttle?: boolean
   multiline?: boolean
+  noActivateOnTyping?: boolean
 }
 
 export default function CodeInput(props: CodeInputProps) {
@@ -96,12 +98,22 @@ export default function CodeInput(props: CodeInputProps) {
     extension,
     Prec.highest(
       keymap.of([
-        { key: 'Tab', run: acceptCompletion },
+        {
+          key: 'Tab',
+          run: (view) => {
+            if (acceptCompletion(view)) return true
+            return startCompletion(view)
+          },
+        },
         { key: 'Backspace', run: handleBackspaceEmpty },
         { key: 'Enter', run: handleEnter },
       ])
     ),
-    autocompletion({ override: [variableAutocomplete], activateOnTypingDelay: 500 }),
+    autocompletion({
+      override: [variableAutocomplete],
+      activateOnTypingDelay: 100,
+      activateOnTyping: !props.noActivateOnTyping,
+    }),
   ]
   if (props.multiline) extensions.push(EditorView.lineWrapping)
 

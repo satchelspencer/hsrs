@@ -81,6 +81,7 @@ const labelFieldTitle = cx(css`
 const labelFieldChildren = (vert: boolean, flush: boolean) =>
   cx(css`
     flex: 1;
+    overflow:hidden;
     ${vert &&
     css`
       margin-left: 4px;

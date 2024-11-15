@@ -54,7 +54,7 @@ export function ElementsList(props: ElementsListProps) {
               onClick={(e) => {
                 const otherSelected =
                   e.shiftKey || e.metaKey
-                    ? nextSelection.filter((s) => s.id !== elementId)
+                    ? (nextSelection ?? []).filter((s) => s.id !== elementId)
                     : []
 
                 const lastOther = _.last(otherSelected),
@@ -160,13 +160,16 @@ const elementListItem = (selected: boolean) =>
 interface ElListActionsProps extends ElementsListProps {}
 
 type ElListAction = {
-  string?: { variables?: string[]; placeholder: string }
+  string?: { variables?: string[]; placeholder: string; default?: string }
   callback: (string: string) => void
 }
 
 function ElListActions(props: ElListActionsProps) {
   const nextSelection = r.useSelector((s) =>
       r.selectors.selectSelectionByIndex(s, props.index + 1)
+    ),
+    lastJumpSelection = r.useSelector((s) =>
+      r.selectors.selectLastJumpSelectionByIndex(s, props.index + 1)
     ),
     dispatch = r.useDispatch(),
     elements = r.useSelector((s) => s.deck.elements)
@@ -212,9 +215,24 @@ function ElListActions(props: ElListActionsProps) {
     addNew: {
       callback: (name) => {
         const existing = Object.keys(elements).find((id) => elements[id].name === name)
-        if (!existing) handleAdd(false, name)
+        if (existing) {
+          dispatch(
+            r.actions.updateElement({
+              id: existing,
+              element: {
+                ...elements[existing],
+                parents: _.uniq(
+                  _.compact([...elements[existing].parents, props.parentId])
+                ),
+              },
+            })
+          )
+        } else handleAdd(false, name)
       },
-      string: { placeholder: 'New element name...' },
+      string: {
+        placeholder: 'Element name...',
+        variables: Object.keys(elements).map((id) => elements[id].name),
+      },
     },
     move: {
       callback: (name) => {
@@ -228,13 +246,14 @@ function ElListActions(props: ElListActionsProps) {
                 id: selection.id,
                 element: {
                   ...el,
-                  parents: [..._.without(el.parents, props.parentId ?? ''), dest],
+                  parents: _.uniq([...el.parents, dest]),
                 },
               })
             )
         }
       },
       string: {
+        default: lastJumpSelection ? elements[lastJumpSelection[0].id].name : undefined,
         placeholder: 'Move to...',
         variables: Object.keys(elements)
           .filter((e) => elements[e].virtual)
@@ -251,6 +270,7 @@ function ElListActions(props: ElListActionsProps) {
       if (!action.string) action.callback('')
       else {
         setActiveAction(id)
+        if (action.string.default) setString(action.string.default)
       }
     },
     cancelAction = () => {
@@ -291,6 +311,7 @@ function ElListActions(props: ElListActionsProps) {
           actions[activeAction].callback(string!)
           cancelAction()
         }}
+        noActivateOnTyping
       />
     </div>
   )
@@ -300,5 +321,6 @@ const actionInputWrapper = cx(css`
   display: flex;
   gap: 5px;
   align-items: center;
-  width: 150px;
+  min-width: 150px;
+  padding-right: 6px;
 `)

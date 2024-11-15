@@ -23,7 +23,10 @@ export function Column(props: ColumnProps) {
   }, [!!wrapperRef.current])
 
   return (
-    <div ref={wrapperRef} className={columnWrapper(props.index === -1)}>
+    <div
+      ref={wrapperRef}
+      className={columnWrapper(props.index === -1, !!selection?.[0]?.jump)}
+    >
       {props.index === -1 ? (
         <ElementsList index={props.index} />
       ) : selection.length === 1 ? (
@@ -38,7 +41,7 @@ export function Column(props: ColumnProps) {
   )
 }
 
-const columnWrapper = (first: boolean) =>
+const columnWrapper = (first: boolean, jump: boolean) =>
   cx(
     styles.surface,
     css`
@@ -48,9 +51,13 @@ const columnWrapper = (first: boolean) =>
       flex-direction: column;
       z-index: 1;
       flex: none;
-      &:not(:first-child){
+      &:not(:first-child) {
         box-shadow: 1px 0px 10px #00000010;
       }
       background: ${styles.color(0.985)};
+      ${jump &&
+      css`
+        border-left: 1px solid ${styles.color.active()};
+      `}
     `
   )
