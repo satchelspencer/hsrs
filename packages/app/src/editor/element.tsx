@@ -12,7 +12,6 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
-import { findMissingInstances } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -57,8 +56,13 @@ export function ElementEditor(props: ElementEditorProps) {
 
   const [searching, setSearching] = useState(false)
 
+  const canShowRelation =
+    element.virtual &&
+    Object.keys(element.params ?? {}).length === 2 &&
+    Object.keys(element.props).length === 0
+
   return (
-    <>
+    <div className={editorWrapperOuter}>
       <div className={editorWrapper}>
         <div className={editorHeader}>
           <Button
@@ -205,7 +209,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        <Button
+        {/* <Button
           onClick={() => {
             console.log(
               JSON.stringify(
@@ -219,12 +223,34 @@ export function ElementEditor(props: ElementEditorProps) {
           }}
         >
           <Icon name="test" />
-        </Button>
+        </Button> */}
+        {canShowRelation && (
+          <Button
+            onClick={() =>
+              dispatch(
+                r.actions.updateSelection({
+                  index: props.index,
+                  selection: { relation: true },
+                })
+              )
+            }
+          >
+            <Icon name="matrix" />
+            &nbsp; View relationships&nbsp;
+            <Icon name="caret-right" />
+          </Button>
+        )}
       </div>
       {element.virtual && <ElementsList parentId={props.id} index={props.index} />}
-    </>
+    </div>
   )
 }
+
+const editorWrapperOuter = cx(css`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+`)
 
 const exampleHead = cx(css`
   display: flex;
@@ -238,6 +264,7 @@ const backButton = cx(css`
 
 const editorWrapper = cx(css`
   display: flex;
+  min-width: 450px;
   flex-direction: column;
   gap: 8px;
   padding: 12px;

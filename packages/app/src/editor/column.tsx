@@ -6,6 +6,7 @@ import * as styles from '../styles'
 import * as r from '../redux'
 import { ElementEditor } from './element'
 import { ElementsList } from './el-list'
+import { RelationEditor } from './relation'
 
 interface ColumnProps {
   index: number
@@ -20,7 +21,7 @@ export function Column(props: ColumnProps) {
 
   useEffect(() => {
     if (wrapperRef.current && props.last) wrapperRef.current.scrollIntoView()
-  }, [!!wrapperRef.current])
+  }, [!!wrapperRef.current, selection?.[0]?.relation])
 
   return (
     <div
@@ -32,9 +33,12 @@ export function Column(props: ColumnProps) {
       ) : selection.length === 1 ? (
         selection.map(
           (selection) =>
-            selection.type === 'element' && (
+            selection.type === 'element' &&
+            (selection.relation ? (
+              <RelationEditor key={selection.id} id={selection.id} index={props.index} />
+            ) : (
               <ElementEditor key={selection.id} id={selection.id} index={props.index} />
-            )
+            ))
         )
       ) : null}
     </div>
@@ -45,7 +49,6 @@ const columnWrapper = (first: boolean, jump: boolean) =>
   cx(
     styles.surface,
     css`
-      width: ${first ? 250 : 450}px;
       border-right: 1px solid ${styles.color(0.93)};
       display: flex;
       flex-direction: column;

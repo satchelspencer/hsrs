@@ -17,18 +17,21 @@ export function LabelGroup(props: LabelGroupProps) {
   const altItems = props.items.map((m) => m[0])
   return (
     <>
-      {props.items.map((item, i) => (
-        <LabelField
-          vert={props.vert}
-          vertOverride={item[2]}
-          flush={props.flush}
-          key={i}
-          title={item[0]}
-          altNames={altItems}
-        >
-          {item[1]}
-        </LabelField>
-      ))}
+      {props.items.map(
+        (item, i) =>
+          item && (
+            <LabelField
+              vert={props.vert}
+              vertOverride={item[2]}
+              flush={props.flush}
+              key={i}
+              title={item[0]}
+              altNames={altItems}
+            >
+              {item[1]}
+            </LabelField>
+          )
+      )}
     </>
   )
 }
@@ -81,7 +84,7 @@ const labelFieldTitle = cx(css`
 const labelFieldChildren = (vert: boolean, flush: boolean) =>
   cx(css`
     flex: 1;
-    overflow:hidden;
+    overflow: hidden;
     ${vert &&
     css`
       margin-left: 4px;
