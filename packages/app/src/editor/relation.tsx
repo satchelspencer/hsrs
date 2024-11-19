@@ -112,6 +112,8 @@ export function RelationEditor(props: RelationEditorProps) {
     [rows, cols] = getNodes(props.id, elements, opened, flatOpened),
     [rowName, colName] = _.sortBy(Object.keys(element.params ?? {}))
 
+  const [hoverCoord, setHoverCoord] = useState<[number, number]>()
+
   const toggleOpen = (node: Node, flat: boolean) => {
     const ctxt = node.ctxt ? node.ctxt + '.' + node.id : node.id,
       used = opened.includes(ctxt) || flatOpened.includes(ctxt)
@@ -144,7 +146,7 @@ export function RelationEditor(props: RelationEditorProps) {
           <Icon name="back" />
         </Button>
       </div>
-      <div className={relationBody}>
+      <div className={relationBody} onMouseOut={() => setHoverCoord(undefined)}>
         <div className={blankout} />
         <div className={tableHeader}>
           {cols.map((node, i) => (
@@ -207,7 +209,11 @@ export function RelationEditor(props: RelationEditorProps) {
                   return (
                     <div
                       key={colNode.id + colNode.ctxt}
-                      className={tableCell(!direct && matches)}
+                      className={tableCell(
+                        !direct && matches,
+                        hoverCoord?.[0] === i || hoverCoord?.[1] === j
+                      )}
+                      onMouseOver={() => setHoverCoord([i, j])}
                     >
                       {matches && <Icon name="check" />}
                     </div>
@@ -258,7 +264,7 @@ const tableCellBase = cx(
   `
 )
 
-const tableCell = (indirect: boolean) =>
+const tableCell = (indirect: boolean, hover: boolean) =>
   cx(
     tableCellBase,
     css`
@@ -267,7 +273,11 @@ const tableCell = (indirect: boolean) =>
       color: ${!indirect ? styles.color.active(0.5) : styles.color(0.8)};
       ${indirect &&
       css`
-        pointer-events: none;
+        cursor: not-allowed !important;
+      `}
+      ${hover &&
+      css`
+        background: ${styles.color.active(0.99)};
       `}
     `
   )
@@ -285,7 +295,7 @@ const tableHeaderCell = (direct: boolean) =>
       padding: 16px 0px;
       text-align: left;
       justify-content: flex-start;
-      color: ${direct ? styles.color(0.3) : styles.color(0.8)};
+      color: ${direct ? styles.color(0.3) : styles.color(0.6)};
       & > * {
         transform: translate(2px, -5px);
       }
@@ -302,7 +312,7 @@ const tableRowHeaderCell = (direct: boolean) =>
       padding: 0px 8px;
       text-align: right;
       justify-content: flex-end;
-      color: ${direct ? styles.color(0.3) : styles.color(0.8)};
+      color: ${direct ? styles.color(0.3) : styles.color(0.6)};
     `
   )
 
