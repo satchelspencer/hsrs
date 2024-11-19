@@ -228,9 +228,9 @@ export function ElementEditor(props: ElementEditorProps) {
           <Button
             onClick={() =>
               dispatch(
-                r.actions.updateSelection({
-                  index: props.index,
-                  selection: { relation: true },
+                r.actions.setSelection({
+                  index: props.index + 1,
+                  selection: [{ id: props.id, type: 'element', relation: true }],
                 })
               )
             }

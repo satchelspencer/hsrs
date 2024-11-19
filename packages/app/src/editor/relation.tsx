@@ -33,12 +33,12 @@ function expandNodes(
   const res: Node[] = []
   for (const node of nodes) {
     res.push(node)
-    const childCtxt = node.ctxt ? node.ctxt + '.' + node.id : node.id
-    const children = opened.includes(childCtxt)
-      ? getElementChildren(node.id, elements)
-      : flatOpened.includes(childCtxt)
-      ? getNonVirtualDescendents(node.id, elements)
-      : []
+    const childCtxt = getNodeCtxt(node),
+      children = opened.includes(childCtxt)
+        ? getElementChildren(node.id, elements)
+        : flatOpened.includes(childCtxt)
+        ? getNonVirtualDescendents(node.id, elements)
+        : []
     res.push(
       ...expandNodes(
         children.map((c) => ({ id: c, indirect: true, ctxt: childCtxt })),
@@ -79,16 +79,20 @@ function getNodes(
   })
 }
 
+function getNodeCtxt(node: Node) {
+  return node.ctxt ? node.ctxt + '.' + node.id : node.id
+}
+
 function inRelation(
   relationId: string,
   params: t.IdMap<string>,
   elements: t.IdMap<t.Element>
-) {
+): [boolean, string | null] {
   const nonVirtuals = getNonVirtualDescendents(relationId, elements),
     paramParentLists = _.mapValues(params, (p) => getElementAndParents(p, elements))
 
   let indirectMatch = false,
-    directMatch = false
+    directMatch: string | null = null
   for (const nonVir of nonVirtuals) {
     const nonVirParams = elements[nonVir].params!,
       matchingParams = _.mapValues(paramParentLists, (parents, paramName) =>
@@ -96,7 +100,7 @@ function inRelation(
       )
     if (_.every(_.values(matchingParams), (p) => p.length)) indirectMatch = true
     if (_.every(_.keys(matchingParams), (k) => matchingParams[k].includes(params[k]))) {
-      directMatch = true
+      directMatch = nonVir
       break
     }
   }
@@ -115,7 +119,7 @@ export function RelationEditor(props: RelationEditorProps) {
   const [hoverCoord, setHoverCoord] = useState<[number, number]>()
 
   const toggleOpen = (node: Node, flat: boolean) => {
-    const ctxt = node.ctxt ? node.ctxt + '.' + node.id : node.id,
+    const ctxt = getNodeCtxt(node),
       used = opened.includes(ctxt) || flatOpened.includes(ctxt)
     if (!flat || used)
       setOpened((opened) => (used ? _.without(opened, ctxt) : [...opened, ctxt]))
@@ -135,12 +139,7 @@ export function RelationEditor(props: RelationEditorProps) {
         <Button
           className={backButton}
           onClick={() =>
-            dispatch(
-              r.actions.updateSelection({
-                index: props.index,
-                selection: { relation: undefined },
-              })
-            )
+            dispatch(r.actions.setSelection({ index: props.index, selection: [] }))
           }
         >
           <Icon name="back" />
@@ -149,57 +148,78 @@ export function RelationEditor(props: RelationEditorProps) {
       <div className={relationBody} onMouseOut={() => setHoverCoord(undefined)}>
         <div className={blankout} />
         <div className={tableHeader}>
-          {cols.map((node, i) => (
-            <div
-              key={node.id + node.ctxt}
-              className={tableHeaderCell(!node.indirect)}
-              onMouseDown={cancel}
-              onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
-            >
-              {node.ctxt?.split('.').map(() => (
-                <>&nbsp;</>
-              ))}
-              <div style={{ opacity: elements[node.id].virtual ? 1 : 0, marginLeft: -6 }}>
-                <Icon
-                  name={
-                    opened.includes(node.id) || flatOpened.includes(node.id)
-                      ? 'caret-left'
-                      : 'caret-down'
-                  }
-                />
-              </div>{' '}
-              <span>{elements[node.id].name}</span>
-            </div>
-          ))}
-        </div>
-        <div className={tableInner}>
-          <div className={tableRowHeader}>
-            {rows.map((node, i) => (
+          {cols.map((node, i) => {
+            const nodeCtxt = getNodeCtxt(node)
+            return (
               <div
-                key={node.id + node.ctxt}
-                className={tableRowHeaderCell(!node.indirect)}
+                key={i}
+                className={tableHeaderCell(!node.indirect)}
                 onMouseDown={cancel}
                 onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
               >
-                <span>{elements[node.id].name}</span>{' '}
-                <div style={{ opacity: elements[node.id].virtual ? 1 : 0, marginTop: 4 }}>
+                <span>
+                  {node.ctxt
+                    ?.split('.')
+                    .map(() => ' ')
+                    .join('')}
+                </span>
+                <div
+                  style={{
+                    opacity: elements[node.id].virtual ? 1 : 0,
+                    marginLeft: -6,
+                    marginTop: (node.ctxt?.split('.')?.length ?? 0) * 4,
+                  }}
+                >
                   <Icon
                     name={
-                      opened.includes(node.id) || flatOpened.includes(node.id)
-                        ? 'caret-down'
-                        : 'caret-right'
+                      opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
+                        ? 'caret-left'
+                        : 'caret-down'
                     }
                   />
-                </div>
-                {node.ctxt?.split('.').map(() => (
-                  <>&nbsp;</>
-                ))}
+                </div>{' '}
+                <span className={headerName}>{elements[node.id].name}</span>
               </div>
-            ))}
+            )
+          })}
+          <div className={tableHeaderCell(false)} />
+        </div>
+        <div className={tableInner}>
+          <div className={tableRowHeader}>
+            {rows.map((node, i) => {
+              const nodeCtxt = getNodeCtxt(node)
+              return (
+                <div
+                  key={i}
+                  className={tableRowHeaderCell(!node.indirect)}
+                  onMouseDown={cancel}
+                  onClick={(e) =>
+                    elements[node.id].virtual && toggleOpen(node, e.shiftKey)
+                  }
+                >
+                  <span className={headerName}>{elements[node.id].name}</span>{' '}
+                  <div
+                    style={{
+                      opacity: elements[node.id].virtual ? 1 : 0,
+                      marginTop: 4,
+                      marginRight: (node.ctxt?.split('.')?.length ?? 0) * 4,
+                    }}
+                  >
+                    <Icon
+                      name={
+                        opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
+                          ? 'caret-down'
+                          : 'caret-right'
+                      }
+                    />
+                  </div>
+                </div>
+              )
+            })}
           </div>
           <div className={tableRowsWrapper}>
             {rows.map((rowNode, i) => (
-              <div key={rowNode.id + rowNode.ctxt} className={tableRow}>
+              <div key={i} className={tableRow}>
                 {cols.map((colNode, j) => {
                   const [matches, direct] = inRelation(
                     props.id,
@@ -208,12 +228,22 @@ export function RelationEditor(props: RelationEditorProps) {
                   )
                   return (
                     <div
-                      key={colNode.id + colNode.ctxt}
+                      key={j}
                       className={tableCell(
                         !direct && matches,
                         hoverCoord?.[0] === i || hoverCoord?.[1] === j
                       )}
                       onMouseOver={() => setHoverCoord([i, j])}
+                      onClick={() => {
+                        if (direct) {
+                          console.log('off', elements[direct].name)
+                        } else if (!matches) {
+                          console.log('on', {
+                            [rowName]: rowNode.id,
+                            [colName]: colNode.id,
+                          })
+                        }
+                      }}
                     >
                       {matches && <Icon name="check" />}
                     </div>
@@ -228,11 +258,17 @@ export function RelationEditor(props: RelationEditorProps) {
   )
 }
 
+const headerName = cx(css`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`)
+
 const blankout = cx(css`
   position: absolute;
   z-index: 2;
-  background: ${styles.color(0.99)};
-  width: ${majorAxis}px;
+  background: ${styles.color(0.97)};
+  width: ${majorAxis - 27}px;
   height: ${majorAxis - 27}px;
   border-bottom: 1px solid ${styles.color(0.94)};
   border-right: 1px solid ${styles.color(0.94)};
@@ -289,6 +325,7 @@ const tableHeaderCell = (direct: boolean) =>
       height: ${majorAxis}px !important;
       border-color: ${styles.color(0.94)} !important;
       border-bottom-color: transparent !important;
+      border-right: 1px solid ${styles.color(0.94)};
       writing-mode: vertical-lr;
       text-orientation: sideways;
       transform: rotate(210deg) translate(-32px, 28px);
@@ -297,7 +334,7 @@ const tableHeaderCell = (direct: boolean) =>
       justify-content: flex-start;
       color: ${direct ? styles.color(0.3) : styles.color(0.6)};
       & > * {
-        transform: translate(2px, -5px);
+        transform: translate(4px, -5px);
       }
     `
   )
@@ -308,7 +345,7 @@ const tableRowHeaderCell = (direct: boolean) =>
     css`
       border-color: ${styles.color(0.94)} !important;
       border-right-color: transparent !important;
-      width: ${majorAxis}px !important;
+      width: ${majorAxis - 27}px !important;
       padding: 0px 8px;
       text-align: right;
       justify-content: flex-end;
@@ -326,7 +363,7 @@ const tableInner = cx(css`
 `)
 
 const tableRowHeader = cx(css`
-  width: ${majorAxis}px;
+  width: ${majorAxis - 27}px;
   background: ${styles.color(0.98)};
   align-self: stretch;
   position: sticky;
@@ -343,7 +380,7 @@ const tableHeader = cx(css`
   top: 0;
   z-index: 1;
   display: flex;
-  padding-left: ${majorAxis}px;
+  padding-left: ${majorAxis - 27}px;
   padding-right: 86px;
   min-width: max-content;
   border-bottom: 1px solid ${styles.color(0.94)} !important;
