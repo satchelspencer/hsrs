@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { MouseEvent, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -6,19 +6,127 @@ import * as styles from '../styles'
 import { Button } from '../components/button'
 import * as r from '../redux'
 import { Icon } from '../components/icon'
+import * as t from '@hsrs/lib/types'
+import {
+  getElementAndParents,
+  getElementChildren,
+  getElementParams,
+  getNonVirtualDescendents,
+} from '@hsrs/lib/props'
 
 interface RelationEditorProps {
   id: string
   index: number
 }
 
-const testRows = 30,
-  testCols = 9,
-  majorAxis = 75,
-  minorAxis = 25
+const majorAxis = 180,
+  minorAxis = 30
+
+type Node = { id: string; indirect?: boolean; ctxt?: string }
+
+function expandNodes(
+  nodes: Node[],
+  elements: t.IdMap<t.Element>,
+  opened: string[],
+  flatOpened: string[]
+) {
+  const res: Node[] = []
+  for (const node of nodes) {
+    res.push(node)
+    const childCtxt = node.ctxt ? node.ctxt + '.' + node.id : node.id
+    const children = opened.includes(childCtxt)
+      ? getElementChildren(node.id, elements)
+      : flatOpened.includes(childCtxt)
+      ? getNonVirtualDescendents(node.id, elements)
+      : []
+    res.push(
+      ...expandNodes(
+        children.map((c) => ({ id: c, indirect: true, ctxt: childCtxt })),
+        elements,
+        opened,
+        flatOpened
+      )
+    )
+  }
+  return res
+}
+
+function getNodes(
+  elementId: string,
+  elements: t.IdMap<t.Element>,
+  opened: string[],
+  flatOpened: string[]
+) {
+  const element = elements[elementId],
+    nonVirtuals = getNonVirtualDescendents(elementId, elements),
+    axes = _.sortBy(Object.keys(element.params ?? {}))
+
+  const nodes: Node[][] = [[], []]
+  for (const axisIndex in axes) {
+    nodes[axisIndex].push({ id: element.params![axes[axisIndex]] })
+  }
+
+  for (const nonVirtualId of nonVirtuals) {
+    const veParams = getElementParams(nonVirtualId, elements)
+    for (const axisIndex in axes) {
+      nodes[axisIndex].push({ id: veParams[axes[axisIndex]] })
+    }
+  }
+
+  return nodes.map((nodeList, i) => {
+    const uniq = _.uniqBy(nodeList, (d) => d.id)
+    return expandNodes(uniq, elements, opened, flatOpened)
+  })
+}
+
+function inRelation(
+  relationId: string,
+  params: t.IdMap<string>,
+  elements: t.IdMap<t.Element>
+) {
+  const nonVirtuals = getNonVirtualDescendents(relationId, elements),
+    paramParentLists = _.mapValues(params, (p) => getElementAndParents(p, elements))
+
+  let indirectMatch = false,
+    directMatch = false
+  for (const nonVir of nonVirtuals) {
+    const nonVirParams = elements[nonVir].params!,
+      matchingParams = _.mapValues(paramParentLists, (parents, paramName) =>
+        parents.filter((p) => nonVirParams[paramName] === p)
+      )
+    if (_.every(_.values(matchingParams), (p) => p.length)) indirectMatch = true
+    if (_.every(_.keys(matchingParams), (k) => matchingParams[k].includes(params[k]))) {
+      directMatch = true
+      break
+    }
+  }
+  return [indirectMatch, directMatch]
+}
 
 export function RelationEditor(props: RelationEditorProps) {
-  const dispatch = r.useDispatch()
+  const dispatch = r.useDispatch(),
+    elements = r.useSelector((s) => s.deck.elements),
+    element = elements[props.id],
+    [opened, setOpened] = useState<string[]>([]),
+    [flatOpened, setFlatOpened] = useState<string[]>([]),
+    [rows, cols] = getNodes(props.id, elements, opened, flatOpened),
+    [rowName, colName] = _.sortBy(Object.keys(element.params ?? {}))
+
+  const toggleOpen = (node: Node, flat: boolean) => {
+    const ctxt = node.ctxt ? node.ctxt + '.' + node.id : node.id,
+      used = opened.includes(ctxt) || flatOpened.includes(ctxt)
+    if (!flat || used)
+      setOpened((opened) => (used ? _.without(opened, ctxt) : [...opened, ctxt]))
+    if (flat || used)
+      setFlatOpened((flatOpened) =>
+        used ? _.without(flatOpened, ctxt) : [...flatOpened, ctxt]
+      )
+  }
+
+  const cancel = (e: MouseEvent) => {
+    if (e.shiftKey) e.preventDefault()
+  }
+
   return (
     <div className={relationWrapper}>
       <div className={relationHeader}>
@@ -39,26 +147,72 @@ export function RelationEditor(props: RelationEditorProps) {
       <div className={relationBody}>
         <div className={blankout} />
         <div className={tableHeader}>
-          {new Array(testCols).fill(0).map((r, j) => (
-            <div key={j} className={tableHeaderCell}>
-              {j}
+          {cols.map((node, i) => (
+            <div
+              key={node.id + node.ctxt}
+              className={tableHeaderCell(!node.indirect)}
+              onMouseDown={cancel}
+              onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
+            >
+              {node.ctxt?.split('.').map(() => (
+                <>&nbsp;</>
+              ))}
+              <div style={{ opacity: elements[node.id].virtual ? 1 : 0, marginLeft: -6 }}>
+                <Icon
+                  name={
+                    opened.includes(node.id) || flatOpened.includes(node.id)
+                      ? 'caret-left'
+                      : 'caret-down'
+                  }
+                />
+              </div>{' '}
+              <span>{elements[node.id].name}</span>
             </div>
           ))}
         </div>
         <div className={tableInner}>
           <div className={tableRowHeader}>
-            {new Array(testRows).fill(0).map((r, j) => (
-              <div key={j} className={tableRowHeaderCell}>
-                {j}
+            {rows.map((node, i) => (
+              <div
+                key={node.id + node.ctxt}
+                className={tableRowHeaderCell(!node.indirect)}
+                onMouseDown={cancel}
+                onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
+              >
+                <span>{elements[node.id].name}</span>{' '}
+                <div style={{ opacity: elements[node.id].virtual ? 1 : 0, marginTop: 4 }}>
+                  <Icon
+                    name={
+                      opened.includes(node.id) || flatOpened.includes(node.id)
+                        ? 'caret-down'
+                        : 'caret-right'
+                    }
+                  />
+                </div>
+                {node.ctxt?.split('.').map(() => (
+                  <>&nbsp;</>
+                ))}
               </div>
             ))}
           </div>
           <div className={tableRowsWrapper}>
-            {new Array(testRows).fill(0).map((r, i) => (
-              <div key={i} className={tableRow}>
-                {new Array(testCols).fill(0).map((r, j) => (
-                  <div key={j} className={tableCell}></div>
-                ))}
+            {rows.map((rowNode, i) => (
+              <div key={rowNode.id + rowNode.ctxt} className={tableRow}>
+                {cols.map((colNode, j) => {
+                  const [matches, direct] = inRelation(
+                    props.id,
+                    { [rowName]: rowNode.id, [colName]: colNode.id },
+                    elements
+                  )
+                  return (
+                    <div
+                      key={colNode.id + colNode.ctxt}
+                      className={tableCell(!direct && matches)}
+                    >
+                      {matches && <Icon name="check" />}
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>
@@ -73,7 +227,7 @@ const blankout = cx(css`
   z-index: 2;
   background: ${styles.color(0.99)};
   width: ${majorAxis}px;
-  height: ${majorAxis}px;
+  height: ${majorAxis - 27}px;
   border-bottom: 1px solid ${styles.color(0.94)};
   border-right: 1px solid ${styles.color(0.94)};
   box-sizing: border-box;
@@ -86,40 +240,71 @@ const tableRow = cx(
   `
 )
 
-const tableCell = cx(
+const tableCellBase = cx(
   css`
     height: ${minorAxis}px;
     width: ${minorAxis}px;
     border-bottom: 1px solid ${styles.color(0.94)};
     border-right: 1px solid ${styles.color(0.94)};
     box-sizing: border-box;
-    line-height: ${minorAxis}px;
-    text-align: right;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    font-size: 14px;
+    line-height: ${minorAxis}px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
   `
 )
 
-const tableHeaderCell = cx(
-  tableCell,
-  css`
-    height: ${majorAxis}px !important;
-    border-color: ${styles.color(0.95)} !important;
-    writing-mode: vertical-lr;
-    text-orientation: sideways;
-    padding: 8px 0px;
-  `
-)
+const tableCell = (indirect: boolean) =>
+  cx(
+    tableCellBase,
+    css`
+      font-size: 16px;
+      justify-content: center;
+      color: ${!indirect ? styles.color.active(0.5) : styles.color(0.8)};
+      ${indirect &&
+      css`
+        pointer-events: none;
+      `}
+    `
+  )
 
-const tableRowHeaderCell = cx(
-  tableCell,
-  css`
-    border-color: ${styles.color(0.95)} !important;
-    width: ${majorAxis}px !important;
-    padding: 0px 8px;
-  `
-)
+const tableHeaderCell = (direct: boolean) =>
+  cx(
+    tableCellBase,
+    css`
+      height: ${majorAxis}px !important;
+      border-color: ${styles.color(0.94)} !important;
+      border-bottom-color: transparent !important;
+      writing-mode: vertical-lr;
+      text-orientation: sideways;
+      transform: rotate(210deg) translate(-32px, 28px);
+      padding: 16px 0px;
+      text-align: left;
+      justify-content: flex-start;
+      color: ${direct ? styles.color(0.3) : styles.color(0.8)};
+      & > * {
+        transform: translate(2px, -5px);
+      }
+    `
+  )
+
+const tableRowHeaderCell = (direct: boolean) =>
+  cx(
+    tableCellBase,
+    css`
+      border-color: ${styles.color(0.94)} !important;
+      border-right-color: transparent !important;
+      width: ${majorAxis}px !important;
+      padding: 0px 8px;
+      text-align: right;
+      justify-content: flex-end;
+      color: ${direct ? styles.color(0.3) : styles.color(0.8)};
+    `
+  )
 
 const tableRowsWrapper = cx(css``)
 
@@ -136,10 +321,12 @@ const tableRowHeader = cx(css`
   align-self: stretch;
   position: sticky;
   left: 0;
+  border-right: 1px solid ${styles.color(0.94)} !important;
+  box-sizing: border-box;
 `)
 
 const tableHeader = cx(css`
-  height: ${majorAxis}px;
+  height: ${majorAxis - 27}px;
   background: ${styles.color(0.98)};
   position: sticky;
   align-self: stretch;
@@ -147,7 +334,10 @@ const tableHeader = cx(css`
   z-index: 1;
   display: flex;
   padding-left: ${majorAxis}px;
+  padding-right: 86px;
   min-width: max-content;
+  border-bottom: 1px solid ${styles.color(0.94)} !important;
+  box-sizing: border-box;
 `)
 
 const backButton = cx(css`

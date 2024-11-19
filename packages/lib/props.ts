@@ -18,6 +18,19 @@ export function getElementAndParents(elementId: string, elements: t.IdMap<t.Elem
   return res
 }
 
+export function getElementChildren(
+  parentId: string | undefined,
+  elements: t.IdMap<t.Element>
+) {
+  const keys: string[] = []
+  for (const key in elements) {
+    const element = elements[key]
+    if (parentId ? element.parents.includes(parentId) : !element.parents.length)
+      keys.push(key)
+  }
+  return keys
+}
+
 export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
   const res: string[] = []
   for (const key in instance) {

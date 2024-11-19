@@ -25,7 +25,7 @@ export function run(expr: string, context: any) {
   }
 }
 
-type depsTree = { [propName: string]: string[] }
+export type depsTree = { [propName: string]: string[] }
 
 export function topoSort(deps: depsTree): string[] {
   const result: string[] = []

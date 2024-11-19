@@ -6,6 +6,7 @@ import {
   getVariables,
   getNonVirtualDescendents,
   shuffleGenerator,
+  getElementChildren,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import _ from 'lodash'
@@ -75,13 +76,7 @@ export const selectElementInstanceGenerator = createSelector(
 export const selectElementIdsByParent = createSelector(
   [(state) => state.deck.elements, (state, parentId?: string) => parentId],
   (elements, parentId) => {
-    const keys: string[] = []
-    for (const key in elements) {
-      const element = elements[key]
-      if (parentId ? element.parents.includes(parentId) : !element.parents.length)
-        keys.push(key)
-    }
-    return keys
+    return getElementChildren(parentId, elements)
   }
 )
 
