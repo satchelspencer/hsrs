@@ -1,4 +1,4 @@
-import React, { MouseEvent, useState } from 'react'
+import React, { MouseEvent, useMemo, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -10,10 +10,10 @@ import * as t from '@hsrs/lib/types'
 import {
   getElementAndParents,
   getElementChildren,
-  getElementParams,
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
 import { uid } from '@hsrs/lib/uid'
+import { clusterNodes } from '@hsrs/lib/clustering'
 
 interface RelationEditorProps {
   id: string
@@ -56,27 +56,19 @@ function getNodes(
   elementId: string,
   elements: t.IdMap<t.Element>,
   opened: string[],
-  flatOpened: string[]
+  flatOpened: string[],
+  order: string[][]
 ) {
   const element = elements[elementId],
-    nonVirtuals = getNonVirtualDescendents(elementId, elements),
     axes = _.sortBy(Object.keys(element.params ?? {}))
 
-  const nodes: Node[][] = [[], []]
-  for (const axisIndex in axes) {
-    nodes[axisIndex].push({ id: element.params![axes[axisIndex]] })
-  }
-
-  for (const nonVirtualId of nonVirtuals) {
-    const veParams = getElementParams(nonVirtualId, elements)
-    for (const axisIndex in axes) {
-      nodes[axisIndex].push({ id: veParams[axes[axisIndex]] })
-    }
-  }
-
-  return nodes.map((nodeList, i) => {
-    const uniq = _.uniqBy(nodeList, (d) => d.id)
-    return expandNodes(uniq, elements, opened, flatOpened)
+  return order.map((idList, i) => {
+    return expandNodes(
+      [element.params![axes[i]], ...idList].map((id) => ({ id })),
+      elements,
+      opened,
+      flatOpened
+    )
   })
 }
 
@@ -114,7 +106,24 @@ export function RelationEditor(props: RelationEditorProps) {
     element = elements[props.id],
     [opened, setOpened] = useState<string[]>([]),
     [flatOpened, setFlatOpened] = useState<string[]>([]),
-    [rows, cols] = getNodes(props.id, elements, opened, flatOpened),
+    [clusterIndexes, setClusterIndexes] = useState([0, 0]),
+    [clusterSeed, setClusterSeed] = useState(0),
+    clusters = useMemo(
+      () => clusterNodes(props.id, elements),
+      [clusterIndexes.join('.'), clusterSeed]
+    ),
+    thisCluster = clusters.map((cs, index) => {
+      return cs[Math.max(Math.min(cs.length - 1, clusterIndexes[index]), 0)]
+    }),
+    thisBoundaries =
+      opened.length || flatOpened.length
+        ? [[], []]
+        : thisCluster.map((c) => [
+            0,
+            ...c.map((v, i) => _.sumBy(_.take(c, i + 1), (v) => v.length)),
+          ]),
+    thisOrder = thisCluster.map((c) => _.flatten(c)),
+    [rows, cols] = getNodes(props.id, elements, opened, flatOpened, thisOrder),
     [rowName, colName] = _.sortBy(Object.keys(element.params ?? {}))
 
   const [hoverCoord, setHoverCoord] = useState<[number, number]>()
@@ -147,14 +156,31 @@ export function RelationEditor(props: RelationEditorProps) {
         </Button>
       </div>
       <div className={relationBody} onMouseOut={() => setHoverCoord(undefined)}>
-        <div className={blankout} />
+        <div className={blankout}>
+          <IndexControl value={clusterIndexes} onChange={setClusterIndexes} index={0} />
+          <IndexControl value={clusterIndexes} onChange={setClusterIndexes} index={1} />
+          <div style={{ right: 2, bottom: 2, position: 'absolute', opacity: 0.7 }}>
+            <Button
+              onClick={() => {
+                setClusterSeed(Math.random())
+                setOpened([])
+                setFlatOpened([])
+              }}
+            >
+              <Icon name="matrix" />
+            </Button>
+          </div>
+        </div>
         <div className={tableHeader}>
           {cols.map((node, i) => {
             const nodeCtxt = getNodeCtxt(node)
             return (
               <div
                 key={i}
-                className={tableHeaderCell(!node.indirect)}
+                className={tableHeaderCell(
+                  !node.indirect,
+                  thisBoundaries[1].includes(i - 1)
+                )}
                 onMouseDown={cancel}
                 onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
               >
@@ -183,7 +209,7 @@ export function RelationEditor(props: RelationEditorProps) {
               </div>
             )
           })}
-          <div className={tableHeaderCell(false)} />
+          <div className={tableHeaderCell(false, false)} />
         </div>
         <div className={tableInner}>
           <div className={tableRowHeader}>
@@ -192,7 +218,10 @@ export function RelationEditor(props: RelationEditorProps) {
               return (
                 <div
                   key={i}
-                  className={tableRowHeaderCell(!node.indirect)}
+                  className={tableRowHeaderCell(
+                    !node.indirect,
+                    thisBoundaries[0].includes(i)
+                  )}
                   onMouseDown={cancel}
                   onClick={(e) =>
                     elements[node.id].virtual && toggleOpen(node, e.shiftKey)
@@ -232,7 +261,9 @@ export function RelationEditor(props: RelationEditorProps) {
                       key={j}
                       className={tableCell(
                         !direct && matches,
-                        hoverCoord?.[0] === i || hoverCoord?.[1] === j
+                        hoverCoord?.[0] === i || hoverCoord?.[1] === j,
+                        thisBoundaries[1].includes(j),
+                        thisBoundaries[0].includes(i)
                       )}
                       onMouseOver={() => setHoverCoord([i, j])}
                       onClick={() => {
@@ -271,6 +302,50 @@ export function RelationEditor(props: RelationEditorProps) {
   )
 }
 
+interface IndexControlProps {
+  value: number[]
+  onChange: (v: number[]) => void
+  index: number
+}
+
+function IndexControl(props: IndexControlProps) {
+  const inc = (amount: number) => {
+    const nv = [...props.value]
+    nv[props.index] = props.value[props.index] + amount
+    props.onChange(nv)
+  }
+  return (
+    <div className={indexControl(!!props.index)}>
+      <Button onClick={() => inc(1)}>
+        <Icon name="plus" />
+      </Button>
+      <span className={controlNumber}>{props.value[props.index]}</span>
+      <Button onClick={() => inc(-1)}>
+        <Icon name="minus" />
+      </Button>
+    </div>
+  )
+}
+
+const controlNumber = cx(css`
+  opacity: 0.7;
+  font-size: 0.8em;
+`)
+
+const indexControl = (vert: boolean) =>
+  cx(css`
+    position: absolute;
+    display: flex;
+    flex-direction: ${vert ? 'column' : 'row-reverse'};
+    ${vert ? 'right' : 'bottom'}: 0px;
+    align-items: center;
+    font-size: 16px;
+    ${vert ? 'height' : 'width'}: 100%;
+    justify-content: center;
+    gap: 2px;
+    background: ${styles.color(0.955)};
+  `)
+
 const headerName = cx(css`
   white-space: nowrap;
   overflow: hidden;
@@ -299,8 +374,8 @@ const tableCellBase = cx(
   css`
     height: ${minorAxis}px;
     width: ${minorAxis}px;
-    border-bottom: 1px solid ${styles.color(0.94)};
-    border-right: 1px solid ${styles.color(0.94)};
+    border-bottom: 1px solid ${styles.color(0.98)};
+    border-right: 1px solid ${styles.color(0.98)};
     box-sizing: border-box;
     overflow: hidden;
     white-space: nowrap;
@@ -313,13 +388,18 @@ const tableCellBase = cx(
   `
 )
 
-const tableCell = (indirect: boolean, hover: boolean) =>
+const tableCell = (
+  indirect: boolean,
+  hover: boolean,
+  rowBoundary: boolean,
+  colBoundary: boolean
+) =>
   cx(
     tableCellBase,
     css`
       font-size: 16px;
       justify-content: center;
-      color: ${!indirect ? styles.color.active(0.5) : styles.color(0.8)};
+      color: ${!indirect ? styles.color(0.5) : styles.color(0.8)};
       ${indirect &&
       css`
         cursor: not-allowed !important;
@@ -328,15 +408,23 @@ const tableCell = (indirect: boolean, hover: boolean) =>
       css`
         background: ${styles.color.active(0.99)};
       `}
+      ${rowBoundary &&
+      css`
+        border-right-color: ${styles.color(0.93)} !important;
+      `}
+      ${colBoundary &&
+      css`
+        border-bottom-color: ${styles.color(0.93)} !important;
+      `}
     `
   )
 
-const tableHeaderCell = (direct: boolean) =>
+const tableHeaderCell = (direct: boolean, boundary: boolean) =>
   cx(
     tableCellBase,
     css`
       height: ${majorAxis}px !important;
-      border-color: ${styles.color(0.94)} !important;
+      border-color: ${boundary ? styles.color(0.93) : styles.color(0.97)} !important;
       border-bottom-color: transparent !important;
       border-right: 1px solid ${styles.color(0.94)};
       writing-mode: vertical-lr;
@@ -352,11 +440,11 @@ const tableHeaderCell = (direct: boolean) =>
     `
   )
 
-const tableRowHeaderCell = (direct: boolean) =>
+const tableRowHeaderCell = (direct: boolean, boundary: boolean) =>
   cx(
     tableCellBase,
     css`
-      border-color: ${styles.color(0.94)} !important;
+      border-color: ${boundary ? styles.color(0.9) : styles.color(0.97)} !important;
       border-right-color: transparent !important;
       width: ${majorAxis - 27}px !important;
       padding: 0px 8px;
