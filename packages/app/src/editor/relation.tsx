@@ -13,6 +13,7 @@ import {
   getElementParams,
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
+import { uid } from '@hsrs/lib/uid'
 
 interface RelationEditorProps {
   id: string
@@ -236,12 +237,24 @@ export function RelationEditor(props: RelationEditorProps) {
                       onMouseOver={() => setHoverCoord([i, j])}
                       onClick={() => {
                         if (direct) {
-                          console.log('off', elements[direct].name)
+                          dispatch(r.actions.deleteElement({ id: direct }))
                         } else if (!matches) {
-                          console.log('on', {
-                            [rowName]: rowNode.id,
-                            [colName]: colNode.id,
-                          })
+                          dispatch(
+                            r.actions.createElement({
+                              id: uid(),
+                              element: {
+                                name:
+                                  elements[rowNode.id].name +
+                                  '-' +
+                                  elements[colNode.id].name,
+                                parents: [props.id],
+                                params: {
+                                  [rowName]: rowNode.id,
+                                  [colName]: colNode.id,
+                                },
+                              },
+                            })
+                          )
                         }
                       }}
                     >

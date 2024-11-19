@@ -62,5 +62,6 @@ const columnWrapper = (first: boolean, jump: boolean) =>
       css`
         border-left: 1px solid ${styles.color.active()};
       `}
+      overflow: hidden;
     `
   )

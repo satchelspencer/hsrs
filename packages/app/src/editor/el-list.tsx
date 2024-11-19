@@ -114,6 +114,8 @@ const sidebarListHeader = cx(
     justify-content: space-between;
     gap: 4px;
     border-bottom: 1px solid ${styles.color(0.93)};
+    position: sticky;
+    top: 0;
   `
 )
 

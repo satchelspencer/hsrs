@@ -250,6 +250,7 @@ const editorWrapperOuter = cx(css`
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: hidden;
 `)
 
 const exampleHead = cx(css`
