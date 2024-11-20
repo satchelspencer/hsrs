@@ -14,11 +14,14 @@ export const deck = createSlice({
       state,
       action: PayloadAction<{ id: string; element?: Partial<t.Element> }>
     ) => {
-      state.elements[action.payload.id] = {
-        name: 'untitled element',
-        parents: [],
-        props: {},
-        ...action.payload.element,
+      state.elements = {
+        [action.payload.id]: {
+          name: 'untitled element',
+          parents: [],
+          props: {},
+          ...action.payload.element,
+        },
+        ...state.elements,
       }
     },
     updateElement: (state, action: PayloadAction<{ id: string; element: t.Element }>) => {

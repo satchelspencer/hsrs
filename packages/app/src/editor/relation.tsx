@@ -8,8 +8,10 @@ import * as r from '../redux'
 import { Icon } from '../components/icon'
 import * as t from '@hsrs/lib/types'
 import {
+  findCommonAncestors,
   getElementAndParents,
   getElementChildren,
+  getElementParams,
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
 import { uid } from '@hsrs/lib/uid'
@@ -60,12 +62,12 @@ function getNodes(
   flatOpened: string[],
   order: string[][]
 ) {
-  const element = elements[elementId],
-    axes = _.sortBy(Object.keys(element.params ?? {}))
+  const params = getElementParams(elementId, elements),
+    axes = _.sortBy(Object.keys(params ?? {}))
 
   return order.map((idList, i) => {
     return expandNodes(
-      [element.params![axes[i]], ...idList].map((id) => ({ id })),
+      [params![axes[i]], ...idList].map((id) => ({ id })),
       elements,
       opened,
       flatOpened
@@ -111,7 +113,7 @@ const diffs = {
 export function RelationEditor(props: RelationEditorProps) {
   const dispatch = r.useDispatch(),
     elements = r.useSelector((s) => s.deck.elements),
-    element = elements[props.id],
+    params = getElementParams(props.id, elements),
     [opened, setOpened] = useState<string[]>([]),
     [flatOpened, setFlatOpened] = useState<string[]>([]),
     [clusterIndexes, setClusterIndexesRaw] = useState([0, 0]),
@@ -134,7 +136,8 @@ export function RelationEditor(props: RelationEditorProps) {
           ]),
     thisOrder = thisCluster.map((c) => _.flatten(c)),
     [rows, cols] = getNodes(props.id, elements, opened, flatOpened, thisOrder),
-    [rowName, colName] = _.sortBy(Object.keys(element.params ?? {}))
+    axes = _.sortBy(Object.keys(params ?? {})),
+    [rowName, colName] = axes
 
   const [hoverCoord, setHoverCoord] = useState<[number, number]>()
 
@@ -197,14 +200,56 @@ export function RelationEditor(props: RelationEditorProps) {
 
   const addToCluster = (axis: number, cluster?: number) => {
     if (cluster == null) return
-    const clusterValues = thisCluster[axis][cluster]
-    console.log(
-      axis,
-      cluster,
-      clusterValues.map((c) => elements[c].name),
-      getCommonAdjs(clusterValues, adjs[axis]).map((c) => elements[c].name)
+    const clusterValues = thisCluster[axis][cluster],
+      newElId = uid(),
+      commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
+      thisAxis = axes[axis],
+      otherAxis = axes[(axis + 1) % 2],
+      common = findCommonAncestors(params![thisAxis], clusterValues, elements)
+
+    if (!common) return
+
+    dispatch(
+      r.actions.createElement({
+        id: newElId,
+        element: { name: 'untitled-' + newElId, parents: [common] },
+      })
+    )
+    for (const commonAdj of commonAdjs) {
+      dispatch(
+        r.actions.createElement({
+          id: uid(),
+          element: {
+            name: elements[commonAdj].name + '-' + newElId,
+            parents: [props.id],
+            params: {
+              [thisAxis]: newElId,
+              [otherAxis]: commonAdj,
+            },
+          },
+        })
+      )
+    }
+    setClusterSeed(Math.random())
+    dispatch(
+      r.actions.setSelection({
+        index: props.index + 1,
+        selection: [{ id: newElId, type: 'element' }],
+      })
     )
   }
+
+  const handleNodeClick = (node: Node) => (e: React.MouseEvent) => {
+      toggleClusterSelected(node)
+    },
+    handleNodeDoubleClick = (node: Node) => (e: React.MouseEvent) => {
+      dispatch(
+        r.actions.setSelection({
+          index: props.index + 1,
+          selection: [{ id: node.id, type: 'element' }],
+        })
+      )
+    }
 
   return (
     <div className={relationWrapper}>
@@ -261,7 +306,8 @@ export function RelationEditor(props: RelationEditorProps) {
                     clusterSelections[1]
                 )}
                 onMouseDown={cancel}
-                onClick={() => toggleClusterSelected(node)}
+                onClick={handleNodeClick(node)}
+                onDoubleClick={handleNodeDoubleClick(node)}
               >
                 <span>
                   {node.ctxt
@@ -311,7 +357,8 @@ export function RelationEditor(props: RelationEditorProps) {
                       clusterSelections[0]
                   )}
                   onMouseDown={cancel}
-                  onClick={() => toggleClusterSelected(node)}
+                  onClick={handleNodeClick(node)}
+                  onDoubleClick={handleNodeDoubleClick(node)}
                 >
                   <span className={headerName}>{elements[node.id].name}</span>{' '}
                   <div
@@ -516,6 +563,7 @@ const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =
   cx(
     tableCellBase,
     css`
+      user-select: none;
       border-color: ${boundary ? styles.color(0.91) : styles.color(0.97)} !important;
       color: ${selected
         ? styles.color.active(0.7)

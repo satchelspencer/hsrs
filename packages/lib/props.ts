@@ -348,3 +348,32 @@ export function findMissingInstances(id: string, elements: t.IdMap<t.Element>) {
   }
   return res
 }
+
+export function findCommonAncestors(
+  parentId: string,
+  ids: string[],
+  elements: t.IdMap<t.Element>
+) {
+  const ancestors = ids.map((id) => getElementAndParents(id, elements))
+
+  const stack: string[] = [parentId]
+  let common: string | null = null,
+    minDistance = Infinity
+
+  while (stack.length) {
+    const parent = stack.shift()!,
+      totalDistance = _.sum(
+        ancestors.map((c) => (c.includes(parent) ? c.indexOf(parent) : Infinity))
+      )
+    if (totalDistance < minDistance) {
+      common = parent
+      minDistance = totalDistance
+      stack.push(
+        ...Object.keys(elements).filter(
+          (e) => elements[e].parents.includes(parent) && elements[e].virtual
+        )
+      )
+    }
+  }
+  return common
+}
