@@ -13,7 +13,7 @@ import {
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
 import { uid } from '@hsrs/lib/uid'
-import { clusterNodes } from '@hsrs/lib/clustering'
+import { clusterNodes, getCommonAdjs, getRelationAdjs } from '@hsrs/lib/clustering'
 
 interface RelationEditorProps {
   id: string
@@ -120,10 +120,8 @@ export function RelationEditor(props: RelationEditorProps) {
       undefined,
     ]),
     [clusterSeed, setClusterSeed] = useState(0),
-    clusters = useMemo(
-      () => clusterNodes(props.id, elements),
-      [clusterIndexes.join('.'), clusterSeed]
-    ),
+    adjs = getRelationAdjs(props.id, elements),
+    clusters = useMemo(() => clusterNodes(adjs), [clusterIndexes.join('.'), clusterSeed]),
     thisCluster = clusters.map((cs, index) => {
       return cs[Math.max(Math.min(cs.length - 1, clusterIndexes[index]), 0)]
     }),
@@ -200,7 +198,12 @@ export function RelationEditor(props: RelationEditorProps) {
   const addToCluster = (axis: number, cluster?: number) => {
     if (cluster == null) return
     const clusterValues = thisCluster[axis][cluster]
-    console.log(axis, cluster, clusterValues)
+    console.log(
+      axis,
+      cluster,
+      clusterValues.map((c) => elements[c].name),
+      getCommonAdjs(clusterValues, adjs[axis]).map((c) => elements[c].name)
+    )
   }
 
   return (
@@ -513,7 +516,7 @@ const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =
   cx(
     tableCellBase,
     css`
-      border-color: ${boundary ? styles.color(0.93) : styles.color(0.97)} !important;
+      border-color: ${boundary ? styles.color(0.91) : styles.color(0.97)} !important;
       color: ${selected
         ? styles.color.active(0.7)
         : direct

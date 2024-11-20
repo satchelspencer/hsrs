@@ -4,13 +4,14 @@ import cluster from 'hierarchical-clustering'
 import * as t from '@hsrs/lib/types'
 import { getElementParams, getNonVirtualDescendents } from '@hsrs/lib/props'
 
-export function clusterNodes(elementId: string, elements: t.IdMap<t.Element>) {
+export type AdjLists = { [id: string]: string[] }[]
+
+export function getRelationAdjs(elementId: string, elements: t.IdMap<t.Element>) {
   const element = elements[elementId],
     nonVirtuals = getNonVirtualDescendents(elementId, elements),
     axes = _.sortBy(Object.keys(element.params ?? {}))
 
-  if (!nonVirtuals.length) return [[[]], [[]]]
-  const adjLists: { [id: string]: string[] }[] = [{}, {}]
+  const adjLists: AdjLists = [{}, {}]
 
   for (const nonVirtualId of nonVirtuals) {
     const veParams = getElementParams(nonVirtualId, elements)
@@ -22,11 +23,20 @@ export function clusterNodes(elementId: string, elements: t.IdMap<t.Element>) {
       adjLists[axisIndex][axisParam].push(otherParam)
     }
   }
+  return adjLists
+}
 
+export function getCommonAdjs(cluster: string[], adjLists: AdjLists[number]): string[] {
+  return _.intersection(...cluster.map((c) => adjLists[c]))
+}
+
+export function clusterNodes(adjLists: AdjLists) {
   const clusters: string[][][][] = []
   for (const adjList of adjLists) {
-    const adjListKeys = Object.keys(adjList),
-      levels = cluster({
+    const adjListKeys = Object.keys(adjList)
+    if (!adjListKeys.length) clusters.push([[]])
+    else {
+      const levels = cluster({
         input: adjListKeys,
         distance(a, b) {
           return 1 / _.intersection(adjList[a], adjList[b]).length
@@ -38,9 +48,10 @@ export function clusterNodes(elementId: string, elements: t.IdMap<t.Element>) {
         },
       })
 
-    clusters.push(
-      levels.map((level) => level.clusters.map((c) => c.map((id) => adjListKeys[id])))
-    )
+      clusters.push(
+        levels.map((level) => level.clusters.map((c) => c.map((id) => adjListKeys[id])))
+      )
+    }
   }
   return clusters
 }
