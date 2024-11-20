@@ -16,6 +16,7 @@ import { computeElementInstance } from '@hsrs/lib/expr'
 interface ElementEditorProps {
   id: string
   index: number
+  last: boolean
 }
 
 export function ElementEditor(props: ElementEditorProps) {

@@ -1,4 +1,4 @@
-import React, { MouseEvent, useMemo, useState } from 'react'
+import React, { MouseEvent, useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
 import { css, cx } from '@emotion/css'
 
@@ -18,6 +18,7 @@ import { clusterNodes } from '@hsrs/lib/clustering'
 interface RelationEditorProps {
   id: string
   index: number
+  last: boolean
 }
 
 const majorAxis = 180,
@@ -100,13 +101,24 @@ function inRelation(
   return [indirectMatch, directMatch]
 }
 
+const diffs = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+}
+
 export function RelationEditor(props: RelationEditorProps) {
   const dispatch = r.useDispatch(),
     elements = r.useSelector((s) => s.deck.elements),
     element = elements[props.id],
     [opened, setOpened] = useState<string[]>([]),
     [flatOpened, setFlatOpened] = useState<string[]>([]),
-    [clusterIndexes, setClusterIndexes] = useState([0, 0]),
+    [clusterIndexes, setClusterIndexesRaw] = useState([0, 0]),
+    [clusterSelections, setClusterSelections] = useState<(number | undefined)[]>([
+      undefined,
+      undefined,
+    ]),
     [clusterSeed, setClusterSeed] = useState(0),
     clusters = useMemo(
       () => clusterNodes(props.id, elements),
@@ -132,15 +144,63 @@ export function RelationEditor(props: RelationEditorProps) {
     const ctxt = getNodeCtxt(node),
       used = opened.includes(ctxt) || flatOpened.includes(ctxt)
     if (!flat || used)
-      setOpened((opened) => (used ? _.without(opened, ctxt) : [...opened, ctxt]))
+      setOpened((opened) =>
+        used ? opened.filter((v) => v.indexOf(ctxt) === -1) : [...opened, ctxt]
+      )
     if (flat || used)
       setFlatOpened((flatOpened) =>
-        used ? _.without(flatOpened, ctxt) : [...flatOpened, ctxt]
+        used ? flatOpened.filter((v) => v.indexOf(ctxt) === -1) : [...flatOpened, ctxt]
       )
   }
 
   const cancel = (e: MouseEvent) => {
     if (e.shiftKey) e.preventDefault()
+  }
+
+  const setClusterIndexes = (value: React.SetStateAction<number[]>) => {
+    setClusterIndexesRaw((s) => {
+      const n = _.isFunction(value) ? value(s) : value
+      return n.map((v, i) => Math.min(Math.max(v, 0), clusters[i].length - 1))
+    })
+  }
+
+  useEffect(() => {
+    if (props.last) {
+      const handler = (e: KeyboardEvent) => {
+        if (e.key.includes('Arrow')) {
+          setClusterIndexes((i) => i.map((v, index) => v + diffs[e.key][index]))
+          e.preventDefault()
+        }
+      }
+      window.addEventListener('keydown', handler)
+      return () => window.removeEventListener('keydown', handler)
+    }
+  }, [props.last])
+
+  const toggleClusterSelected = (node: Node) => {
+    for (let i = 0; i < thisCluster.length; i++) {
+      const clusterList = thisCluster[i]
+      for (let j = 0; j < clusterList.length; j++) {
+        const cluster = clusterList[j]
+        if (cluster.includes(node.id)) {
+          setClusterSelections((s) => {
+            const n = [...s]
+            n[i] = n[i] === j ? undefined : j
+            return n
+          })
+        }
+      }
+    }
+  }
+
+  useEffect(() => {
+    setClusterSelections([undefined, undefined])
+  }, [clusterIndexes])
+
+  const addToCluster = (axis: number, cluster?: number) => {
+    if (cluster == null) return
+    const clusterValues = thisCluster[axis][cluster]
+    console.log(axis, cluster, clusterValues)
   }
 
   return (
@@ -170,6 +230,20 @@ export function RelationEditor(props: RelationEditorProps) {
               <Icon name="matrix" />
             </Button>
           </div>
+          {clusterSelections[0] != null && (
+            <div style={{ left: 2, bottom: 0, position: 'absolute' }}>
+              <Button onClick={() => addToCluster(0, clusterSelections[0])}>
+                <Icon name="plus" />
+              </Button>
+            </div>
+          )}
+          {clusterSelections[1] != null && (
+            <div style={{ right: 0, top: 2, position: 'absolute' }}>
+              <Button onClick={() => addToCluster(1, clusterSelections[1])}>
+                <Icon name="plus" />
+              </Button>
+            </div>
+          )}
         </div>
         <div className={tableHeader}>
           {cols.map((node, i) => {
@@ -179,10 +253,12 @@ export function RelationEditor(props: RelationEditorProps) {
                 key={i}
                 className={tableHeaderCell(
                   !node.indirect,
-                  thisBoundaries[1].includes(i - 1)
+                  thisBoundaries[1].includes(i - 1),
+                  thisCluster[1].findIndex((c) => c.includes(node.id)) ===
+                    clusterSelections[1]
                 )}
                 onMouseDown={cancel}
-                onClick={(e) => elements[node.id].virtual && toggleOpen(node, e.shiftKey)}
+                onClick={() => toggleClusterSelected(node)}
               >
                 <span>
                   {node.ctxt
@@ -197,19 +273,26 @@ export function RelationEditor(props: RelationEditorProps) {
                     marginTop: (node.ctxt?.split('.')?.length ?? 0) * 4,
                   }}
                 >
-                  <Icon
-                    name={
-                      opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
-                        ? 'caret-left'
-                        : 'caret-down'
-                    }
-                  />
+                  <Button
+                    onClick={(e) => {
+                      elements[node.id].virtual && toggleOpen(node, e.shiftKey)
+                      e.stopPropagation()
+                    }}
+                  >
+                    <Icon
+                      name={
+                        opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
+                          ? 'caret-left'
+                          : 'caret-down'
+                      }
+                    />
+                  </Button>
                 </div>{' '}
                 <span className={headerName}>{elements[node.id].name}</span>
               </div>
             )
           })}
-          <div className={tableHeaderCell(false, false)} />
+          <div className={tableHeaderCell(false, false, false)} />
         </div>
         <div className={tableInner}>
           <div className={tableRowHeader}>
@@ -220,12 +303,12 @@ export function RelationEditor(props: RelationEditorProps) {
                   key={i}
                   className={tableRowHeaderCell(
                     !node.indirect,
-                    thisBoundaries[0].includes(i)
+                    thisBoundaries[0].includes(i),
+                    thisCluster[0].findIndex((c) => c.includes(node.id)) ===
+                      clusterSelections[0]
                   )}
                   onMouseDown={cancel}
-                  onClick={(e) =>
-                    elements[node.id].virtual && toggleOpen(node, e.shiftKey)
-                  }
+                  onClick={() => toggleClusterSelected(node)}
                 >
                   <span className={headerName}>{elements[node.id].name}</span>{' '}
                   <div
@@ -235,13 +318,20 @@ export function RelationEditor(props: RelationEditorProps) {
                       marginRight: (node.ctxt?.split('.')?.length ?? 0) * 4,
                     }}
                   >
-                    <Icon
-                      name={
-                        opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
-                          ? 'caret-down'
-                          : 'caret-right'
-                      }
-                    />
+                    <Button
+                      onClick={(e) => {
+                        elements[node.id].virtual && toggleOpen(node, e.shiftKey)
+                        e.stopPropagation()
+                      }}
+                    >
+                      <Icon
+                        name={
+                          opened.includes(nodeCtxt) || flatOpened.includes(nodeCtxt)
+                            ? 'caret-down'
+                            : 'caret-right'
+                        }
+                      />
+                    </Button>
                   </div>
                 </div>
               )
@@ -317,11 +407,11 @@ function IndexControl(props: IndexControlProps) {
   return (
     <div className={indexControl(!!props.index)}>
       <Button onClick={() => inc(1)}>
-        <Icon name="plus" />
+        <Icon name={props.index ? 'caret-up' : 'caret-right'} />
       </Button>
       <span className={controlNumber}>{props.value[props.index]}</span>
       <Button onClick={() => inc(-1)}>
-        <Icon name="minus" />
+        <Icon name={props.index ? 'caret-down' : 'caret-left'} />
       </Button>
     </div>
   )
@@ -419,12 +509,24 @@ const tableCell = (
     `
   )
 
-const tableHeaderCell = (direct: boolean, boundary: boolean) =>
+const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =>
   cx(
     tableCellBase,
     css`
-      height: ${majorAxis}px !important;
       border-color: ${boundary ? styles.color(0.93) : styles.color(0.97)} !important;
+      color: ${selected
+        ? styles.color.active(0.7)
+        : direct
+        ? styles.color(0.3)
+        : styles.color(0.6)};
+    `
+  )
+
+const tableHeaderCell = (direct: boolean, boundary: boolean, selected: boolean) =>
+  cx(
+    headerCellBase(direct, boundary, selected),
+    css`
+      height: ${majorAxis}px !important;
       border-bottom-color: transparent !important;
       border-right: 1px solid ${styles.color(0.94)};
       writing-mode: vertical-lr;
@@ -433,24 +535,21 @@ const tableHeaderCell = (direct: boolean, boundary: boolean) =>
       padding: 16px 0px;
       text-align: left;
       justify-content: flex-start;
-      color: ${direct ? styles.color(0.3) : styles.color(0.6)};
       & > * {
         transform: translate(4px, -5px);
       }
     `
   )
 
-const tableRowHeaderCell = (direct: boolean, boundary: boolean) =>
+const tableRowHeaderCell = (direct: boolean, boundary: boolean, selected: boolean) =>
   cx(
-    tableCellBase,
+    headerCellBase(direct, boundary, selected),
     css`
-      border-color: ${boundary ? styles.color(0.9) : styles.color(0.97)} !important;
       border-right-color: transparent !important;
       width: ${majorAxis - 27}px !important;
       padding: 0px 8px;
       text-align: right;
       justify-content: flex-end;
-      color: ${direct ? styles.color(0.3) : styles.color(0.6)};
     `
   )
 

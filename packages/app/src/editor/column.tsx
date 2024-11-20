@@ -35,9 +35,19 @@ export function Column(props: ColumnProps) {
           (selection) =>
             selection.type === 'element' &&
             (selection.relation ? (
-              <RelationEditor key={selection.id} id={selection.id} index={props.index} />
+              <RelationEditor
+                key={selection.id}
+                id={selection.id}
+                index={props.index}
+                last={props.last}
+              />
             ) : (
-              <ElementEditor key={selection.id} id={selection.id} index={props.index} />
+              <ElementEditor
+                key={selection.id}
+                id={selection.id}
+                index={props.index}
+                last={props.last}
+              />
             ))
         )
       ) : null}
