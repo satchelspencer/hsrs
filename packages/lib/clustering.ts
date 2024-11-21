@@ -19,8 +19,10 @@ export function getRelationAdjs(elementId: string, elements: t.IdMap<t.Element>)
       const axisParam = veParams[axes[axisIndex]],
         otherIndex = (axisIndex + 1) % 2,
         otherParam = veParams[axes[otherIndex]]
-      adjLists[axisIndex][axisParam] ??= []
-      adjLists[axisIndex][axisParam].push(otherParam)
+      if (elements[axisParam] && elements[otherParam]) {
+        adjLists[axisIndex][axisParam] ??= []
+        adjLists[axisIndex][axisParam].push(otherParam)
+      }
     }
   }
   return adjLists
@@ -41,11 +43,7 @@ export function clusterNodes(adjLists: AdjLists) {
         distance(a, b) {
           return 1 / _.intersection(adjList[a], adjList[b]).length
         },
-        linkage(distances) {
-          // var sum = distances.reduce((a, b) => a + b, 0) // Sum of all distances
-          // return sum / distances.length // Average distance
-          return Math.min.apply(null, distances)
-        },
+        linkage: 'single', //'complete',
       })
 
       clusters.push(

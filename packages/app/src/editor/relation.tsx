@@ -111,16 +111,20 @@ const diffs = {
 }
 
 export function RelationEditor(props: RelationEditorProps) {
-  const dispatch = r.useDispatch(),
-    elements = r.useSelector((s) => s.deck.elements),
+  const elements = r.useSelector((s) => s.deck.elements)
+  const showNames = (any: any) => {
+      return JSON.parse(
+        JSON.stringify(any).replace(/"([\w]{10,11})"/g, (v, x) => {
+          return elements[x] ? '"' + elements[x].name + '"' : v
+        })
+      )
+    },
+    dispatch = r.useDispatch(), //(act) => console.log(act.type, JSON.stringify(showNames(act.payload), null, 2)), // r.useDispatch(),
     params = getElementParams(props.id, elements),
     [opened, setOpened] = useState<string[]>([]),
     [flatOpened, setFlatOpened] = useState<string[]>([]),
     [clusterIndexes, setClusterIndexesRaw] = useState([0, 0]),
-    [clusterSelections, setClusterSelections] = useState<(number | undefined)[]>([
-      undefined,
-      undefined,
-    ]),
+    [clusterSelection, setClusterSelection] = useState<{ index: number; axis: number }>(),
     [clusterSeed, setClusterSeed] = useState(0),
     adjs = getRelationAdjs(props.id, elements),
     clusters = useMemo(() => clusterNodes(adjs), [clusterIndexes.join('.'), clusterSeed]),
@@ -178,28 +182,21 @@ export function RelationEditor(props: RelationEditorProps) {
     }
   }, [props.last])
 
-  const toggleClusterSelected = (node: Node) => {
-    for (let i = 0; i < thisCluster.length; i++) {
-      const clusterList = thisCluster[i]
-      for (let j = 0; j < clusterList.length; j++) {
-        const cluster = clusterList[j]
-        if (cluster.includes(node.id)) {
-          setClusterSelections((s) => {
-            const n = [...s]
-            n[i] = n[i] === j ? undefined : j
-            return n
-          })
-        }
-      }
-    }
+  const toggleClusterSelected = (node: Node, axis: number) => {
+    const index = thisCluster[axis].findIndex((c) => c.includes(node.id))
+    if (
+      index === -1 ||
+      (clusterSelection?.axis === axis && clusterSelection.index === index)
+    )
+      setClusterSelection(undefined)
+    else setClusterSelection({ index, axis })
   }
 
   useEffect(() => {
-    setClusterSelections([undefined, undefined])
+    setClusterSelection(undefined)
   }, [clusterIndexes])
 
-  const addToCluster = (axis: number, cluster?: number) => {
-    if (cluster == null) return
+  const addToCluster = (axis: number, cluster: number) => {
     const clusterValues = thisCluster[axis][cluster],
       newElId = uid(),
       commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
@@ -239,8 +236,130 @@ export function RelationEditor(props: RelationEditorProps) {
     )
   }
 
-  const handleNodeClick = (node: Node) => (e: React.MouseEvent) => {
-      toggleClusterSelected(node)
+  const clearCluster = (axis: number, cluster: number) => {
+    const clusterValues = thisCluster[axis][cluster],
+      commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
+      otherAxis = (axis + 1) % 2
+    for (const clusterEl of clusterValues) {
+      for (const adjEl of commonAdjs) {
+        const [, matchEl] = inRelation(
+          props.id,
+          { [axes[otherAxis]]: adjEl, [axes[axis]]: clusterEl },
+          elements
+        )
+        if (matchEl) dispatch(r.actions.deleteElement({ id: matchEl }))
+      }
+    }
+    setClusterSeed(Math.random())
+  }
+
+  const mergeCluster = (axis: number, cluster: number) => {
+    const clusterValues = thisCluster[axis][cluster],
+      commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
+      thisAxis = axes[axis],
+      otherAxis = axes[(axis + 1) % 2],
+      common = findCommonAncestors(params![thisAxis], clusterValues, elements)
+
+    if (!common) return
+
+    const newElId = uid()
+    console.log('create new')
+    dispatch(
+      r.actions.createElement({
+        id: newElId,
+        element: { name: 'untitled-group-' + newElId, parents: [common], virtual: true },
+      })
+    )
+    for (const commonAdj of commonAdjs) {
+      console.log('create new adj', elements[commonAdj].name)
+      dispatch(
+        r.actions.createElement({
+          id: uid(),
+          element: {
+            name: elements[commonAdj].name + '-' + newElId,
+            parents: [props.id],
+            params: {
+              [thisAxis]: newElId,
+              [otherAxis]: commonAdj,
+            },
+          },
+        })
+      )
+      for (const clusterValue of clusterValues) {
+        const [, matchEl] = inRelation(
+          props.id,
+          { [otherAxis]: commonAdj, [thisAxis]: clusterValue },
+          elements
+        )
+        if (matchEl) {
+          console.log(
+            'remove deep adj',
+            elements[commonAdj].name,
+            elements[clusterValue].name
+          )
+          dispatch(r.actions.deleteElement({ id: matchEl }))
+        }
+      }
+    }
+    for (const clusterValue of clusterValues) {
+      const clusterElement = elements[clusterValue]
+      console.log('setParent', elements[clusterValue].name)
+      dispatch(
+        r.actions.updateElement({
+          id: clusterValue,
+          element: { ...clusterElement, parents: [...clusterElement.parents, newElId] },
+        })
+      )
+    }
+    setClusterSeed(Math.random())
+  }
+
+  const splitCluster = (axis: number, cluster: number) => {
+    const clusterValue = thisCluster[axis][cluster][0],
+      commonAdjs = adjs[axis][clusterValue],
+      otherAxisIndex = (axis + 1) % 2,
+      thisAxis = axes[axis],
+      otherAxis = axes[otherAxisIndex]
+
+    for (const adj of commonAdjs) {
+      const [, matchEl] = inRelation(
+        props.id,
+        { [otherAxis]: adj, [thisAxis]: clusterValue },
+        elements
+      )
+      if (matchEl) {
+        console.log('remove root adj', elements[adj].name, elements[clusterValue].name)
+        dispatch(r.actions.deleteElement({ id: matchEl }))
+      }
+
+      for (const elementId of Object.keys(elements)) {
+        const element = elements[elementId]
+        if (element.parents.includes(clusterValue)) {
+          if (!adjs[axis][elementId]?.includes(adj)) {
+            console.log(element.name, elements[adj].name)
+            console.log('create new adj', elements[adj].name)
+            dispatch(
+              r.actions.createElement({
+                id: uid(),
+                element: {
+                  name: elements[adj].name + '-' + element.name,
+                  parents: [props.id],
+                  params: {
+                    [thisAxis]: elementId,
+                    [otherAxis]: adj,
+                  },
+                },
+              })
+            )
+          }
+        }
+      }
+    }
+    setClusterSeed(Math.random())
+  }
+
+  const handleNodeClick = (node: Node, axis: number) => (e: React.MouseEvent) => {
+      toggleClusterSelected(node, axis)
     },
     handleNodeDoubleClick = (node: Node) => (e: React.MouseEvent) => {
       dispatch(
@@ -262,6 +381,52 @@ export function RelationEditor(props: RelationEditorProps) {
         >
           <Icon name="back" />
         </Button>
+        <div className={relationActions}>
+          <Button
+            disabled={!clusterSelection}
+            onClick={() => {
+              if (clusterSelection)
+                clearCluster(clusterSelection.axis, clusterSelection.index)
+            }}
+          >
+            <Icon name="close" />
+          </Button>
+          <Button
+            disabled={
+              !clusterSelection ||
+              thisCluster[clusterSelection.axis][clusterSelection.index].length !== 1 ||
+              !elements[thisCluster[clusterSelection.axis][clusterSelection.index][0]]
+                .virtual
+            }
+            onClick={() => {
+              if (clusterSelection)
+                splitCluster(clusterSelection.axis, clusterSelection.index)
+            }}
+          >
+            <Icon name="split" />
+          </Button>
+          <Button
+            disabled={
+              !clusterSelection ||
+              thisCluster[clusterSelection.axis][clusterSelection.index].length === 1
+            }
+            onClick={() => {
+              if (clusterSelection)
+                mergeCluster(clusterSelection.axis, clusterSelection.index)
+            }}
+          >
+            <Icon name="merge" />
+          </Button>
+          <Button
+            disabled={!clusterSelection}
+            onClick={() => {
+              if (clusterSelection)
+                addToCluster(clusterSelection.axis, clusterSelection.index)
+            }}
+          >
+            <Icon name="plus" />
+          </Button>
+        </div>
       </div>
       <div className={relationBody} onMouseOut={() => setHoverCoord(undefined)}>
         <div className={blankout}>
@@ -278,20 +443,6 @@ export function RelationEditor(props: RelationEditorProps) {
               <Icon name="matrix" />
             </Button>
           </div>
-          {clusterSelections[0] != null && (
-            <div style={{ left: 2, bottom: 0, position: 'absolute' }}>
-              <Button onClick={() => addToCluster(0, clusterSelections[0])}>
-                <Icon name="plus" />
-              </Button>
-            </div>
-          )}
-          {clusterSelections[1] != null && (
-            <div style={{ right: 0, top: 2, position: 'absolute' }}>
-              <Button onClick={() => addToCluster(1, clusterSelections[1])}>
-                <Icon name="plus" />
-              </Button>
-            </div>
-          )}
         </div>
         <div className={tableHeader}>
           {cols.map((node, i) => {
@@ -303,10 +454,10 @@ export function RelationEditor(props: RelationEditorProps) {
                   !node.indirect,
                   thisBoundaries[1].includes(i - 1),
                   thisCluster[1].findIndex((c) => c.includes(node.id)) ===
-                    clusterSelections[1]
+                    clusterSelection?.index && clusterSelection.axis === 1
                 )}
                 onMouseDown={cancel}
-                onClick={handleNodeClick(node)}
+                onClick={handleNodeClick(node, 1)}
                 onDoubleClick={handleNodeDoubleClick(node)}
               >
                 <span>
@@ -354,10 +505,10 @@ export function RelationEditor(props: RelationEditorProps) {
                     !node.indirect,
                     thisBoundaries[0].includes(i),
                     thisCluster[0].findIndex((c) => c.includes(node.id)) ===
-                      clusterSelections[0]
+                      clusterSelection?.index && clusterSelection.axis === 0
                   )}
                   onMouseDown={cancel}
-                  onClick={handleNodeClick(node)}
+                  onClick={handleNodeClick(node, 0)}
                   onDoubleClick={handleNodeDoubleClick(node)}
                 >
                   <span className={headerName}>{elements[node.id].name}</span>{' '}
@@ -652,6 +803,12 @@ const relationHeader = cx(css`
   padding-bottom: 8px;
   border-bottom: 1px solid ${styles.color(0.94)};
 `)
+
+const relationActions = cx(css`
+  display: flex;
+  align-items: center;
+`)
+
 const relationBody = cx(css`
   flex: 1;
   background: ${styles.color(1)};
