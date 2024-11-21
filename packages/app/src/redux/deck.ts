@@ -32,23 +32,34 @@ export const deck = createSlice({
       state,
       action: PayloadAction<{ id: string; fromParentId?: string }>
     ) => {
-      const { id, fromParentId } = action.payload
-      if (!state.elements[id]) throw 'element does not exist'
-
-      const victim = state.elements[id],
-        prevParents = victim.parents
-
-      victim.parents = fromParentId ? _.without(victim.parents, fromParentId) : []
-
-      if (!victim.parents.length) {
-        delete state.elements[id]
-        for (const elementId in state.elements) {
-          const element = state.elements[elementId]
-          if (element.parents.includes(id)) {
-            element.parents = _.uniq([..._.without(element.parents, id), ...prevParents])
-          }
-        }
-      }
+      deleteElementDeep(state.elements, action.payload.id, action.payload.fromParentId)
     },
   },
 })
+
+function deleteElementDeep(
+  elements: t.IdMap<t.Element>,
+  id: string,
+  parentId?: string,
+  ctxt: string[] = []
+) {
+  if (!elements[id]) throw 'element does not exist'
+  if (ctxt.includes(id)) throw 'loop'
+
+  const victim = elements[id],
+    prevParents = victim.parents
+
+  victim.parents = parentId ? _.without(prevParents, parentId) : []
+
+  if (!victim.parents.length) {
+    delete elements[id]
+    const childCtxt = [...ctxt, id]
+    for (const elementId in elements) {
+      const element = elements[elementId]
+      if (Object.values(element.params ?? {}).includes(id))
+        deleteElementDeep(elements, elementId, undefined, childCtxt)
+      else if (element.parents.includes(id))
+        deleteElementDeep(elements, elementId, id, childCtxt)
+    }
+  }
+}

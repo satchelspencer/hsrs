@@ -807,6 +807,7 @@ const relationHeader = cx(css`
 const relationActions = cx(css`
   display: flex;
   align-items: center;
+  gap: 16px;
 `)
 
 const relationBody = cx(css`
