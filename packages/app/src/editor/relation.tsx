@@ -196,13 +196,32 @@ export function RelationEditor(props: RelationEditorProps) {
     setClusterSelection(undefined)
   }, [clusterIndexes])
 
+  const createRelations = (axis: number, commonAdjs: string[], newElId: string) => {
+    const thisAxis = axes[axis],
+      otherAxis = axes[(axis + 1) % 2]
+    for (const commonAdj of commonAdjs) {
+      if (!adjs[axis][newElId]?.includes(commonAdj))
+        dispatch(
+          r.actions.createElement({
+            id: uid(),
+            element: {
+              name: elements[commonAdj].name + '-' + newElId,
+              parents: [props.id],
+              params: {
+                [thisAxis]: newElId,
+                [otherAxis]: commonAdj,
+              },
+            },
+          })
+        )
+    }
+  }
+
   const addToCluster = (axis: number, cluster: number) => {
     const clusterValues = thisCluster[axis][cluster],
       newElId = uid(),
       commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
-      thisAxis = axes[axis],
-      otherAxis = axes[(axis + 1) % 2],
-      common = findCommonAncestors(params![thisAxis], clusterValues, elements)
+      common = findCommonAncestors(params[axes[axis]], clusterValues, elements)
 
     if (!common) return
 
@@ -212,21 +231,8 @@ export function RelationEditor(props: RelationEditorProps) {
         element: { name: 'untitled-' + newElId, parents: [common] },
       })
     )
-    for (const commonAdj of commonAdjs) {
-      dispatch(
-        r.actions.createElement({
-          id: uid(),
-          element: {
-            name: elements[commonAdj].name + '-' + newElId,
-            parents: [props.id],
-            params: {
-              [thisAxis]: newElId,
-              [otherAxis]: commonAdj,
-            },
-          },
-        })
-      )
-    }
+    createRelations(axis, commonAdjs, newElId)
+
     setClusterSeed(Math.random())
     dispatch(
       r.actions.setSelection({
@@ -240,6 +246,7 @@ export function RelationEditor(props: RelationEditorProps) {
     const clusterValues = thisCluster[axis][cluster],
       commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
       otherAxis = (axis + 1) % 2
+
     for (const clusterEl of clusterValues) {
       for (const adjEl of commonAdjs) {
         const [, matchEl] = inRelation(
@@ -256,54 +263,23 @@ export function RelationEditor(props: RelationEditorProps) {
   const mergeCluster = (axis: number, cluster: number) => {
     const clusterValues = thisCluster[axis][cluster],
       commonAdjs = getCommonAdjs(clusterValues, adjs[axis]),
-      thisAxis = axes[axis],
-      otherAxis = axes[(axis + 1) % 2],
-      common = findCommonAncestors(params![thisAxis], clusterValues, elements)
+      common = findCommonAncestors(params![axes[axis]], clusterValues, elements)
 
     if (!common) return
 
+    clearCluster(axis, cluster)
+
     const newElId = uid()
-    console.log('create new')
     dispatch(
       r.actions.createElement({
         id: newElId,
         element: { name: 'untitled-group-' + newElId, parents: [common], virtual: true },
       })
     )
-    for (const commonAdj of commonAdjs) {
-      console.log('create new adj', elements[commonAdj].name)
-      dispatch(
-        r.actions.createElement({
-          id: uid(),
-          element: {
-            name: elements[commonAdj].name + '-' + newElId,
-            parents: [props.id],
-            params: {
-              [thisAxis]: newElId,
-              [otherAxis]: commonAdj,
-            },
-          },
-        })
-      )
-      for (const clusterValue of clusterValues) {
-        const [, matchEl] = inRelation(
-          props.id,
-          { [otherAxis]: commonAdj, [thisAxis]: clusterValue },
-          elements
-        )
-        if (matchEl) {
-          console.log(
-            'remove deep adj',
-            elements[commonAdj].name,
-            elements[clusterValue].name
-          )
-          dispatch(r.actions.deleteElement({ id: matchEl }))
-        }
-      }
-    }
+    createRelations(axis, commonAdjs, newElId)
+
     for (const clusterValue of clusterValues) {
       const clusterElement = elements[clusterValue]
-      console.log('setParent', elements[clusterValue].name)
       dispatch(
         r.actions.updateElement({
           id: clusterValue,
@@ -316,43 +292,14 @@ export function RelationEditor(props: RelationEditorProps) {
 
   const splitCluster = (axis: number, cluster: number) => {
     const clusterValue = thisCluster[axis][cluster][0],
-      commonAdjs = adjs[axis][clusterValue],
-      otherAxisIndex = (axis + 1) % 2,
-      thisAxis = axes[axis],
-      otherAxis = axes[otherAxisIndex]
+      commonAdjs = adjs[axis][clusterValue]
 
-    for (const adj of commonAdjs) {
-      const [, matchEl] = inRelation(
-        props.id,
-        { [otherAxis]: adj, [thisAxis]: clusterValue },
-        elements
-      )
-      if (matchEl) {
-        console.log('remove root adj', elements[adj].name, elements[clusterValue].name)
-        dispatch(r.actions.deleteElement({ id: matchEl }))
-      }
+    clearCluster(axis, cluster)
 
-      for (const elementId of Object.keys(elements)) {
-        const element = elements[elementId]
-        if (element.parents.includes(clusterValue)) {
-          if (!adjs[axis][elementId]?.includes(adj)) {
-            console.log(element.name, elements[adj].name)
-            console.log('create new adj', elements[adj].name)
-            dispatch(
-              r.actions.createElement({
-                id: uid(),
-                element: {
-                  name: elements[adj].name + '-' + element.name,
-                  parents: [props.id],
-                  params: {
-                    [thisAxis]: elementId,
-                    [otherAxis]: adj,
-                  },
-                },
-              })
-            )
-          }
-        }
+    for (const elementId of Object.keys(elements)) {
+      const element = elements[elementId]
+      if (element.parents.includes(clusterValue)) {
+        createRelations(axis, commonAdjs, elementId)
       }
     }
     setClusterSeed(Math.random())
