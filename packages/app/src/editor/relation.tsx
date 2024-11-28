@@ -205,7 +205,7 @@ export function RelationEditor(props: RelationEditorProps) {
           r.actions.createElement({
             id: uid(),
             element: {
-              name: elements[commonAdj].name + '-' + newElId,
+              name: elements[commonAdj].name + '-' + (elements[newElId]?.name ?? newElId),
               parents: [props.id],
               params: {
                 [thisAxis]: newElId,
@@ -317,6 +317,24 @@ export function RelationEditor(props: RelationEditorProps) {
       )
     }
 
+  const [visibleRange, setVisibleRange] = useState([0, 50, 0, 50]),
+    [minRow, maxRow, minCol, maxCol] = visibleRange,
+    handleScroll = useMemo(() => {
+      return _.throttle((e: React.UIEvent<HTMLDivElement>) => {
+        const el: HTMLDivElement = e.target as any
+
+        const padd = 500,
+          minRow = el.scrollTop - padd,
+          maxRow = minRow + el.offsetHeight + padd * 2,
+          minCol = el.scrollLeft - padd,
+          maxCol = minCol + el.offsetWidth + padd * 2
+
+        setVisibleRange(
+          [minRow, maxRow, minCol, maxCol].map((c) => Math.floor(c / minorAxis))
+        )
+      }, 100)
+    }, [])
+
   return (
     <div className={relationWrapper}>
       <div className={relationHeader}>
@@ -375,7 +393,11 @@ export function RelationEditor(props: RelationEditorProps) {
           </Button>
         </div>
       </div>
-      <div className={relationBody} onMouseOut={() => setHoverCoord(undefined)}>
+      <div
+        className={relationBody}
+        onScroll={handleScroll}
+        onMouseOut={() => setHoverCoord(undefined)}
+      >
         <div className={blankout}>
           <IndexControl value={clusterIndexes} onChange={setClusterIndexes} index={0} />
           <IndexControl value={clusterIndexes} onChange={setClusterIndexes} index={1} />
@@ -485,50 +507,63 @@ export function RelationEditor(props: RelationEditorProps) {
               )
             })}
           </div>
-          <div className={tableRowsWrapper}>
+          <div
+            className={tableRowsWrapper}
+            style={{ width: cols.length * minorAxis, height: rows.length * minorAxis }}
+          >
             {rows.map((rowNode, i) => (
               <div key={i} className={tableRow}>
                 {cols.map((colNode, j) => {
-                  const [matches, direct] = inRelation(
-                    props.id,
-                    { [rowName]: rowNode.id, [colName]: colNode.id },
-                    elements
-                  )
+                  const visible = i >= minRow && i <= maxRow && j >= minCol && j <= maxCol
+                  const [matches, direct] = visible
+                    ? inRelation(
+                        props.id,
+                        { [rowName]: rowNode.id, [colName]: colNode.id },
+                        elements
+                      )
+                    : [false, null]
                   return (
-                    <div
-                      key={j}
-                      className={tableCell(
-                        !direct && matches,
-                        hoverCoord?.[0] === i || hoverCoord?.[1] === j,
-                        thisBoundaries[1].includes(j),
-                        thisBoundaries[0].includes(i)
-                      )}
-                      onMouseOver={() => setHoverCoord([i, j])}
-                      onClick={() => {
-                        if (direct) {
-                          dispatch(r.actions.deleteElement({ id: direct }))
-                        } else if (!matches) {
-                          dispatch(
-                            r.actions.createElement({
-                              id: uid(),
-                              element: {
-                                name:
-                                  elements[rowNode.id].name +
-                                  '-' +
-                                  elements[colNode.id].name,
-                                parents: [props.id],
-                                params: {
-                                  [rowName]: rowNode.id,
-                                  [colName]: colNode.id,
+                    visible && (
+                      <div
+                        key={j + '' + i}
+                        className={tableCell(
+                          !direct && matches,
+                          hoverCoord?.[0] === i || hoverCoord?.[1] === j,
+                          thisBoundaries[1].includes(j),
+                          thisBoundaries[0].includes(i)
+                        )}
+                        style={{
+                          position: 'absolute',
+                          top: i * minorAxis,
+                          left: j * minorAxis,
+                        }}
+                        //onMouseOver={() => setHoverCoord([i, j])}
+                        onClick={() => {
+                          if (direct) {
+                            dispatch(r.actions.deleteElement({ id: direct }))
+                          } else if (!matches) {
+                            dispatch(
+                              r.actions.createElement({
+                                id: uid(),
+                                element: {
+                                  name:
+                                    elements[rowNode.id].name +
+                                    '-' +
+                                    elements[colNode.id].name,
+                                  parents: [props.id],
+                                  params: {
+                                    [rowName]: rowNode.id,
+                                    [colName]: colNode.id,
+                                  },
                                 },
-                              },
-                            })
-                          )
-                        }
-                      }}
-                    >
-                      {matches && <Icon name="check" />}
-                    </div>
+                              })
+                            )
+                          }
+                        }}
+                      >
+                        {matches && <Icon name="check" />}
+                      </div>
+                    )
                   )
                 })}
               </div>
@@ -592,7 +627,7 @@ const headerName = cx(css`
 
 const blankout = cx(css`
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   background: ${styles.color(0.97)};
   width: ${majorAxis - 27}px;
   height: ${majorAxis - 27}px;
@@ -612,8 +647,8 @@ const tableCellBase = cx(
   css`
     height: ${minorAxis}px;
     width: ${minorAxis}px;
-    border-bottom: 1px solid ${styles.color(0.98)};
-    border-right: 1px solid ${styles.color(0.98)};
+    border-bottom: 1px solid ${styles.color(0.95)};
+    border-right: 1px solid ${styles.color(0.95)};
     box-sizing: border-box;
     overflow: hidden;
     white-space: nowrap;
@@ -648,11 +683,11 @@ const tableCell = (
       `}
       ${rowBoundary &&
       css`
-        border-right-color: ${styles.color(0.93)} !important;
+        border-right-color: ${styles.color(0.9)} !important;
       `}
       ${colBoundary &&
       css`
-        border-bottom-color: ${styles.color(0.93)} !important;
+        border-bottom-color: ${styles.color(0.9)} !important;
       `}
     `
   )
@@ -662,7 +697,7 @@ const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =
     tableCellBase,
     css`
       user-select: none;
-      border-color: ${boundary ? styles.color(0.91) : styles.color(0.97)} !important;
+      border-color: ${boundary ? styles.color(0.85) : styles.color(0.95)} !important;
       color: ${selected
         ? styles.color.active(0.7)
         : direct
@@ -702,7 +737,11 @@ const tableRowHeaderCell = (direct: boolean, boundary: boolean, selected: boolea
     `
   )
 
-const tableRowsWrapper = cx(css``)
+const tableRowsWrapper = cx(
+  css`
+    position: relative;
+  `
+)
 
 const tableInner = cx(css`
   display: flex;
@@ -719,6 +758,7 @@ const tableRowHeader = cx(css`
   left: 0;
   border-right: 1px solid ${styles.color(0.94)} !important;
   box-sizing: border-box;
+  z-index: 2;
 `)
 
 const tableHeader = cx(css`

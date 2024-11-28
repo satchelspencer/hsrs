@@ -160,7 +160,7 @@ export function generateElementParams(
 
 export function* shuffleGenerator<T>(
   generator: Generator<T>,
-  blockSize = 100
+  blockSize = 1000
 ): Generator<T> {
   let done = false
   while (!done) {

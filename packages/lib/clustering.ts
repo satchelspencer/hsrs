@@ -43,11 +43,13 @@ export function clusterNodes(adjLists: AdjLists) {
         distance(a, b) {
           return 1 / _.intersection(adjList[a], adjList[b]).length
         },
-        linkage: 'single', //'complete',
+        linkage: 'complete',
       })
 
       clusters.push(
-        levels.map((level) => level.clusters.map((c) => c.map((id) => adjListKeys[id])))
+        _.reverse(
+          levels.map((level) => level.clusters.map((c) => c.map((id) => adjListKeys[id])))
+        )
       )
     }
   }
