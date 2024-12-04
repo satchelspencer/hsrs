@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getElementAndParents, getElementProps, generateElementInstances } from './props'
+import { getElementAndParents, getElementProps, generateElementInstanceSamples } from './props'
 import { Element, ElementInstance, IdMap } from './types'
 import _ from 'lodash'
 
@@ -140,7 +140,7 @@ describe('elementInstances', () => {
       },
       id = 'condition'
     let i = 0
-    for (const g of generateElementInstances(id, elements)) {
+    for (const g of generateElementInstanceSamples(id, elements)) {
       console.log(renderInstance(g))
       break
     }

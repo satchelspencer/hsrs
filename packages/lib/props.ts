@@ -102,160 +102,60 @@ export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
 }
 
-function* generatorMapValues<T>(gens: {
-  [key: string]: () => Generator<T>
-}): Generator<{ [key: string]: T }> {
-  const keys = Object.keys(gens)
-  if (!keys.length) yield {}
-  else {
-    const [key, ...rest] = Object.keys(gens)
-    for (const v of gens[key]()) {
-      for (const r of generatorMapValues(_.pick(gens, rest))) {
-        yield {
-          [key]: v,
-          ...r,
-        }
-      }
-    }
-  }
-}
-
-function* arrayGenerator<T>(arr: T[]): Generator<T> {
-  for (const item of arr) {
-    yield item
-  }
-}
-
-function getAllLeafElements(instance: t.ElementInstance): string[] {
-  const params = Object.keys(instance.params ?? {})
-  return params.length
-    ? params.flatMap((k) => getAllLeafElements(instance.params![k]!))
-    : [instance.element]
-}
-
-function hasDuplicateElements(instance: t.ElementInstance, exclude: string[]) {
-  const all = _.difference(getAllLeafElements(instance), exclude)
-  return all.length !== _.uniq(all).length
-}
-
-export function generateElementParams(
-  elementId: string,
-  elements: t.IdMap<t.Element>,
-  fixedParams?: t.Params
-) {
-  const params = getElementParams(elementId, elements)
-  const descOptions: { [paramName: string]: () => Generator<string> } = {}
-  for (const paramName in params)
-    descOptions[paramName] = () =>
-      arrayGenerator(
-        _.shuffle(
-          getNonVirtualDescendents(
-            fixedParams?.[paramName] ?? params[paramName],
-            elements
-          )
-        )
-      )
-  return generatorMapValues(descOptions)
-}
-
-export function* shuffleGenerator<T>(
-  generator: Generator<T>,
-  blockSize = 1000
-): Generator<T> {
-  let done = false
-  while (!done) {
-    let items: T[] = []
-    for (let i = 0; i < blockSize; i++) {
-      const next = generator.next()
-      if (next.done) {
-        done = true
-        break
-      }
-      items.push(next.value)
-    }
-    items = _.shuffle(items)
-    for (const item of items) yield item
-  }
-}
-
-export function* generateElementInstances(
+function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
-  fixedParams?: t.Params
-): Generator<t.ElementInstance> {
+  fixedParams?: t.Params,
+  depth = 0
+): t.ElementInstance {
   const descendents = _.shuffle(getNonVirtualDescendents(id, elements))
+  for (const descendent of descendents) {
+    const del = elements[descendent],
+      params = getElementParams(descendent, elements)
 
-  let yielded = false
-  for (const elementId of descendents) {
-    const instance: t.ElementInstance = { element: elementId },
-      constraint = elements[elementId].constraint ?? ''
+    let failed = false
+    for (const fparam in fixedParams) {
+      if (!params[fparam]) continue
+      const common = satisfies(fixedParams[fparam], params[fparam], elements)
+      if (!common) failed = true
+      else params[fparam] = common
+    }
 
-    for (const selectedOptions of generateElementParams(
-      elementId,
-      elements,
-      fixedParams
-    )) {
-      const childParams: t.Params = {}
+    if (failed) continue
 
-      const childParamsGenerator = generatorMapValues(
-        _.mapValues(
-          selectedOptions,
-          (option) => () => generateElementParams(option, elements)
-        )
-      )
+    const inst: t.ElementInstance = {
+      element: descendent,
+      params: {},
+    }
 
-      for (const nestedChildParams of childParamsGenerator) {
-        let failed = false
-        for (const paramName in nestedChildParams) {
-          const thisChildParams = nestedChildParams[paramName]
-          for (const cParamName in thisChildParams) {
-            if (!constraint.includes(cParamName)) continue
-
-            const cParamValue = thisChildParams[cParamName],
-              common = childParams[cParamName]
-                ? satisfies(childParams[cParamName], cParamValue, elements)
-                : cParamValue
-
-            if (common) childParams[cParamName] = common
-            else {
-              failed = true
-              break
-            }
-          }
-          if (failed) break
-        }
-        if (!failed) {
-          const childGenerators = _.mapValues(
-            selectedOptions,
-            (param, paramName) => () =>
-              generateElementInstances(param, elements, nestedChildParams[paramName])
-          )
-          for (const child of generatorMapValues(childGenerators)) {
-            const thisInstance = Object.keys(child).length
-                ? { ...instance, params: child }
-                : instance,
-              hasDupes = hasDuplicateElements(
-                thisInstance,
-                Object.values({ ...childParams, ...fixedParams })
-              ),
-              hasEmptyProps = _.some(elements[thisInstance.element].props, (p) =>
-                _.some(p, (p) => p === 'null')
-              )
-
-            if (!hasDupes && !hasEmptyProps) {
-              yield thisInstance
-              yielded = true
-            }
-          }
-        }
+    const constraints: t.Params = {}
+    for (const param of _.shuffle(Object.keys(params))) {
+      const pinst = sampleElementIstance(params[param], elements, constraints, depth + 1)
+      for (const childParam in pinst.params) {
+        if (del.constraint?.includes(childParam))
+          constraints[childParam] = pinst.params[childParam]!.element
       }
+      inst.params![param] = pinst
+    }
+
+    return inst
+  }
+  throw ''
+}
+
+export function* generateElementInstanceSamples(
+  id: string,
+  elements: t.IdMap<t.Element>
+): Generator<t.ElementInstance> {
+  let fails = 0
+  while (fails < 1000) {
+    try {
+      yield sampleElementIstance(id, elements)
+      fails = 0
+    } catch {
+      fails++
     }
   }
-
-  if (yielded && !fixedParams)
-    for (const looped of generateElementInstances(id, elements)) {
-      yield looped
-    }
 }
 
 export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element>) {

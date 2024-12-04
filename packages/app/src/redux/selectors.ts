@@ -1,12 +1,11 @@
 import {
   getElementProps,
-  generateElementInstances,
   getElementParams,
   getElementParamsAndProps,
   getVariables,
   getNonVirtualDescendents,
-  shuffleGenerator,
   getElementChildren,
+  generateElementInstanceSamples,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import _ from 'lodash'
@@ -69,7 +68,7 @@ export const selectElementPropVariables = createSelector(
 export const selectElementInstanceGenerator = createSelector(
   [(state, id: string) => id, (s) => s.deck.elements],
   (elementId, elements) => {
-    return shuffleGenerator(generateElementInstances(elementId, elements))
+    return generateElementInstanceSamples(elementId, elements)
   }
 )
 
