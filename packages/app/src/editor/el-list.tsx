@@ -50,6 +50,7 @@ export function ElementsList(props: ElementsListProps) {
             <ElementListItem
               key={elementId}
               name={element.name}
+              virtual={!!element.virtual}
               selected={selected}
               onClick={(e) => {
                 const otherSelected =
@@ -116,6 +117,7 @@ const sidebarListHeader = cx(
     border-bottom: 1px solid ${styles.color(0.93)};
     position: sticky;
     top: 0;
+    z-index:2;
   `
 )
 
@@ -134,6 +136,7 @@ const elementsListInner = cx(css`
 interface ElementListItemProps {
   name: string
   selected: boolean
+  virtual: boolean
   onClick?: React.EventHandler<React.MouseEvent>
 }
 
@@ -141,9 +144,21 @@ function ElementListItem(props: ElementListItemProps) {
   return (
     <div className={elementListItem(props.selected)} onClick={props.onClick}>
       &zwnj;{props.name}
+      {props.virtual && (
+        <div className={elementListIcon}>
+          <Icon name="caret-right" />
+        </div>
+      )}
     </div>
   )
 }
+
+const elementListIcon = cx(css`
+  flex: 1;
+  display: flex;
+  flex-direction: row-reverse;
+  opacity: 0.5;
+`)
 
 const elementListItem = (selected: boolean) =>
   cx(
@@ -157,6 +172,7 @@ const elementListItem = (selected: boolean) =>
       background: inherit;
       cursor: pointer;
       ${selected && `background:${styles.color(0.96)};`}
+      position: relative;
     `
   )
 
@@ -320,7 +336,7 @@ function ElListActions(props: ElListActionsProps) {
   )
 }
 
-const actionInputWrapper = cx(css`
+export const actionInputWrapper = cx(css`
   display: flex;
   gap: 5px;
   align-items: center;
