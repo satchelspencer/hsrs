@@ -423,7 +423,8 @@ export function RelationEditor(props: RelationEditorProps) {
                   !node.indirect,
                   thisBoundaries[1].includes(i - 1),
                   thisCluster[1].findIndex((c) => c.includes(node.id)) ===
-                    clusterSelection?.index && clusterSelection.axis === 1
+                    clusterSelection?.index && clusterSelection.axis === 1,
+                  hoverCoord?.[1] === i
                 )}
                 onMouseDown={cancel}
                 onClick={handleNodeClick(node, 1)}
@@ -461,7 +462,7 @@ export function RelationEditor(props: RelationEditorProps) {
               </div>
             )
           })}
-          <div className={tableHeaderCell(false, false, false)} />
+          <div className={tableHeaderCell(false, false, false, false)} />
         </div>
         <div className={tableInner}>
           <div className={tableRowHeader}>
@@ -474,7 +475,8 @@ export function RelationEditor(props: RelationEditorProps) {
                     !node.indirect,
                     thisBoundaries[0].includes(i),
                     thisCluster[0].findIndex((c) => c.includes(node.id)) ===
-                      clusterSelection?.index && clusterSelection.axis === 0
+                      clusterSelection?.index && clusterSelection.axis === 0,
+                    hoverCoord?.[0] === i
                   )}
                   onMouseDown={cancel}
                   onClick={handleNodeClick(node, 0)}
@@ -528,7 +530,7 @@ export function RelationEditor(props: RelationEditorProps) {
                         key={j + '' + i}
                         className={tableCell(
                           !direct && matches,
-                          hoverCoord?.[0] === i || hoverCoord?.[1] === j,
+                          false, //hoverCoord?.[0] === i || hoverCoord?.[1] === j,
                           thisBoundaries[1].includes(j),
                           thisBoundaries[0].includes(i)
                         )}
@@ -537,7 +539,7 @@ export function RelationEditor(props: RelationEditorProps) {
                           top: i * minorAxis,
                           left: j * minorAxis,
                         }}
-                        //onMouseOver={() => setHoverCoord([i, j])}
+                        onMouseOver={() => setHoverCoord([i, j])}
                         onClick={() => {
                           if (direct) {
                             dispatch(r.actions.deleteElement({ id: direct }))
@@ -692,7 +694,12 @@ const tableCell = (
     `
   )
 
-const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =>
+const headerCellBase = (
+  direct: boolean,
+  boundary: boolean,
+  selected: boolean,
+  hovered: boolean
+) =>
   cx(
     tableCellBase,
     css`
@@ -703,12 +710,21 @@ const headerCellBase = (direct: boolean, boundary: boolean, selected: boolean) =
         : direct
         ? styles.color(0.3)
         : styles.color(0.6)};
+      ${hovered &&
+      css`
+        text-decoration: underline;
+      `}
     `
   )
 
-const tableHeaderCell = (direct: boolean, boundary: boolean, selected: boolean) =>
+const tableHeaderCell = (
+  direct: boolean,
+  boundary: boolean,
+  selected: boolean,
+  hovered: boolean
+) =>
   cx(
-    headerCellBase(direct, boundary, selected),
+    headerCellBase(direct, boundary, selected, hovered),
     css`
       height: ${majorAxis}px !important;
       border-bottom-color: transparent !important;
@@ -725,9 +741,14 @@ const tableHeaderCell = (direct: boolean, boundary: boolean, selected: boolean) 
     `
   )
 
-const tableRowHeaderCell = (direct: boolean, boundary: boolean, selected: boolean) =>
+const tableRowHeaderCell = (
+  direct: boolean,
+  boundary: boolean,
+  selected: boolean,
+  hovered: boolean
+) =>
   cx(
-    headerCellBase(direct, boundary, selected),
+    headerCellBase(direct, boundary, selected, hovered),
     css`
       border-right-color: transparent !important;
       width: ${majorAxis - 27}px !important;
