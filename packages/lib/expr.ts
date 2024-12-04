@@ -19,7 +19,8 @@ export function isValid(expr: string) {
 export function run(expr: string, context: any) {
   if (expr === 'null') return undefined
   try {
-    return jexl.evalSync(expr, context) ?? expr
+    const res = jexl.evalSync(expr, context) ?? expr
+    return _.isNaN(res) ? expr : res
   } catch {
     return expr
   }
@@ -50,20 +51,13 @@ function getPropExecOrder(props: t.Props): string[] {
   const depsTree: { [propName: string]: string[] } = {}
   for (const propName in props) {
     const expr = props[propName],
-      deps = _.compact(_.uniq(expr.flatMap((e) => (e ?? '').match(/_\.(\w+)/g)))).map(
-        (r) => r.replace('_.', '')
+      deps = _.compact(_.uniq((expr ?? '').match(/[_$]\.(\w+)/g))).map((r) =>
+        r.replace('_.', '').replace('$.', '')
       )
     depsTree[propName] = deps
   }
 
   return topoSort(depsTree)
-}
-
-function selectIndex(t: t.PropsInstance, index: number) {
-  return _.mapValues(t, (v) => {
-    if (!_.isArray(v)) return selectIndex(v, index)
-    else return v[index]
-  })
 }
 
 export function computeElementInstance(
@@ -83,10 +77,12 @@ export function computeElementInstance(
     execOrder = getPropExecOrder(elProps)
 
   for (const prop of execOrder) {
-    result[prop] = elProps[prop].map((p, index) => {
-      if (!p) return p
-      return run(p, selectIndex({ ...params, _: result }, index))
-    })
+    const mapped = _.mapValues(
+      _.omit(elProps, prop),
+      (v, k) => v && run(v.replaceAll('.' + k, '.' + prop), { ...params, _: result })
+    )
+    result[prop] =
+      elProps[prop] && run(elProps[prop], { ...params, _: result, $: mapped })
   }
 
   return { ...result, ...params }

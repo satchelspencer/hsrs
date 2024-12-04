@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { getElementAndParents, getElementProps, generateElementInstanceSamples } from './props'
+import {
+  getElementAndParents,
+  getElementProps,
+  generateElementInstanceSamples,
+} from './props'
 import { Element, ElementInstance, IdMap } from './types'
 import _ from 'lodash'
 
@@ -28,19 +32,6 @@ describe('getElementAndParents', () => {
         e: { name: 'e', parents: [], props: {} },
       })
     ).toEqual(['a', 'b', 'd', 'c'])
-  })
-})
-
-describe('resolveProps', () => {
-  it('should resolve deep props ', async () => {
-    expect(
-      getElementProps('a', {
-        a: { name: 'a', parents: ['b'], props: { p1: ['1', '1b'] } },
-        b: { name: 'b', parents: ['c', 'd'], props: { p1: ['2', '2b'] } },
-        c: { name: 'c', parents: [], props: { p3: ['a', 'ab'], p4: ['b', 'bb'] } },
-        d: { name: 'c', parents: ['a'], props: {} },
-      })
-    ).toEqual({ p1: ['1', '1b'], p3: ['a', 'ab'], p4: ['b', 'bb'] })
   })
 })
 
@@ -123,7 +114,7 @@ describe('elementInstances', () => {
           parents: [],
           props: {},
           params: { vsub: 'verbSubject', vobj: 'verbObject' },
-          constraint: 'verb'
+          constraint: 'verb',
         },
         sentenceB: {
           name: 'sent',
@@ -135,7 +126,7 @@ describe('elementInstances', () => {
           name: 'condition',
           parents: [],
           props: {},
-          params: { this: 'sentenceB', because: 'sentence',  },
+          params: { this: 'sentenceB', because: 'sentence' },
         },
       },
       id = 'condition'

@@ -35,8 +35,8 @@ export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
   const res: string[] = []
   for (const key in instance) {
     const value = instance[key]
-    if (_.isArray(value)) res.push((prefix ? '' : '_.') + key)
-    else res.push(...getVariables(value, key))
+    if (_.isObject(value)) res.push(...getVariables(value, key))
+    else res.push((prefix ? '' : '_.') + key, (prefix ? '' : '$.') + key)
   }
   return prefix ? res.map((p) => prefix + '.' + p) : res
 }
@@ -69,11 +69,7 @@ export function getElementProps(elementId: string, elements: t.IdMap<t.Element>)
     const element = elements[elementId]
     if (!element) continue
     for (const propId in element.props) {
-      res[propId] ??= [null, null]
-      for (const index in element.props[propId]) {
-        if (element.props[propId][index] || !res[propId][index])
-          res[propId][index] = element.props[propId][index]
-      }
+      if (element.props[propId] || !res[propId]) res[propId] = element.props[propId]
     }
   }
 

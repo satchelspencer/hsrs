@@ -9,7 +9,7 @@ export interface Element {
 
 export type Params = IdMap<string>
 
-export type Props = IdMap<(string | null)[]>
+export type Props = IdMap<(string | null)>
 
 export type PropsInstance = { [paramName: string]: PropsInstance | Props[string] }
 

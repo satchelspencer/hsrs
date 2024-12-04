@@ -189,12 +189,10 @@ export function ElementEditor(props: ElementEditorProps) {
               <>
                 <LabelGroup
                   items={Object.keys(example)
-                    .filter((l) => _.isArray(example[l]) && _.every(example[l]))
+                    .filter((l) => typeof example[l] === 'string')
                     .map((id) => [
                       <div className={propName}>{id}</div>,
-                      <div>
-                        {example[id]?.[0]} {example[id]?.[1]}
-                      </div>,
+                      <div>{example[id]}</div>,
                     ])}
                 />
                 {!Object.keys(_.omit(example, Object.keys(exampleInstance.params ?? {})))
@@ -368,39 +366,28 @@ interface PropsEditorProps {
 function PropsEditor(props: PropsEditorProps) {
   return (
     <MapEditor
-      vert
       value={props.value}
       onChange={props.onChange}
       fixed={props.fixed}
-      defaultValue={[]}
+      defaultValue={null}
       placeholder="new property name..."
       renderInput={({ value, onChange, onDelete, placeholder, key }) => {
-        const vert = _.some(value, (v) => {
-          const m = v ?? placeholder
-          return m && m.length > 25
-        })
         return (
-          <div className={propTupleWrapper(vert)}>
-            {[0, 1].map((index) => (
-              <div key={index} className={propTupleInnerWrapper(vert)}>
-                <CodeInput
-                  value={value?.[index] ?? ''}
-                  onChange={(v) => {
-                    const newValue = [...(value ?? [null, null])]
-                    newValue[index] = v || null
-                    onChange(newValue)
-                  }}
-                  onClear={() => {
-                    if (!value?.find((v) => !!v)) onDelete()
-                  }}
-                  placeholder={placeholder?.[index] ?? ''}
-                  varColor={props.varColor}
-                  variables={_.without(props.variables, '_.' + key)}
-                  throttle
-                  multiline
-                />
-              </div>
-            ))}
+          <div className={propTupleWrapper(true)}>
+            <div className={propTupleInnerWrapper(true)}>
+              <CodeInput
+                value={value ?? ''}
+                onChange={(v) => onChange(v || null)}
+                onClear={() => {
+                  if (!value) onDelete()
+                }}
+                placeholder={placeholder ?? ''}
+                varColor={props.varColor}
+                variables={_.without(props.variables, '_.' + key)}
+                throttle
+                multiline
+              />
+            </div>
           </div>
         )
       }}
