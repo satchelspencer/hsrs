@@ -33,11 +33,15 @@ export interface Deck {
   session: LearningSession | null
 }
 
+export interface MemoryState {
+  stability: number
+  difficulty: number
+}
+
 export interface Cards {
   [cardId: string]: {
     history: CardLearning[]
-    stability: number
-    difficulty: number
+    state?: MemoryState
   }
 }
 
