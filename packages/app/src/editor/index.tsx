@@ -10,7 +10,7 @@ export function Editor() {
   const selDepth = r.useSelector((s) => r.selectors.selectSelections(s).length),
     cards = r.useSelector((s) =>
       getAllCards(s.deck.elements).map(
-        (c) => `${s.deck.elements[c.root].name}:${c.property}`
+        (c) => `${s.deck.elements[c.element].name}:${c.property}`
       )
     )
   //console.log(cards.join('\n'))

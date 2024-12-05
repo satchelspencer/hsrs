@@ -4,6 +4,8 @@ import _ from 'lodash'
 
 const deckInit: t.Deck = {
   elements: {},
+  cards: {},
+  session: null,
 }
 
 export const deck = createSlice({
@@ -34,6 +36,10 @@ export const deck = createSlice({
     ) => {
       deleteElementDeep(state.elements, action.payload.id, action.payload.fromParentId)
     },
+    createSession: (state, action: PayloadAction<{ size: number }>) => {},
+    endSession: (state, action: PayloadAction<{}>) => {},
+    gradeCard: (state, action: PayloadAction<{ grade: number }>) => {},
+    undoGrade: (state, action: PayloadAction<{}>) => {},
   },
 })
 

@@ -179,7 +179,7 @@ export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
   const cards: t.Card[] = []
 
   for (const elId in elements) {
-    cards.push(...getElementCards(elId, elements))
+    if (!elements[elId].virtual) cards.push(...getElementCards(elId, elements))
   }
 
   return cards
@@ -187,10 +187,11 @@ export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
 
 export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
   const cards: t.Card[] = [],
-    el = elements[id]
-  for (const propId in el.props) {
-    const prop = el.props[propId]
-    if (prop?.[1]) cards.push({ root: id, property: propId, reverse: false })
+    props = getElementProps(id, elements)
+
+  for (const propId in props) {
+    const prop = props[propId]
+    if (prop) cards.push({ element: id, property: propId })
   }
   return cards
 }

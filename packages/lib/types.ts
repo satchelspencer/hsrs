@@ -9,7 +9,7 @@ export interface Element {
 
 export type Params = IdMap<string>
 
-export type Props = IdMap<(string | null)>
+export type Props = IdMap<string | null>
 
 export type PropsInstance = { [paramName: string]: PropsInstance | Props[string] }
 
@@ -19,9 +19,8 @@ export interface ElementInstance {
 }
 
 export interface Card {
-  root: string //element id
+  element: string
   property: string
-  reverse: boolean
 }
 
 export interface CardInstance extends Card, ElementInstance {}
@@ -30,4 +29,26 @@ export type IdMap<T> = { [id: string]: T }
 
 export interface Deck {
   elements: IdMap<Element>
+  cards: Cards
+  session: LearningSession | null
+}
+
+export interface Cards {
+  [cardId: string]: {
+    history: CardLearning[]
+    stability: number
+    difficulty: number
+  }
+}
+
+export interface CardLearning {
+  instance: ElementInstance
+  score: number
+  time: number
+  took: number
+}
+
+export interface LearningSession {
+  stack: CardInstance[]
+  cards: Cards
 }
