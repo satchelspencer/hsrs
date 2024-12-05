@@ -7,6 +7,7 @@ interface ButtonProps {
   children: React.ReactNode
   onClick: React.MouseEventHandler
   disabled?: boolean
+  active?: boolean
   className?: string
 }
 
@@ -15,14 +16,14 @@ export function Button(props: ButtonProps) {
     <button
       disabled={props.disabled}
       onClick={props.onClick}
-      className={cx(linkWrapper(props.disabled), props.className)}
+      className={cx(linkWrapper(props.disabled, props.active), props.className)}
     >
       {props.children}
     </button>
   )
 }
 
-const linkWrapper = (disabled?: boolean) =>
+const linkWrapper = (disabled?: boolean, active?: boolean) =>
   cx(css`
     border: none;
     flex: none;
@@ -47,6 +48,10 @@ const linkWrapper = (disabled?: boolean) =>
     css`
       pointer-events: none;
       opacity: 0.5;
+    `}
+    ${active &&
+    css`
+      color: ${styles.color.active(0.5)};
     `}
   `)
 

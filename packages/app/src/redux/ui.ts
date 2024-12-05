@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 export type UiState = {
   selections: Selection[][]
+  route: string
 }
 
 export type Selection = {
@@ -13,6 +14,7 @@ export type Selection = {
 
 const uiInit: UiState = {
   selections: [],
+  route: 'learn',
 }
 
 export const ui = createSlice({
@@ -37,6 +39,9 @@ export const ui = createSlice({
         (s) => ({ ...s, ...action.payload.selection })
       )
       state.selections = newSelections
+    },
+    setRoute: (state, action: PayloadAction<{ route: string }>) => {
+      state.route = action.payload.route
     },
   },
 })
