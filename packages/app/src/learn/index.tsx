@@ -67,16 +67,13 @@ export function Learn() {
               )}
             </div>
           </div>
-        ) : (
-          <Button onClick={() => dispatch(r.actions.endSession({}))}>
-            Finish session
-          </Button>
-        )
+        ) : null
       ) : (
         <Button onClick={() => dispatch(r.actions.createSession({ size: 20 }))}>
           Create session
         </Button>
       )}
+      <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
     </div>
   )
 }

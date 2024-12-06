@@ -5,9 +5,10 @@ import { sampleElementIstance } from './props'
 import _ from 'lodash'
 
 export function createLearningSession(deck: t.Deck, size: number): t.LearningSession {
-  const dueCards = getDue(deck.cards ?? {}, size),
+  const learned = getLearnedElements(deck),
+    dueCards = getDue(deck, size, learned),
     newCardFactor = 4, //TODO
-    newCards = getNew(deck, (size - dueCards.length) / newCardFactor)
+    newCards = getNew(deck, (size - dueCards.length) / newCardFactor, learned)
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
@@ -16,28 +17,33 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
     ],
-    cards = [...dueCards]
+    stack = [...dueCards]
 
   let d = 0
   for (const gap of sumSpac) {
     d += gap
     const nc = newCards.shift()
     if (!nc) break
-    cards.splice(Math.floor(d), 0, nc)
+    stack.splice(Math.floor(d), 0, nc)
   }
 
-  const session: t.LearningSession = {
-    stack: cards.map((cardId) => {
-      const { element, property } = id2Card(cardId)
-      return {
-        property,
-        ...sampleElementIstance(element, deck.elements),
-      }
-    }),
+  return {
+    stack,
     cards: { states: {}, history: [] },
   }
+}
 
-  return session
+function getLearnedElements(deck: t.Deck): t.IdMap<t.Element> {
+  return _.pickBy(deck.elements, (el, elid) => {
+    const props = Object.keys(el.props)
+    return (
+      !props.length ||
+      _.some(
+        props,
+        (propName) => !!deck.cards[card2Id({ element: elid, property: propName })]
+      )
+    )
+  })
 }
 
 export function gradeCard(session: t.LearningSession, grade: number): t.LearningSession {
@@ -74,20 +80,53 @@ export function id2Card(id: string): t.Card {
   return { element, property }
 }
 
-function getNew(deck: t.Deck, limit: number) {
-  return _.sampleSize(
-    getAllCards(deck.elements).filter((c) => !deck.cards?.[card2Id(c)]),
-    limit
-  ).map(card2Id)
+function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
+  const res: t.CardInstance[] = [],
+    cards = _.sortBy(
+      _.shuffle(getAllCards(deck.elements)),
+      (card) => -Object.keys(deck.elements[card.element].params ?? {}).length //TEMPPPP
+    )
+
+  while (res.length < limit && cards.length) {
+    const card = cards.pop()!,
+      id = card2Id(card)
+    if (!deck.cards[id]) sampleAndAdd(res, id, deck, learnable)
+  }
+
+  return res
 }
 
-function getDue(cards: t.Cards, limit: number) {
-  const now = getTime()
-  return _.take(
-    Object.keys(cards.states).filter((cardId) => {
-      const state = cards.states[cardId]
-      return state.due && state.due < now
-    }),
-    limit
-  )
+function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
+  const res: t.CardInstance[] = [],
+    cardsIds = _.shuffle(Object.keys(deck.cards.states)),
+    now = getTime()
+
+  while (res.length < limit && cardsIds.length) {
+    const cardId = cardsIds.pop()!,
+      state = deck.cards.states[cardId]
+    if (state.due && state.due < now) sampleAndAdd(res, cardId, deck, learnable)
+  }
+
+  return res
+}
+
+function sampleAndAdd(
+  res: t.CardInstance[],
+  cardId: string,
+  deck: t.Deck,
+  learnable: t.IdMap<t.Element>
+) {
+  const { element, property } = id2Card(cardId),
+    el = deck.elements[element]
+
+  let i = 0
+  while (i++ < 10) {
+    try {
+      res.push({
+        ...sampleElementIstance(element, { ...learnable, [element]: el }),
+        property,
+      })
+      break
+    } catch {}
+  }
 }
