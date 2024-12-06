@@ -22,10 +22,15 @@ export function Learn() {
 
   console.log(
     JSON.stringify(
-      session?.stack.map((s) => [
-        elements[s.element].name,
-        session.cards.states[card2Id(s)]?.stability,
-      ]),
+      session?.stack.map((s) =>
+        [
+          elements[s.element].name,
+          s?.property,
+          s.element,
+          //s?.params
+          session.cards.states[card2Id(s)]?.stability,
+        ].join(', ')
+      ),
       null,
       2
     )
@@ -69,11 +74,12 @@ export function Learn() {
           </div>
         ) : null
       ) : (
-        <Button onClick={() => dispatch(r.actions.createSession({ size: 20 }))}>
+        <Button onClick={() => dispatch(r.actions.createSession({ size: 100 }))}>
           Create session
         </Button>
       )}
       <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
+      <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button>
     </div>
   )
 }

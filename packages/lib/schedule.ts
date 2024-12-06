@@ -34,7 +34,7 @@ export function nextCardState(
   return {
     ...memoryState,
     lastSeen: now,
-    due: Math.floor(fsrs!.nextInterval(memoryState.stability, 0.9, 3) * 24 * 3600),
+    due: now + Math.floor(fsrs!.nextInterval(memoryState.stability, 0.9, 3) * 24 * 3600),
     views: (cardState?.views ?? 0) + 1,
   }
 }
@@ -82,4 +82,16 @@ export function nextState(
 
 export function getTime() {
   return Math.floor(new Date().getTime() / 1000)
+}
+
+export function applyHistoryToCards(cards: t.Cards, history: t.CardLearning[]) {
+  for (const learning of history) {
+    cards.history.push(learning)
+    //TODO handle sub cards
+    cards.states[learning.cardId] = nextCardState(
+      cards.states[learning.cardId],
+      learning.score,
+      1
+    )
+  }
 }

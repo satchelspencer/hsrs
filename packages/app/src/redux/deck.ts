@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
 import { createLearningSession, gradeCard } from '@hsrs/lib/session'
+import { applyHistoryToCards } from '@hsrs/lib/schedule'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -49,6 +50,12 @@ export const deck = createSlice({
     },
     undoGrade: (state, action: PayloadAction<{}>) => {},
     endSession: (state, action: PayloadAction<{}>) => {
+      if (!state.session) throw 'no session'
+      applyHistoryToCards(state.cards, state.session.cards.history)
+      state.session = null
+    },
+    clearHistory: (state, action: PayloadAction<{}>) => {
+      state.cards = { history: [], states: {} }
       state.session = null
     },
   },

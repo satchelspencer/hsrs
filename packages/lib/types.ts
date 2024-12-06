@@ -52,6 +52,7 @@ export interface Cards {
 }
 
 export interface CardLearning {
+  cardId: string
   params?: ParamsInstance
   score: number
   time: number

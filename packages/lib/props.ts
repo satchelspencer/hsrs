@@ -136,7 +136,7 @@ export function sampleElementIstance(
 
     return inst
   }
-  throw ''
+  throw 'sample not found'
 }
 
 export function* generateElementInstanceSamples(

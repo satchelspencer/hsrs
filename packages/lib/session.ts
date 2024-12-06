@@ -1,4 +1,4 @@
-import { getAllCards } from './props'
+import { getAllCards, getElementAndParents } from './props'
 import { getTime, nextCardState } from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
@@ -34,16 +34,23 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
 }
 
 function getLearnedElements(deck: t.Deck): t.IdMap<t.Element> {
-  return _.pickBy(deck.elements, (el, elid) => {
-    const props = Object.keys(el.props)
-    return (
+  const elIDs: string[] = []
+
+  for (const elid in deck.elements) {
+    const el = deck.elements[elid],
+      props = Object.keys(el.props)
+    if (
       !props.length ||
       _.some(
         props,
-        (propName) => !!deck.cards[card2Id({ element: elid, property: propName })]
+        (propName) => !!deck.cards.states[card2Id({ element: elid, property: propName })]
       )
-    )
-  })
+    ) {
+      elIDs.push(...getElementAndParents(elid, deck.elements))
+    }
+  }
+
+  return _.pick(deck.elements, elIDs)
 }
 
 export function gradeCard(session: t.LearningSession, grade: number): t.LearningSession {
@@ -54,6 +61,7 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
     now = getTime()
 
   session.cards.history.push({
+    cardId,
     ..._.pick(currentCard, 'params'),
     score: grade,
     time: now,
@@ -82,15 +90,16 @@ export function id2Card(id: string): t.Card {
 
 function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
   const res: t.CardInstance[] = [],
-    cards = _.sortBy(
-      _.shuffle(getAllCards(deck.elements)),
-      (card) => -Object.keys(deck.elements[card.element].params ?? {}).length //TEMPPPP
-    )
+    cards = _.shuffle(getAllCards(deck.elements))
+  // _.sortBy(
+  //   _.shuffle(_.uniq(getAllCards(deck.elements))),
+  //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
+  // )
 
   while (res.length < limit && cards.length) {
     const card = cards.pop()!,
       id = card2Id(card)
-    if (!deck.cards[id]) sampleAndAdd(res, id, deck, learnable)
+    if (!deck.cards.states[id]) sampleAndAdd(res, id, deck, learnable)
   }
 
   return res
