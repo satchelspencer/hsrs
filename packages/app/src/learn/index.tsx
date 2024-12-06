@@ -24,7 +24,7 @@ export function Learn() {
     JSON.stringify(
       session?.stack.map((s) => [
         elements[s.element].name,
-        session.cards[card2Id(s)].state?.stability,
+        session.cards.states[card2Id(s)]?.stability,
       ]),
       null,
       2

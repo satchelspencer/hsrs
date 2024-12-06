@@ -5,7 +5,10 @@ import { createLearningSession, gradeCard } from '@hsrs/lib/session'
 
 const deckInit: t.Deck = {
   elements: {},
-  cards: {},
+  cards: {
+    history: [],
+    states: {},
+  },
   session: null,
 }
 

@@ -2,7 +2,7 @@ import { fsrs as init, Fsrs } from './fsrs'
 import * as t from './types'
 import _ from 'lodash'
 
-export let fsrs: Fsrs | null = null,
+let fsrs: Fsrs | null = null,
   waiting: (() => void)[] = []
 init().then((f) => {
   fsrs = f
@@ -18,6 +18,26 @@ export async function ready() {
 }
 
 const grades = ['again', 'hard', 'good', 'easy']
+
+export function nextCardState(
+  cardState: t.CardState | undefined,
+  grade: number,
+  probability: number
+): t.CardState {
+  const now = getTime(),
+    memoryState = nextState(
+      cardState,
+      cardState?.lastSeen ? now - cardState.lastSeen : 0,
+      grade,
+      probability
+    )
+  return {
+    ...memoryState,
+    lastSeen: now,
+    due: Math.floor(fsrs!.nextInterval(memoryState.stability, 0.9, 3) * 24 * 3600),
+    views: (cardState?.views ?? 0) + 1,
+  }
+}
 
 export function nextState(
   memoryState: t.MemoryState | undefined,
@@ -58,4 +78,8 @@ export function nextState(
       difficulty: intd,
     }
   }
+}
+
+export function getTime() {
+  return Math.floor(new Date().getTime() / 1000)
 }

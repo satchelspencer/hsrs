@@ -1,5 +1,5 @@
 import { getAllCards } from './props'
-import { fsrs, nextState } from './schedule'
+import { getTime, nextCardState } from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
 import _ from 'lodash'
@@ -34,7 +34,7 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
         ...sampleElementIstance(element, deck.elements),
       }
     }),
-    cards: _.fromPairs(cards.map((c) => [c, { history: [] }])),
+    cards: { states: {}, history: [] },
   }
 
   return session
@@ -45,22 +45,20 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
   if (!currentCard) throw 'no card'
 
   const cardId = card2Id(currentCard),
-    card = session.cards[cardId],
-    lastHistory = _.last(card.history),
     now = getTime()
 
-  card.history.push({
+  session.cards.history.push({
     ..._.pick(currentCard, 'params'),
     score: grade,
     time: now,
     took: 0,
   })
 
-  card.state = nextState(card.state, lastHistory ? now - lastHistory.time : 0, grade, 1)
+  const cardState = nextCardState(session.cards.states[cardId], grade, 1)
+  session.cards.states[cardId] = cardState
 
-  if (card.state.stability < 1) {
-    const views = card.history.length,
-      newIndex = Math.min(Math.pow(3, views) - 1, session.stack.length)
+  if (cardState.stability < 1) {
+    const newIndex = Math.min(Math.pow(3, cardState.views ?? 1) - 1, session.stack.length)
     session.stack.splice(newIndex, 0, currentCard)
   }
 
@@ -83,23 +81,12 @@ function getNew(deck: t.Deck, limit: number) {
   ).map(card2Id)
 }
 
-function getTime() {
-  return new Date().getTime() / 1000
-}
-
 function getDue(cards: t.Cards, limit: number) {
   const now = getTime()
-
   return _.take(
-    Object.keys(cards).filter((cardId) => {
-      const card = cards[cardId],
-        lastTime = _.last(card.history)?.time,
-        due =
-          lastTime &&
-          card.state &&
-          fsrs!.nextInterval(card.state.stability, 0.9, 3) * 24 * 3600
-
-      return due && due < now
+    Object.keys(cards.states).filter((cardId) => {
+      const state = cards.states[cardId]
+      return state.due && state.due < now
     }),
     limit
   )

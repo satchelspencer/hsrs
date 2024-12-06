@@ -39,12 +39,16 @@ export interface MemoryState {
   difficulty: number
 }
 
+export interface CardState extends MemoryState {
+  due?: number
+  lastSeen?: number
+  views?: number
+}
+
+type CardStates = IdMap<CardState>
 export interface Cards {
-  [cardId: string]: {
-    history: CardLearning[]
-    state?: MemoryState
-    due?: number
-  }
+  history: CardLearning[]
+  states: CardStates
 }
 
 export interface CardLearning {
