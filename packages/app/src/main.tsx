@@ -8,6 +8,7 @@ import { StoreProvider } from './redux'
 import { Button } from './components/button'
 import { Icon } from './components/icon'
 import * as r from './redux'
+import { Learn } from './learn'
 
 const container = document.getElementById('root')
 if (container) {
@@ -39,7 +40,10 @@ export function App() {
           )
         })}
       </div>
-      <div className={appBody}>{currentRoute === 'lib' && <Editor />}</div>
+      <div className={appBody}>
+        {currentRoute === 'lib' && <Editor />}
+        {currentRoute === 'learn' && <Learn />}
+      </div>
     </div>
   )
 }

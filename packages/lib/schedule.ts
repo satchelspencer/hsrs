@@ -1,7 +1,8 @@
 import { fsrs as init, Fsrs } from './fsrs'
 import * as t from './types'
+import _ from 'lodash'
 
-let fsrs: Fsrs | null = null,
+export let fsrs: Fsrs | null = null,
   waiting: (() => void)[] = []
 init().then((f) => {
   fsrs = f
@@ -20,7 +21,7 @@ const grades = ['again', 'hard', 'good', 'easy']
 
 export function nextState(
   memoryState: t.MemoryState | undefined,
-  daysElapsed: number,
+  secondsElapsed: number,
   grade: number,
   probability: number
 ): t.MemoryState {
@@ -38,7 +39,7 @@ export function nextState(
         memoryState.stability,
         memoryState.difficulty,
         0.9,
-        daysElapsed
+        secondsElapsed / (3600 * 24)
       )[grades[grade - 1]].memory,
       nextDifficulty = nextMemoryState.difficulty,
       nextStability = nextMemoryState.stability

@@ -15,9 +15,10 @@ export type PropsInstance = { [paramName: string]: PropsInstance | Props[string]
 
 export interface ElementInstance {
   element: string
-  params?: IdMap<ElementInstance | undefined>
+  params?: ParamsInstance
 }
 
+type ParamsInstance = IdMap<ElementInstance | undefined>
 export interface Card {
   element: string
   property: string
@@ -42,11 +43,12 @@ export interface Cards {
   [cardId: string]: {
     history: CardLearning[]
     state?: MemoryState
+    due?: number
   }
 }
 
 export interface CardLearning {
-  instance: ElementInstance
+  params?: ParamsInstance
   score: number
   time: number
   took: number

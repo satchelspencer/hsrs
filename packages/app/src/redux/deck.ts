@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
+import { createLearningSession, gradeCard } from '@hsrs/lib/session'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -36,10 +37,17 @@ export const deck = createSlice({
     ) => {
       deleteElementDeep(state.elements, action.payload.id, action.payload.fromParentId)
     },
-    createSession: (state, action: PayloadAction<{ size: number }>) => {},
-    endSession: (state, action: PayloadAction<{}>) => {},
-    gradeCard: (state, action: PayloadAction<{ grade: number }>) => {},
+    createSession: (state, action: PayloadAction<{ size: number }>) => {
+      state.session = createLearningSession(state, action.payload.size)
+    },
+    gradeCard: (state, action: PayloadAction<{ grade: number }>) => {
+      if (!state.session) throw 'no session'
+      state.session = gradeCard(state.session, action.payload.grade)
+    },
     undoGrade: (state, action: PayloadAction<{}>) => {},
+    endSession: (state, action: PayloadAction<{}>) => {
+      state.session = null
+    },
   },
 })
 

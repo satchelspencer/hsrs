@@ -98,7 +98,7 @@ export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
 }
 
-function sampleElementIstance(
+export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
   fixedParams?: t.Params,
