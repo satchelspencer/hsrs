@@ -7,10 +7,12 @@ import storage from 'redux-persist/lib/storage'
 import { Provider } from 'react-redux'
 import { deck } from './deck'
 import { ui } from './ui'
+import { settings } from './settings'
 
 export const actions = {
   ...deck.actions,
   ...ui.actions,
+  ...settings.actions
 }
 
 const reducer = persistReducer(
@@ -18,6 +20,7 @@ const reducer = persistReducer(
   combineReducers({
     deck: deck.reducer,
     ui: ui.reducer,
+    settings: settings.reducer
   })
 )
 

@@ -9,6 +9,7 @@ import { Button } from './components/button'
 import { Icon } from './components/icon'
 import * as r from './redux'
 import { Learn } from './learn'
+import { Settings } from './settings'
 
 const container = document.getElementById('root')
 if (container) {
@@ -20,7 +21,7 @@ if (container) {
   )
 }
 
-const routes = ['learn', 'lib', 'history']
+const routes = ['learn', 'lib', 'history', 'settings']
 
 export function App() {
   const dispatch = r.useDispatch(),
@@ -43,6 +44,7 @@ export function App() {
       <div className={appBody}>
         {currentRoute === 'lib' && <Editor />}
         {currentRoute === 'learn' && <Learn />}
+        {currentRoute === 'settings' && <Settings />}
       </div>
     </div>
   )
