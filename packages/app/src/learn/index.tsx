@@ -52,9 +52,19 @@ export function Learn() {
     [pluginLoaded, setPluginLoaded] = useState(false)
 
   useEffect(() => {
+    const handleMessage = (e: MessageEvent<any>) => {
+      if (e.origin === pluginUrl) {
+        setPluginLoaded(true)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  useEffect(() => {
     if (pluginRef.current?.contentWindow && pluginUrl && pluginLoaded) {
       pluginRef.current.contentWindow.postMessage(
-        { value: shownValue, vars: settings.vars, revealed },
+        { value, vars: settings.vars, revealed, property: card?.property },
         pluginUrl
       )
     }
@@ -70,10 +80,9 @@ export function Learn() {
                 <iframe
                   allow="autoplay"
                   className={frame}
-                  onLoadStart={() => setPluginLoaded(false)}
-                  onLoad={() => setPluginLoaded(true)}
                   ref={pluginRef}
                   src={pluginUrl}
+                  onLoad={() => setPluginLoaded(false)}
                 />
               ) : (
                 <LabelGroup

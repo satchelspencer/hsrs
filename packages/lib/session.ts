@@ -72,7 +72,7 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
   session.cards.states[cardId] = cardState
 
   if (cardState.stability < 1) {
-    const newIndex = Math.min(Math.pow(3, cardState.views ?? 1) - 1, session.stack.length)
+    const newIndex = Math.min(Math.pow(2, cardState.views ?? 1), session.stack.length)
     session.stack.splice(newIndex, 0, currentCard)
   }
 
