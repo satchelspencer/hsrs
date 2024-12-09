@@ -33,24 +33,28 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
   }
 }
 
-function getLearnedElements(deck: t.Deck): t.IdMap<t.Element> {
-  const elIDs: string[] = []
+function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
+  const res: t.IdMap<t.IdMap<t.Element>> = {},
+    all: t.IdMap<t.Element> = {}
 
   for (const elid in deck.elements) {
     const el = deck.elements[elid],
-      props = Object.keys(el.props)
-    if (
-      !props.length ||
-      _.some(
-        props,
-        (propName) => !!deck.cards.states[card2Id({ element: elid, property: propName })]
-      )
-    ) {
-      elIDs.push(...getElementAndParents(elid, deck.elements))
+      props = Object.keys(el.props),
+      elAndParents = getElementAndParents(elid, deck.elements)
+
+    if (!props.length) {
+      for (const eid of elAndParents) all[eid] = deck.elements[eid]
+    } else {
+      for (const propName of props) {
+        res[propName] ??= {}
+        if (deck.cards.states[card2Id({ element: elid, property: propName })]) {
+          for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
+        }
+      }
     }
   }
 
-  return _.pick(deck.elements, elIDs)
+  return _.mapValues(res, (v) => ({ ...v, ...all }))
 }
 
 export function gradeCard(
@@ -111,7 +115,7 @@ export function undoGrade(session: t.LearningSession): t.LearningSession {
   const history = session.cards.history
   session.cards.history = []
   session.cards.states = {}
-  applyHistoryToCards(session.cards, history)
+  applyHistoryToCards(session.cards, history, true)
 
   return session
 }
@@ -125,7 +129,7 @@ export function id2Card(id: string): t.Card {
   return { element, property }
 }
 
-function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
+function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
     cards = _.shuffle(getAllCards(deck.elements))
   // _.sortBy(
@@ -142,7 +146,7 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
   return res
 }
 
-function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.Element>) {
+function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
     cardsIds = _.shuffle(Object.keys(deck.cards.states)),
     now = getTime()
@@ -160,7 +164,7 @@ function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
   deck: t.Deck,
-  learnable: t.IdMap<t.Element>
+  learnable: t.IdMap<t.IdMap<t.Element>>
 ) {
   const { element, property } = id2Card(cardId),
     el = deck.elements[element]
@@ -169,7 +173,7 @@ function sampleAndAdd(
   while (i++ < 10) {
     try {
       res.push({
-        ...sampleElementIstance(element, { ...learnable, [element]: el }),
+        ...sampleElementIstance(element, { ...learnable[property], [element]: el }),
         property,
       })
       break
