@@ -53,7 +53,11 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.Element> {
   return _.pick(deck.elements, elIDs)
 }
 
-export function gradeCard(session: t.LearningSession, grade: number): t.LearningSession {
+export function gradeCard(
+  session: t.LearningSession,
+  grade: number,
+  took: number
+): t.LearningSession {
   const currentCard = session.stack.shift()
   if (!currentCard) throw 'no card'
 
@@ -65,7 +69,7 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
     ..._.pick(currentCard, 'params'),
     score: grade,
     time: now,
-    took: 0,
+    took,
   })
 
   const cardState = nextCardState(session.cards.states[cardId], grade, 1)

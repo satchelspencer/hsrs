@@ -10,6 +10,7 @@ import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
 import { card2Id, getSessionDone } from '@hsrs/lib/session'
 import { getElementAndParents } from '@hsrs/lib/props'
+import { getTime } from '@hsrs/lib/schedule'
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
@@ -48,9 +49,15 @@ export function Learn() {
   //   )
   // )
 
+  const [time, setTime] = useState<number>(getTime())
+
+  useEffect(() => {
+    setTime(getTime())
+  }, [card])
+
   const setGrade = (grade: number) => {
     setRevealed(false)
-    dispatch(r.actions.gradeCard({ grade }))
+    dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
   }
   const handleKey = useRef<(key: string, meta: boolean) => void>()
   handleKey.current = (key, meta) => {
@@ -99,8 +106,6 @@ export function Learn() {
       )
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded])
-
-  useEffect(() => {}, [])
 
   return (
     <div className={learnWrapper}>
@@ -153,6 +158,7 @@ export function Learn() {
           Create session
         </Button>
       )}
+      <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
       <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button>
     </div>
   )
