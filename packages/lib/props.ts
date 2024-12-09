@@ -102,9 +102,10 @@ export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
   fixedParams?: t.Params,
-  depth = 0
+  order?: (elId: string) => number
 ): t.ElementInstance {
-  const descendents = _.shuffle(getNonVirtualDescendents(id, elements))
+  const nonV = getNonVirtualDescendents(id, elements),
+    descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
   for (const descendent of descendents) {
     const del = elements[descendent],
       params = getElementParams(descendent, elements)
@@ -126,7 +127,7 @@ export function sampleElementIstance(
 
     const constraints: t.Params = {}
     for (const param of _.shuffle(Object.keys(params))) {
-      const pinst = sampleElementIstance(params[param], elements, constraints, depth + 1)
+      const pinst = sampleElementIstance(params[param], elements, constraints, order)
       for (const childParam in pinst.params) {
         if (del.constraint?.includes(childParam))
           constraints[childParam] = pinst.params[childParam]!.element

@@ -160,6 +160,9 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
   return res
 }
 
+const SAMPLE_TRIES = 20,
+  jitterScale = 3600 * 24 * 30
+
 function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
@@ -170,13 +173,29 @@ function sampleAndAdd(
     el = deck.elements[element]
 
   let i = 0
-  while (i++ < 10) {
+  while (i < SAMPLE_TRIES) {
     try {
       res.push({
-        ...sampleElementIstance(element, { ...learnable[property], [element]: el }),
+        ...sampleElementIstance(
+          element,
+          { ...learnable[property], [element]: el },
+          undefined,
+
+          (elId) => {
+            const jitter =
+              Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
+              jitterScale *
+              (Math.random() > 0.5 ? 1 : -1)
+            return (
+              (deck.cards.states[card2Id({ element: elId, property })]?.due ?? Infinity) +
+              jitter
+            )
+          }
+        ),
         property,
       })
       break
     } catch {}
+    i++
   }
 }
