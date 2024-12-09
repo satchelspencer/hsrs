@@ -71,9 +71,22 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
   const cardState = nextCardState(session.cards.states[cardId], grade, 1)
   session.cards.states[cardId] = cardState
 
-  if (cardState.stability < 1) {
-    const newIndex = Math.min(Math.pow(2, cardState.views ?? 1), session.stack.length)
-    session.stack.splice(newIndex, 0, currentCard)
+  const newIndex = Math.max(
+    Math.min(
+      Math.floor(
+        cardState.stability < 1
+          ? Math.pow(cardState.stability, 2) * 10
+          : session.stack.length - Math.floor(Math.random() * 2)
+      ),
+      session.stack.length
+    ),
+    1
+  )
+  session.stack.splice(newIndex, 0, currentCard)
+
+  const states = _.values(session.cards.states)
+  if (states.length === session.stack.length && _.every(states, (c) => c.stability > 1)) {
+    session.stack = []
   }
 
   return session
