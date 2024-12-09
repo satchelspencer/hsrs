@@ -1,5 +1,5 @@
 import { getAllCards, getElementAndParents } from './props'
-import { getTime, nextCardState } from './schedule'
+import { applyHistoryToCards, getTime, nextCardState } from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
 import _ from 'lodash'
@@ -71,23 +71,43 @@ export function gradeCard(session: t.LearningSession, grade: number): t.Learning
   const cardState = nextCardState(session.cards.states[cardId], grade, 1)
   session.cards.states[cardId] = cardState
 
-  const newIndex = Math.max(
-    Math.min(
-      Math.floor(
-        cardState.stability < 1
-          ? Math.pow(cardState.stability, 2) * 10
-          : session.stack.length - Math.floor(Math.random() * 2)
+  const jitter = Math.floor(Math.random() * 3 - 1),
+    newIndex = Math.max(
+      Math.min(
+        Math.floor(
+          cardState.stability < 1
+            ? 1 + Math.pow(cardState.stability, 2) * 10
+            : session.stack.length
+        ) + jitter,
+        session.stack.length
       ),
-      session.stack.length
-    ),
-    1
-  )
+      1
+    )
   session.stack.splice(newIndex, 0, currentCard)
 
+  return session
+}
+
+export function getSessionDone(session: t.LearningSession): boolean {
   const states = _.values(session.cards.states)
-  if (states.length === session.stack.length && _.every(states, (c) => c.stability > 1)) {
-    session.stack = []
-  }
+  return states.length === session.stack.length && _.every(states, (c) => c.stability > 1)
+}
+
+export function undoGrade(session: t.LearningSession): t.LearningSession {
+  const learning = session.cards.history.pop()
+  if (!learning) throw 'no card to undo'
+
+  const stackIndex = session.stack.findIndex((s) => card2Id(s) === learning.cardId)
+  if (stackIndex === -1) throw 'not in stack'
+
+  const cardInstance = session.stack[stackIndex]
+  session.stack.splice(stackIndex, 1)
+  session.stack.unshift(cardInstance)
+
+  const history = session.cards.history
+  session.cards.history = []
+  session.cards.states = {}
+  applyHistoryToCards(session.cards, history)
 
   return session
 }

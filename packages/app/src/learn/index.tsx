@@ -8,7 +8,7 @@ import { Button } from '../components/button'
 import { computeElementInstance } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
-import { card2Id } from '@hsrs/lib/session'
+import { card2Id, getSessionDone } from '@hsrs/lib/session'
 import { getElementAndParents } from '@hsrs/lib/props'
 
 export function Learn() {
@@ -26,10 +26,12 @@ export function Learn() {
       getElementAndParents(card.element, elements)
         .map((e) => elements[e].name)
         .find((e) => settings.plugins[e]),
-    pluginUrl = plugin && settings.plugins[plugin]
+    pluginUrl = plugin && settings.plugins[plugin],
+    sessionDone = session && getSessionDone(session)
 
   // console.log(
   //   plugin,
+  //   sessionDone,
   //   settings.plugins[plugin ?? ''],
   //   JSON.stringify(
   //     session?.stack.map((s) =>
@@ -46,7 +48,24 @@ export function Learn() {
   //   )
   // )
 
-  // console.log(session)
+  const setGrade = (grade: number) => {
+    setRevealed(false)
+    dispatch(r.actions.gradeCard({ grade }))
+  }
+  const handleKey = useRef<(key: string, meta: boolean) => void>()
+  handleKey.current = (key, meta) => {
+    if (key === ' ') {
+      if (revealed) setGrade(3)
+      else setRevealed(true)
+    } else if (key === '1' && revealed) setGrade(1)
+    else if (key === '2' && revealed) setGrade(2)
+    else if (key === '3' && revealed) setGrade(3)
+    else if (key === '4' && revealed) setGrade(4)
+    else if (key === 'z' && meta) {
+      dispatch(r.actions.undoGrade({}))
+      setRevealed(false)
+    }
+  }
 
   const pluginRef = useRef<HTMLIFrameElement>(null),
     [pluginLoaded, setPluginLoaded] = useState(false)
@@ -54,11 +73,19 @@ export function Learn() {
   useEffect(() => {
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.origin === pluginUrl) {
+        if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
         setPluginLoaded(true)
       }
     }
     window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
+
+    const keyHanlder = (e: KeyboardEvent) => handleKey.current?.(e.key, e.metaKey)
+    window.addEventListener('keydown', keyHanlder)
+
+    return () => {
+      window.removeEventListener('message', handleMessage)
+      window.removeEventListener('keydown', keyHanlder)
+    }
   }, [])
 
   useEffect(() => {
@@ -70,10 +97,16 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded])
 
+  useEffect(() => {}, [])
+
   return (
     <div className={learnWrapper}>
       {session ? (
-        value ? (
+        sessionDone ? (
+          <Button onClick={() => dispatch(r.actions.endSession({}))}>
+            Finish session
+          </Button>
+        ) : value ? (
           <div className={cardWrapper}>
             <div className={cardBody}>
               {plugin ? (
@@ -98,10 +131,7 @@ export function Learn() {
                 [1, 2, 3, 4].map((grade) => (
                   <Button
                     key={grade}
-                    onClick={() => {
-                      setRevealed(false)
-                      dispatch(r.actions.gradeCard({ grade }))
-                    }}
+                    onClick={() => setGrade(grade)}
                     className={cardAction}
                   >
                     {grade}
@@ -116,11 +146,10 @@ export function Learn() {
           </div>
         ) : null
       ) : (
-        <Button onClick={() => dispatch(r.actions.createSession({ size: 100 }))}>
+        <Button onClick={() => dispatch(r.actions.createSession({ size: 40 }))}>
           Create session
         </Button>
       )}
-      <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
       <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button>
     </div>
   )

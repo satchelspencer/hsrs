@@ -74,7 +74,7 @@ export function nextState(
     const intd = (1 - probability) * memoryState.difficulty + probability * nextDifficulty
 
     return {
-      stability: r,
+      stability: Math.max(r, 0.25),
       difficulty: intd,
     }
   }
