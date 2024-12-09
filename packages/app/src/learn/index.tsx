@@ -91,7 +91,10 @@ export function Learn() {
   useEffect(() => {
     if (pluginRef.current?.contentWindow && pluginUrl && pluginLoaded) {
       pluginRef.current.contentWindow.postMessage(
-        { value, vars: settings.vars, revealed, property: card?.property },
+        {
+          type: 'state',
+          state: { value, vars: settings.vars, revealed, property: card?.property },
+        },
         pluginUrl
       )
     }
