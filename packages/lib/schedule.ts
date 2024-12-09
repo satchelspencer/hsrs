@@ -1,4 +1,5 @@
 import { fsrs as init, Fsrs } from './fsrs'
+import { card2Id, id2Card } from './session'
 import * as t from './types'
 import _ from 'lodash'
 
@@ -80,18 +81,59 @@ export function nextState(
   }
 }
 
+export function getRetr(state: t.MemoryState, secondsElapsed: number) {
+  return Math.pow(
+    1 + (19 / 81) * (secondsElapsed / (state.stability * (3600 * 24))),
+    -0.5
+  )
+}
+
 export function getTime() {
   return Math.floor(new Date().getTime() / 1000)
 }
 
-export function applyHistoryToCards(cards: t.Cards, history: t.CardLearning[]) {
+export function applyHistoryToCards(
+  cards: t.Cards,
+  history: t.CardLearning[],
+  shallow?: boolean
+) {
   for (const learning of history) {
     cards.history.push(learning)
-    //TODO handle sub cards
-    cards.states[learning.cardId] = nextCardState(
-      cards.states[learning.cardId],
-      learning.score,
-      1
-    )
+
+    const flearnings = shallow ? [learning] : flattenCard(learning),
+      successProbs = flearnings.map((l) => {
+        const state = cards.states[l.cardId]
+        return state?.lastSeen ? getRetr(state, learning.time - state.lastSeen) : 0.5
+      }),
+      totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
+
+    for (const i in flearnings) {
+      const flearning = flearnings[i],
+        successProb = successProbs[i],
+        state = cards.states[flearning.cardId],
+        probability =
+          !shallow && flearning.score === 1 && state
+            ? (1 - successProb) / (1 - totalSuccessProb)
+            : 1
+
+      cards.states[learning.cardId] = nextCardState(state, learning.score, probability)
+    }
   }
+}
+
+function flattenCard(learning: t.CardLearning): t.CardLearning[] {
+  const res = [learning],
+    { property } = id2Card(learning.cardId)
+  for (const paramName in learning.params) {
+    const paramValue = learning.params[paramName]
+    if (paramValue)
+      res.push(
+        ...flattenCard({
+          ...learning,
+          cardId: card2Id({ element: paramValue.element, property }),
+          params: paramValue.params,
+        })
+      )
+  }
+  return _.uniqBy(res, (l) => l.cardId)
 }
