@@ -109,8 +109,12 @@ export function applyHistoryToCards(
 
     for (const i in flearnings) {
       const flearning = flearnings[i],
-        successProb = successProbs[i],
-        state = cards.states[flearning.cardId],
+        state = cards.states[flearning.cardId]
+
+      if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12)
+        continue
+
+      const successProb = successProbs[i],
         probability =
           !shallow && flearning.score === 1 && state
             ? (1 - successProb) / (1 - totalSuccessProb)
