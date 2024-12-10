@@ -98,7 +98,7 @@ export function gradeCard(
 
 export function getSessionDone(session: t.LearningSession): boolean {
   const states = _.values(session.cards.states)
-  return states.length === session.stack.length && _.every(states, (c) => c.stability > 1)
+  return states.length >= session.stack.length && _.every(states, (c) => c.stability > 1)
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
@@ -163,8 +163,11 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 
   while (res.length < limit && cardsIds.length) {
     const cardId = cardsIds.pop()!,
-      state = deck.cards.states[cardId]
-    if (state.due && state.due < now) sampleAndAdd(res, cardId, deck, learnable)
+      state = deck.cards.states[cardId],
+      card = id2Card(cardId),
+      hasProps = !!deck.elements[card.element].props[card.property]
+    if (hasProps && state.due && state.due < now)
+      sampleAndAdd(res, cardId, deck, learnable)
   }
 
   return res

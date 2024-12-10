@@ -18,7 +18,7 @@ export async function ready() {
     })
 }
 
-const grades = ['again', 'hard', 'good', 'easy']
+export const grades = ['again', 'hard', 'good', 'easy']
 
 export function nextCardState(
   cardState: t.CardState | undefined,
@@ -36,7 +36,6 @@ export function nextCardState(
     ...memoryState,
     lastSeen: now,
     due: now + Math.floor(fsrs!.nextInterval(memoryState.stability, 0.9, 3) * 24 * 3600),
-    views: (cardState?.views ?? 0) + 1,
   }
 }
 

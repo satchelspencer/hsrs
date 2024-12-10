@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { css, cx } from '@emotion/css'
 import _ from 'lodash'
 
@@ -9,11 +9,13 @@ import { computeElementInstance } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
 import { card2Id, getSessionDone } from '@hsrs/lib/session'
-import { getElementAndParents } from '@hsrs/lib/props'
-import { getTime } from '@hsrs/lib/schedule'
+import { getAllCards, getElementAndParents } from '@hsrs/lib/props'
+import { getTime, grades } from '@hsrs/lib/schedule'
+import { Icon } from '../components/icon'
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
+    cards = r.useSelector((s) => s.deck.cards),
     elements = r.useSelector((s) => s.deck.elements),
     settings = r.useSelector((s) => s.settings),
     dispatch = r.useDispatch()
@@ -113,13 +115,42 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded])
 
+  const { cardsDue, cardsAvailable } = useMemo(
+      () => ({
+        cardsDue: Object.values(cards.states).filter((s) => s.due && s.due < time).length,
+        cardsAvailable: getAllCards(elements).filter((c) => !cards.states[card2Id(c)])
+          .length,
+      }),
+      [cards.states]
+    ),
+    sessionSeconds = _.sumBy(session?.cards.history, (h) => h.took),
+    accuracy =
+      session &&
+      session.cards.history.filter((h) => h.score !== 1).length /
+        session.cards.history.length
+
   return (
     <div className={learnWrapper}>
       {session ? (
         sessionDone ? (
-          <Button onClick={() => dispatch(r.actions.endSession({}))}>
-            Finish session
-          </Button>
+          <>
+            <Button
+              className={mainAction}
+              onClick={() => dispatch(r.actions.endSession({}))}
+            >
+              <Icon size={1.2} name="check" />
+              &nbsp;finish session
+            </Button>
+            <div className={desc}>
+              {session.cards.history.length} reviews done in{' '}
+              {sessionSeconds > 60 ? (
+                <>{Math.floor(sessionSeconds) / 60} minutes</>
+              ) : (
+                <>{sessionSeconds} seconds</>
+              )}
+              . {accuracy && Math.floor(accuracy * 100)}% accuracy
+            </div>
+          </>
         ) : value ? (
           <div className={cardWrapper}>
             <div className={cardBody}>
@@ -139,36 +170,109 @@ export function Learn() {
                   ])}
                 />
               )}
+              <div className={sessionActions}>
+                <Button onClick={() => dispatch(r.actions.endSession({}))}>
+                  <Icon name="close" />
+                </Button>
+              </div>
             </div>
             <div className={cardActions}>
-              {revealed ? (
-                [1, 2, 3, 4].map((grade) => (
-                  <Button
-                    key={grade}
-                    onClick={() => setGrade(grade)}
-                    className={cardAction}
-                  >
-                    {grade}
+              <div className={actionsInner} style={{ justifyContent: 'start' }}>
+                <div className={sessionProgress}>
+                  {
+                    session.stack.filter(
+                      (s) => session.cards.states[card2Id(s)]?.stability >= 1
+                    ).length
+                  }
+                  /{session.stack.length}
+                </div>
+              </div>
+              <div className={actionsInner}>
+                {revealed ? (
+                  grades.map((grade, index) => (
+                    <Button
+                      key={grade}
+                      onClick={() => setGrade(index)}
+                      className={cardAction}
+                    >
+                      {grade}
+                    </Button>
+                  ))
+                ) : (
+                  <Button onClick={() => setRevealed(true)} className={cardAction}>
+                    Reveal
                   </Button>
-                ))
-              ) : (
-                <Button onClick={() => setRevealed(true)} className={cardAction}>
-                  reveal
+                )}
+              </div>
+              <div
+                className={actionsInner}
+                style={{ justifyContent: 'end', fontSize: '1.1em' }}
+              >
+                <Button
+                  onClick={() => {
+                    dispatch(
+                      r.actions.setSelection({
+                        selection: [{ type: 'element', jump: true, id: card.element }],
+                        index: 0,
+                      })
+                    )
+                    dispatch(r.actions.setRoute({ route: 'lib' }))
+                  }}
+                >
+                  <Icon name="open" />
                 </Button>
-              )}
+              </div>
             </div>
           </div>
         ) : null
       ) : (
-        <Button onClick={() => dispatch(r.actions.createSession({ size: 100 }))}>
-          Create session
-        </Button>
+        <>
+          <Button
+            className={mainAction}
+            onClick={() => dispatch(r.actions.createSession({ size: 60 }))}
+          >
+            <Icon size={1.2} name="plus" />
+            &nbsp;start session
+          </Button>
+          <div className={desc}>
+            {cardsDue} due for review, {cardsAvailable} new available
+          </div>
+        </>
       )}
-      <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
-      <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button>
+      {/* <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
+      <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button> */}
     </div>
   )
 }
+
+const desc = cx(css`
+  font-size: 0.9em;
+  opacity: 0.7;
+`)
+
+const mainAction = cx(css`
+  font-size: 1.3em;
+  /* background: ${styles.color(0.95)};
+  border: 1px solid ${styles.color(0.93)};
+  color: ${styles.color(0.4)};
+  padding: 10px;
+  border-radius: 4px; */
+`)
+
+const sessionActions = cx(css`
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.8em;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`)
+
+const sessionProgress = cx(css`
+  color: ${styles.color(0.7)};
+`)
 
 const frame = cx(
   css`
@@ -197,11 +301,22 @@ const cardBody = cx(css`
 
 const cardActions = cx(css`
   display: flex;
-  flex-direction: row;
-  gap: 10;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
 `)
 
-const cardAction = cx(css``)
+const actionsInner = cx(css`
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  justify-content: center;
+`)
+
+const cardAction = cx(css`
+  color: ${styles.color.active(0.7)};
+  font-size: 1.15em;
+`)
 
 const learnWrapper = cx(
   styles.fill,
@@ -210,5 +325,7 @@ const learnWrapper = cx(
     align-items: center;
     justify-content: center;
     flex-direction: column;
+    position: relative;
+    gap: 10px;
   `
 )
