@@ -131,6 +131,8 @@ export function Learn() {
       session.cards.history.filter((h) => h.score !== 1).length /
         session.cards.history.length
 
+  const sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1)
+
   return (
     <div className={learnWrapper}>
       {session ? (
@@ -234,11 +236,30 @@ export function Learn() {
         <>
           <Button
             className={mainAction}
-            onClick={() => dispatch(r.actions.createSession({ size: 60 }))}
+            onClick={() =>
+              dispatch(r.actions.createSession({ size: Math.pow(2, sessionSize) * 30 }))
+            }
           >
             <Icon size={1.2} name="plus" />
             &nbsp;start session
           </Button>
+          <div className={sizePicker}>
+            {['S', 'M', 'L', 'XL'].map((s, index) => {
+              return (
+                <Button
+                  key={index}
+                  className={sizeButton(sessionSize === index + 1)}
+                  onClick={() =>
+                    dispatch(
+                      r.actions.setDeckSettings({ newSessionSize: (index + 1) as any })
+                    )
+                  }
+                >
+                  {s}
+                </Button>
+              )
+            })}
+          </div>
           <div className={desc}>
             {cardsDue} due for review, {cardsAvailable} new available
           </div>
@@ -249,6 +270,25 @@ export function Learn() {
     </div>
   )
 }
+
+const sizePicker = cx(css`
+  display: flex;
+  gap: 20px;
+`)
+
+const sizeButton = (selected?: boolean) =>
+  cx(css`
+    background: ${styles.color(0.95)};
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    ${selected &&
+    css`
+      outline: 2px solid ${styles.color.active()} !important;
+    `}
+  `)
 
 const desc = cx(css`
   font-size: 0.9em;

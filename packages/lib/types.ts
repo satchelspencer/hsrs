@@ -32,6 +32,11 @@ export interface Deck {
   elements: IdMap<Element>
   cards: Cards
   session: LearningSession | null
+  settings: DeckSettings
+}
+
+export interface DeckSettings {
+  newSessionSize: 1 | 2 | 3 | 4
 }
 
 export interface MemoryState {

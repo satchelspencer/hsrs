@@ -11,6 +11,9 @@ const deckInit: t.Deck = {
     states: {},
   },
   session: null,
+  settings: {
+    newSessionSize: 1,
+  },
 }
 
 export const deck = createSlice({
@@ -60,6 +63,9 @@ export const deck = createSlice({
     clearHistory: (state, action: PayloadAction<{}>) => {
       state.cards = { history: [], states: {} }
       state.session = null
+    },
+    setDeckSettings: (state, action: PayloadAction<Partial<t.DeckSettings>>) => {
+      state.settings = { ...deckInit.settings, ...state.settings, ...action.payload }
     },
   },
 })
