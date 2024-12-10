@@ -29,7 +29,8 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
 
   return {
     stack,
-    cards: { states: {}, history: [] },
+    cards: {},
+    history: [],
   }
 }
 
@@ -47,7 +48,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
     } else {
       for (const propName of props) {
         res[propName] ??= {}
-        if (deck.cards.states[card2Id({ element: elid, property: propName })]) {
+        if (deck.cards[card2Id({ element: elid, property: propName })]) {
           for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
         }
       }
@@ -68,7 +69,7 @@ export function gradeCard(
   const cardId = card2Id(currentCard),
     now = getTime()
 
-  session.cards.history.push({
+  session.history.push({
     cardId,
     ..._.pick(currentCard, 'params'),
     score: grade,
@@ -76,8 +77,8 @@ export function gradeCard(
     took,
   })
 
-  const cardState = nextCardState(session.cards.states[cardId], grade, 1)
-  session.cards.states[cardId] = cardState
+  const cardState = nextCardState(session.cards[cardId], grade, 1)
+  session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
     newIndex = Math.max(
@@ -97,12 +98,12 @@ export function gradeCard(
 }
 
 export function getSessionDone(session: t.LearningSession): boolean {
-  const states = _.values(session.cards.states)
+  const states = _.values(session.cards)
   return states.length >= session.stack.length && _.every(states, (c) => c.stability > 1)
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
-  const learning = session.cards.history.pop()
+  const learning = session.history.pop()
   if (!learning) throw 'no card to undo'
 
   const stackIndex = session.stack.findIndex((s) => card2Id(s) === learning.cardId)
@@ -112,10 +113,8 @@ export function undoGrade(session: t.LearningSession): t.LearningSession {
   session.stack.splice(stackIndex, 1)
   session.stack.unshift(cardInstance)
 
-  const history = session.cards.history
-  session.cards.history = []
-  session.cards.states = {}
-  applyHistoryToCards(session.cards, history, true)
+  session.cards = {}
+  applyHistoryToCards(session.cards, session.history, true)
 
   return session
 }
@@ -146,7 +145,7 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 
     for (const property in props) {
       const id = card2Id({ ...card, property })
-      if (!deck.cards.states[id]) {
+      if (!deck.cards[id]) {
         sampleAndAdd(res, id, deck, learnable)
         usedEls[card.element] = true
       }
@@ -158,12 +157,12 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 
 function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
-    cardsIds = _.shuffle(Object.keys(deck.cards.states)),
+    cardsIds = _.shuffle(Object.keys(deck.cards)),
     now = getTime()
 
   while (res.length < limit && cardsIds.length) {
     const cardId = cardsIds.pop()!,
-      state = deck.cards.states[cardId],
+      state = deck.cards[cardId],
       card = id2Card(cardId),
       hasProps = !!deck.elements[card.element].props[card.property]
     if (hasProps && state.due && state.due < now)
@@ -200,8 +199,7 @@ function sampleAndAdd(
               jitterScale *
               (Math.random() > 0.5 ? 1 : -1)
             return (
-              (deck.cards.states[card2Id({ element: elId, property })]?.due ?? Infinity) +
-              jitter
+              (deck.cards[card2Id({ element: elId, property })]?.due ?? Infinity) + jitter
             )
           }
         ),

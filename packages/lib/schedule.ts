@@ -92,23 +92,21 @@ export function getTime() {
 }
 
 export function applyHistoryToCards(
-  cards: t.Cards,
+  cards: t.CardStates,
   history: t.CardLearning[],
   shallow?: boolean
 ) {
   for (const learning of history) {
-    cards.history.push(learning)
-
     const flearnings = shallow ? [learning] : flattenCard(learning),
       successProbs = flearnings.map((l) => {
-        const state = cards.states[l.cardId]
-        return state?.lastSeen ? getRetr(state, learning.time - state.lastSeen) : 0.5
+        const state = cards[l.cardId]
+        return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 0.5
       }),
       totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
 
     for (const i in flearnings) {
       const flearning = flearnings[i],
-        state = cards.states[flearning.cardId]
+        state = cards[flearning.cardId]
 
       if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12)
         continue
@@ -119,7 +117,7 @@ export function applyHistoryToCards(
             ? (1 - successProb) / (1 - totalSuccessProb)
             : 1
 
-      cards.states[learning.cardId] = nextCardState(state, learning.score, probability)
+      cards[flearning.cardId] = nextCardState(state, flearning.score, probability)
     }
   }
 }

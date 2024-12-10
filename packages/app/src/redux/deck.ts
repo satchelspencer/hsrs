@@ -6,10 +6,7 @@ import { applyHistoryToCards } from '@hsrs/lib/schedule'
 
 const deckInit: t.Deck = {
   elements: {},
-  cards: {
-    history: [],
-    states: {},
-  },
+  cards: {},
   session: null,
   settings: {
     newSessionSize: 1,
@@ -57,11 +54,12 @@ export const deck = createSlice({
     },
     endSession: (state, action: PayloadAction<{}>) => {
       if (!state.session) throw 'no session'
-      applyHistoryToCards(state.cards, state.session.cards.history)
+      applyHistoryToCards(state.cards, state.session.history)
+      //TODO SAVE HISTORY
       state.session = null
     },
     clearHistory: (state, action: PayloadAction<{}>) => {
-      state.cards = { history: [], states: {} }
+      state.cards = {}
       state.session = null
     },
     setDeckSettings: (state, action: PayloadAction<Partial<t.DeckSettings>>) => {

@@ -43,7 +43,7 @@ export function Learn() {
   //         s?.property,
   //         s.element,
   //         //s?.params
-  //         session.cards.states[card2Id(s)]?.stability,
+  //         session.cards[card2Id(s)]?.stability,
   //       ].join(', ')
   //     ),
   //     null,
@@ -119,17 +119,15 @@ export function Learn() {
 
   const { cardsDue, cardsAvailable } = useMemo(
       () => ({
-        cardsDue: Object.values(cards.states).filter((s) => s.due && s.due < time).length,
-        cardsAvailable: getAllCards(elements).filter((c) => !cards.states[card2Id(c)])
-          .length,
+        cardsDue: Object.values(cards).filter((s) => s.due && s.due < time).length,
+        cardsAvailable: getAllCards(elements).filter((c) => !cards[card2Id(c)]).length,
       }),
-      [cards.states]
+      [cards]
     ),
-    sessionSeconds = _.sumBy(session?.cards.history, (h) => h.took),
+    sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
       session &&
-      session.cards.history.filter((h) => h.score !== 1).length /
-        session.cards.history.length
+      session.history.filter((h) => h.score !== 1).length / session.history.length
 
   const sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1)
 
@@ -146,7 +144,7 @@ export function Learn() {
               &nbsp;finish session
             </Button>
             <div className={desc}>
-              {session.cards.history.length} reviews done in{' '}
+              {session.history.length} reviews done in{' '}
               {sessionSeconds > 60 ? (
                 <>{Math.floor(sessionSeconds) / 60} minutes</>
               ) : (
@@ -187,9 +185,8 @@ export function Learn() {
               <div className={actionsInner} style={{ justifyContent: 'start' }}>
                 <div className={sessionProgress}>
                   {
-                    session.stack.filter(
-                      (s) => session.cards.states[card2Id(s)]?.stability >= 1
-                    ).length
+                    session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1)
+                      .length
                   }
                   /{session.stack.length}
                 </div>

@@ -30,7 +30,7 @@ export type IdMap<T> = { [id: string]: T }
 
 export interface Deck {
   elements: IdMap<Element>
-  cards: Cards
+  cards: CardStates
   session: LearningSession | null
   settings: DeckSettings
 }
@@ -49,11 +49,7 @@ export interface CardState extends MemoryState {
   lastSeen?: number
 }
 
-type CardStates = IdMap<CardState>
-export interface Cards {
-  history: CardLearning[]
-  states: CardStates
-}
+export type CardStates = IdMap<CardState>
 
 export interface CardLearning {
   cardId: string
@@ -65,5 +61,6 @@ export interface CardLearning {
 
 export interface LearningSession {
   stack: CardInstance[]
-  cards: Cards
+  cards: CardStates
+  history: CardLearning[]
 }
