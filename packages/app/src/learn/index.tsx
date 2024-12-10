@@ -100,7 +100,13 @@ export function Learn() {
       pluginRef.current.contentWindow.postMessage(
         {
           type: 'state',
-          state: { value, vars: settings.vars, revealed, property: card?.property },
+          state: {
+            value,
+            vars: settings.vars,
+            revealed,
+            property: card?.property,
+            id: card2Id(card),
+          },
         },
         pluginUrl
       )
@@ -154,7 +160,7 @@ export function Learn() {
           </div>
         ) : null
       ) : (
-        <Button onClick={() => dispatch(r.actions.createSession({ size: 40 }))}>
+        <Button onClick={() => dispatch(r.actions.createSession({ size: 100 }))}>
           Create session
         </Button>
       )}
