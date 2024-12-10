@@ -82,6 +82,7 @@ export function Learn() {
   useEffect(() => {
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.origin === pluginUrl) {
+        //console.log('load')
         if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
         setPluginLoaded(true)
       }
@@ -99,6 +100,7 @@ export function Learn() {
 
   useEffect(() => {
     if (pluginRef.current?.contentWindow && pluginUrl && pluginLoaded) {
+      //console.log('send')
       pluginRef.current.contentWindow.postMessage(
         {
           type: 'state',
@@ -160,7 +162,10 @@ export function Learn() {
                   className={frame}
                   ref={pluginRef}
                   src={pluginUrl}
-                  onLoad={() => setPluginLoaded(false)}
+                  onLoad={() => {
+                    //console.log('start')
+                    setPluginLoaded(false)
+                  }}
                 />
               ) : (
                 <LabelGroup
@@ -200,7 +205,7 @@ export function Learn() {
                   ))
                 ) : (
                   <Button onClick={() => setRevealed(true)} className={cardAction}>
-                    Reveal
+                    reveal
                   </Button>
                 )}
               </div>
@@ -263,7 +268,6 @@ const sessionActions = cx(css`
   position: absolute;
   top: 0;
   right: 0;
-  font-size: 0.8em;
   padding: 8px;
   display: flex;
   align-items: center;
@@ -295,7 +299,7 @@ const cardWrapper = cx(
 const cardBody = cx(css`
   display: flex;
   flex-direction: column;
-  font-size: 3em;
+  font-size: 2em;
   flex: 1;
 `)
 

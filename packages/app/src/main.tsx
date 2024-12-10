@@ -21,7 +21,7 @@ if (container) {
   )
 }
 
-const routes = ['learn', 'lib', 'history', 'settings']
+const routes = ['learn', 'lib', 'settings']
 
 export function App() {
   const dispatch = r.useDispatch(),
