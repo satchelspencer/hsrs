@@ -1,4 +1,4 @@
-import { getAllCards, getElementAndParents } from './props'
+import { getAllCards, getElementAndParents, getElementProps } from './props'
 import { applyHistoryToCards, getTime, nextCardState } from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
@@ -8,7 +8,7 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
   const learned = getLearnedElements(deck),
     dueCards = getDue(deck, size, learned),
     newCardFactor = 4, //TODO
-    newCards = getNew(deck, (size - dueCards.length) / newCardFactor, learned)
+    newCards = _.shuffle(getNew(deck, (size - dueCards.length) / newCardFactor, learned))
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
@@ -131,7 +131,8 @@ export function id2Card(id: string): t.Card {
 
 function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
-    cards = _.shuffle(getAllCards(deck.elements))
+    cards = _.shuffle(getAllCards(deck.elements)),
+    usedEls: { [elId: string]: true } = {}
   // _.sortBy(
   //   _.shuffle(_.uniq(getAllCards(deck.elements))),
   //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
@@ -139,8 +140,17 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 
   while (res.length < limit && cards.length) {
     const card = cards.pop()!,
-      id = card2Id(card)
-    if (!deck.cards.states[id]) sampleAndAdd(res, id, deck, learnable)
+      props = getElementProps(card.element, deck.elements)
+
+    if (usedEls[card.element]) continue
+
+    for (const property in props) {
+      const id = card2Id({ ...card, property })
+      if (!deck.cards.states[id]) {
+        sampleAndAdd(res, id, deck, learnable)
+        usedEls[card.element] = true
+      }
+    }
   }
 
   return res
