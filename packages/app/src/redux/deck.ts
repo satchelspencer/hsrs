@@ -43,7 +43,7 @@ export const deck = createSlice({
       deleteElementDeep(state.elements, action.payload.id, action.payload.fromParentId)
     },
     createSession: (state, action: PayloadAction<{ size: number }>) => {
-      state.session = createLearningSession(state, action.payload.size)
+      state.session = createLearningSession(state, action.payload.size).session
     },
     gradeCard: (state, action: PayloadAction<{ grade: number; took: number }>) => {
       if (!state.session) throw 'no session'

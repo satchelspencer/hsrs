@@ -8,14 +8,14 @@ import { Button } from '../components/button'
 import { computeElementInstance } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
-import { card2Id, getSessionDone } from '@hsrs/lib/session'
-import { getAllCards, getElementAndParents } from '@hsrs/lib/props'
+import { card2Id, createLearningSession, getSessionDone } from '@hsrs/lib/session'
+import { getElementAndParents } from '@hsrs/lib/props'
 import { getTime, grades } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
-    cards = r.useSelector((s) => s.deck.cards),
+    deck = r.useSelector((s) => s.deck),
     elements = r.useSelector((s) => s.deck.elements),
     settings = r.useSelector((s) => s.settings),
     dispatch = r.useDispatch()
@@ -117,19 +117,16 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded])
 
-  const { cardsDue, cardsAvailable } = useMemo(
-      () => ({
-        cardsDue: Object.values(cards).filter((s) => s.due && s.due < time).length,
-        cardsAvailable: getAllCards(elements).filter((c) => !cards[card2Id(c)]).length,
-      }),
-      [cards]
+  const sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1),
+    actualSessionSize = Math.pow(2, sessionSize) * 30,
+    { new: cardsAvailable, due: cardsDue } = useMemo(
+      () => createLearningSession(deck, actualSessionSize),
+      [deck, sessionSize]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
       session &&
       session.history.filter((h) => h.score !== 1).length / session.history.length
-
-  const sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1)
 
   return (
     <div className={learnWrapper}>
@@ -233,9 +230,7 @@ export function Learn() {
         <>
           <Button
             className={mainAction}
-            onClick={() =>
-              dispatch(r.actions.createSession({ size: Math.pow(2, sessionSize) * 30 }))
-            }
+            onClick={() => dispatch(r.actions.createSession({ size: actualSessionSize }))}
           >
             <Icon size={1.2} name="plus" />
             &nbsp;start session

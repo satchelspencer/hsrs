@@ -4,11 +4,13 @@ import * as t from './types'
 import { sampleElementIstance } from './props'
 import _ from 'lodash'
 
-export function createLearningSession(deck: t.Deck, size: number): t.LearningSession {
+export function createLearningSession(
+  deck: t.Deck,
+  size: number
+): { session: t.LearningSession; new: number; due: number } {
   const learned = getLearnedElements(deck),
     dueCards = getDue(deck, size, learned),
-    newCardFactor = 4, //TODO
-    newCards = _.shuffle(getNew(deck, (size - dueCards.length) / newCardFactor, learned))
+    newCards = _.shuffle(getNew(deck, size - dueCards.length, learned))
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
@@ -28,9 +30,13 @@ export function createLearningSession(deck: t.Deck, size: number): t.LearningSes
   }
 
   return {
-    stack,
-    cards: {},
-    history: [],
+    session: {
+      stack,
+      cards: {},
+      history: [],
+    },
+    new: gaps,
+    due: dueCards.length,
   }
 }
 
@@ -130,14 +136,15 @@ export function id2Card(id: string): t.Card {
 
 function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
-    cards = //_.shuffle(getAllCards(deck.elements)),
-      _.sortBy(
-        _.shuffle(_.uniq(getAllCards(deck.elements))),
-        (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
-      ),
-    usedEls: { [elId: string]: true } = {}
+    cards = _.shuffle(getAllCards(deck.elements)),
+    // _.sortBy(
+    //   _.shuffle(_.uniq(getAllCards(deck.elements))),
+    //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
+    // ),
+    usedEls: { [elId: string]: true } = {},
+    newCardFactor = 4 //TODO
 
-  while (res.length < limit && cards.length) {
+  while (res.length < limit / newCardFactor && cards.length) {
     const card = cards.pop()!,
       props = getElementProps(card.element, deck.elements)
 
