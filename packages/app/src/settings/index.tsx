@@ -6,6 +6,7 @@ import * as r from '../redux'
 import { LabelGroup } from '../components/labels'
 import { MapEditor } from '../components/map'
 import CodeInput from '../components/code'
+import { ImportExport } from './io'
 
 export function Settings() {
   const settings = r.useSelector((s) => s.settings),
@@ -37,6 +38,7 @@ export function Settings() {
           ],
         ]}
       />
+      <ImportExport />
     </div>
   )
 }

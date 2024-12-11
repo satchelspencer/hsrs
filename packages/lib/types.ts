@@ -64,3 +64,13 @@ export interface LearningSession {
   cards: CardStates
   history: CardLearning[]
 }
+
+export interface HistoryExport {
+  type: 'history'
+  history: CardLearning[]
+}
+
+export interface DeckExport {
+  type: 'deck'
+  elements: IdMap<Element>
+}

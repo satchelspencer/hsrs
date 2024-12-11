@@ -1,4 +1,5 @@
 import Dexie, { Table } from 'dexie'
+import _ from 'lodash'
 
 import * as t from '@hsrs/lib/types'
 import { flattenCard } from '@hsrs/lib/schedule'
@@ -11,6 +12,10 @@ interface DBItem extends t.CardLearning {
 export function learning2db(learning: t.CardLearning): DBItem {
   const flat = flattenCard(learning)
   return { ...learning, elIds: flat.map((f) => id2Card(f.cardId).element) }
+}
+
+export function db2learning(learning: DBItem): t.CardLearning {
+  return _.omit(learning, 'elIds', 'id')
 }
 
 class CardLearningDatabase extends Dexie {

@@ -65,3 +65,12 @@ const warnWrapper = cx(css`
     color: #c50007;
   }
 `)
+
+export function SolidButton(props: ButtonProps) {
+  return <Button className={solidWrapper} {...props} />
+}
+
+const solidWrapper = cx(css`
+  background: ${styles.color(0.97)};
+  border: 1px solid ${styles.color(0.95)};
+`)

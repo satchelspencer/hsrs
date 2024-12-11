@@ -255,8 +255,6 @@ export function Learn() {
           <div className={desc}>
             {cardsDue} due for review, {cardsAvailable} new available
           </div>
-          {/* <Button onClick={() => dispatch(r.actions.clearHistory())}>clear</Button>
-          <Button onClick={() => dispatch(r.actions.recomputeCards())}>recompute</Button> */}
         </>
       )}
     </div>

@@ -56,6 +56,9 @@ export const deck = createSlice({
     setDeckSettings: (state, action: PayloadAction<Partial<t.DeckSettings>>) => {
       state.settings = { ...deckInit.settings, ...state.settings, ...action.payload }
     },
+    importElements: (state, action: PayloadAction<t.DeckExport>) => {
+      state.elements = _.merge(state.elements, action.payload.elements)
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {

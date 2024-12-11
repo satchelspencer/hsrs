@@ -35,7 +35,7 @@ export function nextCardState(
   return {
     ...memoryState,
     lastSeen: now,
-    due: now + Math.floor(fsrs!.nextInterval(memoryState.stability, 0.9, 3) * 24 * 3600),
+    due: now + Math.floor(fsrs!.nextInterval(memoryState.stability, 0.98, 3) * 24 * 3600),
   }
 }
 
