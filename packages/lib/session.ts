@@ -77,7 +77,7 @@ export function gradeCard(
     took,
   })
 
-  const cardState = nextCardState(session.cards[cardId], grade, 1)
+  const cardState = nextCardState(session.cards[cardId], grade, 1, now)
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
@@ -130,12 +130,12 @@ export function id2Card(id: string): t.Card {
 
 function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
-    cards = _.shuffle(getAllCards(deck.elements)),
+    cards = //_.shuffle(getAllCards(deck.elements)),
+      _.sortBy(
+        _.shuffle(_.uniq(getAllCards(deck.elements))),
+        (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
+      ),
     usedEls: { [elId: string]: true } = {}
-  // _.sortBy(
-  //   _.shuffle(_.uniq(getAllCards(deck.elements))),
-  //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
-  // )
 
   while (res.length < limit && cards.length) {
     const card = cards.pop()!,

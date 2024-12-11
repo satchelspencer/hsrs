@@ -1,8 +1,9 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
 import { createLearningSession, gradeCard, undoGrade } from '@hsrs/lib/session'
 import { applyHistoryToCards } from '@hsrs/lib/schedule'
+import { db, learning2db } from './db'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -52,21 +53,54 @@ export const deck = createSlice({
       if (!state.session) throw 'no session'
       state.session = undoGrade(state.session)
     },
-    endSession: (state, action: PayloadAction<{}>) => {
-      if (!state.session) throw 'no session'
-      applyHistoryToCards(state.cards, state.session.history)
-      //TODO SAVE HISTORY
-      state.session = null
-    },
-    clearHistory: (state, action: PayloadAction<{}>) => {
-      state.cards = {}
-      state.session = null
-    },
     setDeckSettings: (state, action: PayloadAction<Partial<t.DeckSettings>>) => {
       state.settings = { ...deckInit.settings, ...state.settings, ...action.payload }
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {
+      applyHistoryToCards(state.cards, action.payload)
+      state.session = null
+    })
+
+    builder.addCase(deckThunks.recomputeCards.fulfilled, (state, action) => {
+      state.cards = action.payload
+    })
+
+    builder.addCase(deckThunks.clearHistory.fulfilled, (state, action) => {
+      state.cards = {}
+      state.session = null
+    })
+  },
 })
+
+export const deckThunks = {
+  endSession: createAsyncThunk<t.CardLearning[], void, { state: { deck: t.Deck } }>(
+    'deck/endSession',
+    async (_, { getState }) => {
+      const state = getState().deck
+      if (!state.session) throw 'no session'
+      await db.cardLearning.bulkAdd(state.session.history.map(learning2db))
+      return state.session.history
+    }
+  ),
+  clearHistory: createAsyncThunk<void, void, { state: { deck: t.Deck } }>(
+    'deck/clearHistory',
+    async (_, { getState }) => {
+      await db.cardLearning.clear()
+    }
+  ),
+  recomputeCards: createAsyncThunk<t.CardStates, void, { state: { deck: t.Deck } }>(
+    'deck/recomputeCards',
+    async (_, { getState }) => {
+      const newCards: t.CardStates = {}
+      await db.cardLearning.orderBy('id').each((learning) => {
+        applyHistoryToCards(newCards, [learning])
+      })
+      return newCards
+    }
+  ),
+}
 
 function deleteElementDeep(
   elements: t.IdMap<t.Element>,

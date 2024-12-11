@@ -23,15 +23,15 @@ export const grades = ['again', 'hard', 'good', 'easy']
 export function nextCardState(
   cardState: t.CardState | undefined,
   grade: number,
-  probability: number
+  probability: number,
+  now: number
 ): t.CardState {
-  const now = getTime(),
-    memoryState = nextState(
-      cardState,
-      cardState?.lastSeen ? now - cardState.lastSeen : 0,
-      grade,
-      probability
-    )
+  const memoryState = nextState(
+    cardState,
+    cardState?.lastSeen ? now - cardState.lastSeen : 0,
+    grade,
+    probability
+  )
   return {
     ...memoryState,
     lastSeen: now,
@@ -117,12 +117,17 @@ export function applyHistoryToCards(
             ? (1 - successProb) / (1 - totalSuccessProb)
             : 1
 
-      cards[flearning.cardId] = nextCardState(state, flearning.score, probability)
+      cards[flearning.cardId] = nextCardState(
+        state,
+        flearning.score,
+        probability,
+        learning.time
+      )
     }
   }
 }
 
-function flattenCard(learning: t.CardLearning): t.CardLearning[] {
+export function flattenCard(learning: t.CardLearning): t.CardLearning[] {
   const res = [learning],
     { property } = id2Card(learning.cardId)
   for (const paramName in learning.params) {

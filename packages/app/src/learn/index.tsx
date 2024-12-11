@@ -138,7 +138,7 @@ export function Learn() {
           <>
             <Button
               className={mainAction}
-              onClick={() => dispatch(r.actions.endSession({}))}
+              onClick={() => dispatch(r.actions.endSession())}
             >
               <Icon size={1.2} name="check" />
               &nbsp;finish session
@@ -176,7 +176,7 @@ export function Learn() {
                 />
               )}
               <div className={sessionActions}>
-                <Button onClick={() => dispatch(r.actions.endSession({}))}>
+                <Button onClick={() => dispatch(r.actions.endSession())}>
                   <Icon name="close" />
                 </Button>
               </div>
@@ -260,10 +260,10 @@ export function Learn() {
           <div className={desc}>
             {cardsDue} due for review, {cardsAvailable} new available
           </div>
+          {/* <Button onClick={() => dispatch(r.actions.clearHistory())}>clear</Button>
+          <Button onClick={() => dispatch(r.actions.recomputeCards())}>recompute</Button> */}
         </>
       )}
-      {/* <Button onClick={() => dispatch(r.actions.endSession({}))}>Finish session</Button>
-      <Button onClick={() => dispatch(r.actions.clearHistory({}))}>clear history</Button> */}
     </div>
   )
 }

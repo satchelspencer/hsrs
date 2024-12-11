@@ -5,14 +5,15 @@ import { persistStore, persistReducer } from 'redux-persist'
 import { PersistGate } from 'redux-persist/integration/react'
 import storage from 'redux-persist/lib/storage'
 import { Provider } from 'react-redux'
-import { deck } from './deck'
+import { deck, deckThunks } from './deck'
 import { ui } from './ui'
 import { settings } from './settings'
 
 export const actions = {
   ...deck.actions,
+  ...deckThunks,
   ...ui.actions,
-  ...settings.actions
+  ...settings.actions,
 }
 
 const reducer = persistReducer(
@@ -20,7 +21,7 @@ const reducer = persistReducer(
   combineReducers({
     deck: deck.reducer,
     ui: ui.reducer,
-    settings: settings.reducer
+    settings: settings.reducer,
   })
 )
 
@@ -47,7 +48,7 @@ export function StoreProvider(props: { children: React.ReactNode }) {
 export const persistor = persistStore(store)
 
 type RootState = ReturnType<typeof store.getState>
-type AppDispatch = typeof store.dispatch
+export type AppDispatch = typeof store.dispatch
 export const useDispatch = ud.withTypes<AppDispatch>()
 export const useSelector = us.withTypes<RootState>()
 export const createSelector = cs.withTypes<RootState>()

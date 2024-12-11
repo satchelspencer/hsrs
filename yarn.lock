@@ -607,6 +607,7 @@ __metadata:
     "@vitejs/plugin-react": ^4.3.3
     codemirror: ^6.0.1
     culori: ^4.0.1
+    dexie: ^4.0.10
     react: ^18.3.1
     react-codemirror2: ^8.0.0
     react-dom: ^18.3.1
@@ -1440,6 +1441,13 @@ __metadata:
   version: 5.0.2
   resolution: "deep-eql@npm:5.0.2"
   checksum: 6aaaadb4c19cbce42e26b2bbe5bd92875f599d2602635dc97f0294bae48da79e89470aedee05f449e0ca8c65e9fd7e7872624d1933a1db02713d99c2ca8d1f24
+  languageName: node
+  linkType: hard
+
+"dexie@npm:^4.0.10":
+  version: 4.0.10
+  resolution: "dexie@npm:4.0.10"
+  checksum: 5023478791d86e6723c4c2653544eb218095ac725a57f9597d611b716ecb0b848c4a6a123da27dbc01081f033d83d5ef21dd60744afc97f4d3dd03ad22739e83
   languageName: node
   linkType: hard
 
