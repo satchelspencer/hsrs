@@ -97,34 +97,46 @@ export function applyHistoryToCards(
   shallow?: boolean
 ) {
   for (const learning of history) {
-    const flearnings = shallow ? [learning] : flattenCard(learning),
-      successProbs = flearnings.map((l) => {
-        const state = cards[l.cardId]
-        return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 0.5
-      }),
-      totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
-
-    for (const i in flearnings) {
-      const flearning = flearnings[i],
-        state = cards[flearning.cardId]
-
-      if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12)
-        continue
-
-      const successProb = successProbs[i],
-        probability =
-          !shallow && flearning.score === 1 && state
-            ? (1 - successProb) / (1 - totalSuccessProb)
-            : 1
-
-      cards[flearning.cardId] = nextCardState(
-        state,
-        flearning.score,
-        probability,
-        learning.time
-      )
-    }
+    const diff = getLearningCardDiff(cards, learning, shallow)
+    Object.assign(cards, diff)
   }
+}
+
+export function getLearningCardDiff(
+  cards: t.CardStates,
+  learning: t.CardLearning,
+  shallow?: boolean
+): t.CardStates {
+  const stateChanges: t.CardStates = {},
+    flearnings = shallow ? [learning] : flattenCard(learning),
+    successProbs = flearnings.map((l) => {
+      const state = cards[l.cardId]
+      return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 0.5
+    }),
+    totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
+
+  for (const i in flearnings) {
+    const flearning = flearnings[i],
+      state = cards[flearning.cardId]
+
+    if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12)
+      continue
+
+    const successProb = successProbs[i],
+      probability =
+        !shallow && flearning.score === 1 && state
+          ? (1 - successProb) / (1 - totalSuccessProb)
+          : 1
+
+    stateChanges[flearning.cardId] = nextCardState(
+      state,
+      flearning.score,
+      probability,
+      learning.time
+    )
+  }
+
+  return stateChanges
 }
 
 export function flattenCard(learning: t.CardLearning): t.CardLearning[] {

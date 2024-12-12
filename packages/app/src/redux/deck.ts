@@ -1,8 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
-import { createLearningSession, gradeCard, undoGrade } from '@hsrs/lib/session'
-import { applyHistoryToCards } from '@hsrs/lib/schedule'
+import { createLearningSession, gradeCard, id2Card, undoGrade } from '@hsrs/lib/session'
+import { applyHistoryToCards, getLearningCardDiff } from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
 
 const deckInit: t.Deck = {
@@ -48,6 +48,24 @@ export const deck = createSlice({
     gradeCard: (state, action: PayloadAction<{ grade: number; took: number }>) => {
       if (!state.session) throw 'no session'
       state.session = gradeCard(state.session, action.payload.grade, action.payload.took)
+
+      const diff = getLearningCardDiff(state.cards, _.last(state.session.history)!),
+        round = (n: number) => Math.floor(n * 100) / 100
+      for (const key in diff) {
+        const v = diff[key],
+          { element, property } = id2Card(key),
+          current = state.cards[key]
+
+        console.log(
+          `${state.elements[element].name}:${property} %cs:${round(
+            current?.stability
+          )}->${round(v.stability)} %cd:${round(current?.difficulty)}->${round(
+            v.difficulty
+          )}`,
+          `color: ${!current || current?.stability < v.stability ? 'green' : 'red'};`,
+          `color: ${!current || current?.difficulty > v.difficulty ? 'green' : 'red'};`
+        )
+      }
     },
     undoGrade: (state, action: PayloadAction<{}>) => {
       if (!state.session) throw 'no session'
