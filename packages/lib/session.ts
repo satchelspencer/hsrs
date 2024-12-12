@@ -1,5 +1,11 @@
 import { getAllCards, getElementAndParents, getElementProps } from './props'
-import { applyHistoryToCards, getTime, nextCardState } from './schedule'
+import {
+  applyHistoryToCards,
+  getNdayStability,
+  getTime,
+  nextCardState,
+  TARGET_RETENTION,
+} from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
 import _ from 'lodash'
@@ -68,6 +74,10 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   return _.mapValues(res, (v) => ({ ...v, ...all }))
 }
 
+export function getTargetStability() {
+  return getNdayStability(TARGET_RETENTION, 1)
+}
+
 export function gradeCard(
   session: t.LearningSession,
   grade: number,
@@ -91,11 +101,12 @@ export function gradeCard(
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
+    targetStability = getTargetStability(),
     newIndex = Math.max(
       Math.min(
         Math.floor(
-          cardState.stability < 1
-            ? 1 + Math.pow(cardState.stability, 2) * 10
+          cardState.stability < targetStability
+            ? 1 + Math.pow(cardState.stability, 3) * 30
             : session.stack.length
         ) + jitter,
         session.stack.length
@@ -108,8 +119,12 @@ export function gradeCard(
 }
 
 export function getSessionDone(session: t.LearningSession): boolean {
-  const states = _.values(session.cards)
-  return states.length >= session.stack.length && _.every(states, (c) => c.stability > 1)
+  const states = _.values(session.cards),
+    targetStability = getTargetStability()
+  return (
+    states.length >= session.stack.length &&
+    _.every(states, (c) => c.stability > targetStability)
+  )
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {

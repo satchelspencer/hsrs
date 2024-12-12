@@ -18,6 +18,8 @@ export async function ready() {
     })
 }
 
+export const TARGET_RETENTION = 0.98 //TODO put in store
+
 export const grades = ['again', 'hard', 'good', 'easy']
 
 export function nextCardState(
@@ -35,7 +37,11 @@ export function nextCardState(
   return {
     ...memoryState,
     lastSeen: now,
-    due: now + Math.floor(fsrs!.nextInterval(memoryState.stability, 0.98, 3) * 24 * 3600),
+    due:
+      now +
+      Math.floor(
+        fsrs!.nextInterval(memoryState.stability, TARGET_RETENTION, 3) * 24 * 3600
+      ),
   }
 }
 
@@ -85,6 +91,11 @@ export function getRetr(state: t.MemoryState, secondsElapsed: number) {
     1 + (19 / 81) * (secondsElapsed / (state.stability * (3600 * 24))),
     -0.5
   )
+}
+
+export function getNdayStability(desiredRetention: number, days: number) {
+  const dr2 = desiredRetention * desiredRetention
+  return (19 * days * dr2) / (81 * (1 - dr2))
 }
 
 export function getTime() {
