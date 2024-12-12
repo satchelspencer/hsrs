@@ -37,6 +37,7 @@ export interface Deck {
 
 export interface DeckSettings {
   newSessionSize: 1 | 2 | 3 | 4
+  allowNew: boolean
 }
 
 export interface MemoryState {

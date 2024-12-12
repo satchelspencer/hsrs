@@ -6,11 +6,14 @@ import _ from 'lodash'
 
 export function createLearningSession(
   deck: t.Deck,
-  size: number
-): { session: t.LearningSession; new: number; due: number } {
+  size: number,
+  allowNew: boolean
+): { session: t.LearningSession; new: number; due: number; next: number } {
   const learned = getLearnedElements(deck),
-    dueCards = getDue(deck, size, learned),
-    newCards = _.shuffle(getNew(deck, size - dueCards.length, learned))
+    { dueCards, nextCards } = getDue(deck, size, learned),
+    newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, learned)) : [],
+    ncFactor = getNewCardFactor(deck),
+    previewCards = _.take(nextCards, size - dueCards.length - newCards.length * ncFactor)
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
@@ -19,7 +22,7 @@ export function createLearningSession(
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
     ],
-    stack = [...dueCards]
+    stack = _.shuffle(allowNew ? [...dueCards] : [...dueCards, ...previewCards])
 
   let d = 0
   for (const gap of sumSpac) {
@@ -37,6 +40,7 @@ export function createLearningSession(
     },
     new: gaps,
     due: dueCards.length,
+    next: previewCards.length,
   }
 }
 
@@ -134,6 +138,10 @@ export function id2Card(id: string): t.Card {
   return { element, property }
 }
 
+function getNewCardFactor(deck: t.Deck) {
+  return 4 //TODO
+}
+
 function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
   const res: t.CardInstance[] = [],
     cards = _.shuffle(getAllCards(deck.elements)),
@@ -142,7 +150,7 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
     //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
     // ),
     usedEls: { [elId: string]: true } = {},
-    newCardFactor = 4 //TODO
+    newCardFactor = getNewCardFactor(deck)
 
   while (res.length < limit / newCardFactor && cards.length) {
     const card = cards.pop()!,
@@ -163,20 +171,24 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 }
 
 function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
-  const res: t.CardInstance[] = [],
-    cardsIds = _.shuffle(Object.keys(deck.cards)),
+  const dueCards: t.CardInstance[] = [],
+    nextCards: t.CardInstance[] = [],
+    cardsIds = _.sortBy(
+      Object.keys(deck.cards),
+      (cardId) => deck.cards[cardId].due ?? Infinity
+    ),
     now = getTime()
 
-  while (res.length < limit && cardsIds.length) {
-    const cardId = cardsIds.pop()!,
+  while (dueCards.length + nextCards.length < limit && cardsIds.length) {
+    const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
       card = id2Card(cardId),
       hasProps = !!deck.elements[card.element].props[card.property]
-    if (hasProps && state.due && state.due < now)
-      sampleAndAdd(res, cardId, deck, learnable)
+    if (hasProps && state.due)
+      sampleAndAdd(state.due < now ? dueCards : nextCards, cardId, deck, learnable)
   }
 
-  return res
+  return { dueCards, nextCards }
 }
 
 const SAMPLE_TRIES = 20,

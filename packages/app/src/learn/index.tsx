@@ -117,11 +117,16 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded])
 
-  const sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1),
+  const allowNew = r.useSelector((s) => s.deck.settings?.allowNew),
+    sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1),
     actualSessionSize = Math.pow(2, sessionSize) * 30,
-    { new: cardsAvailable, due: cardsDue } = useMemo(
-      () => createLearningSession(deck, actualSessionSize),
-      [deck, sessionSize]
+    {
+      new: cardsAvailable,
+      due: cardsDue,
+      next: nextDue,
+    } = useMemo(
+      () => createLearningSession(deck, actualSessionSize, allowNew),
+      [deck, sessionSize, allowNew]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
@@ -253,7 +258,17 @@ export function Learn() {
             })}
           </div>
           <div className={desc}>
-            {cardsDue} due for review, {cardsAvailable} new available
+            {cardsDue} due, {cardsAvailable} new, {nextDue} review
+          </div>
+          <div className={desc}>
+            <input
+              type="checkbox"
+              checked={!!allowNew}
+              onChange={() =>
+                dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
+              }
+            />{' '}
+            <span>Allow new cards</span>
           </div>
         </>
       )}
@@ -283,6 +298,8 @@ const sizeButton = (selected?: boolean) =>
 const desc = cx(css`
   font-size: 0.9em;
   opacity: 0.7;
+  display: flex;
+  align-items: center;
 `)
 
 const mainAction = cx(css`
