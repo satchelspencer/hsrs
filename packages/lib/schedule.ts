@@ -37,7 +37,7 @@ export async function ready() {
     })
 }
 
-export const TARGET_RETENTION = 0.985 //TODO put in store
+export const defaultretention = 0.985
 
 export const grades = ['again', 'hard', 'good', 'easy']
 
@@ -45,7 +45,8 @@ export function nextCardState(
   cardState: t.CardState | undefined,
   grade: number,
   probability: number,
-  now: number
+  now: number,
+  retention = defaultretention
 ): t.CardState {
   const memoryState = nextState(
     cardState,
@@ -59,7 +60,7 @@ export function nextCardState(
     due:
       now +
       Math.floor(
-        fsrs!.nextInterval(memoryState.stability, TARGET_RETENTION, 3) * 24 * 3600
+        fsrs!.nextInterval(memoryState.stability, retention, 3) * 24 * 3600
       ),
   }
 }
@@ -119,10 +120,11 @@ export function getTime() {
 export function applyHistoryToCards(
   cards: t.CardStates,
   history: t.CardLearning[],
-  shallow?: boolean
+  shallow?: boolean,
+  retention?: number
 ) {
   for (const learning of history) {
-    const diff = getLearningCardDiff(cards, learning, shallow)
+    const diff = getLearningCardDiff(cards, learning, retention, shallow)
     Object.assign(cards, diff)
   }
 }
@@ -130,6 +132,7 @@ export function applyHistoryToCards(
 export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
+  retention?: number,
   shallow?: boolean
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
@@ -157,7 +160,8 @@ export function getLearningCardDiff(
       state,
       flearning.score,
       probability,
-      learning.time
+      learning.time,
+      retention
     )
   }
 

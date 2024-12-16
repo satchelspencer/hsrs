@@ -58,7 +58,11 @@ export const deck = createSlice({
       if (!state.session) throw 'no session'
       state.session = gradeCard(state.session, action.payload.grade, action.payload.took)
 
-      const diff = getLearningCardDiff(state.cards, _.last(state.session.history)!),
+      const diff = getLearningCardDiff(
+          state.cards,
+          _.last(state.session.history)!,
+          state.settings.retention
+        ),
         round = (n: number) => Math.floor(n * 100) / 100
 
       for (const key in diff) {
@@ -90,7 +94,12 @@ export const deck = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {
-      applyHistoryToCards(state.cards, action.payload)
+      applyHistoryToCards(
+        state.cards,
+        action.payload,
+        false,
+        state.settings.retention
+      )
       state.session = null
     })
 
@@ -127,10 +136,11 @@ export const deckThunks = {
   ),
   recomputeCards: createAsyncThunk<t.CardStates, void, { state: { deck: t.Deck } }>(
     'deck/recomputeCards',
-    async (_) => {
-      const newCards: t.CardStates = {}
+    async (_, { getState }) => {
+      const newCards: t.CardStates = {},
+        retention = getState().deck.settings.retention
       await db.cardLearning.orderBy('id').each((learning) => {
-        applyHistoryToCards(newCards, [learning])
+        applyHistoryToCards(newCards, [learning], false, retention)
       })
       return newCards
     }

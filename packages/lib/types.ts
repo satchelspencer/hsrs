@@ -40,6 +40,7 @@ export interface DeckSettings {
   newSessionSize: 1 | 2 | 3 | 4
   allowNew: boolean
   fsrsParams?: FSRSParams
+  retention?: number
 }
 
 export interface MemoryState {

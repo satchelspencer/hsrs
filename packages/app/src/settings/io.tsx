@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import _ from 'lodash'
+import { css, cx } from '@emotion/css'
 
 import { Button, SolidButton, WarnButton } from '../components/button'
 import { Icon } from '../components/icon'
@@ -8,6 +9,7 @@ import { db, db2learning, learning2db } from '../redux/db'
 import * as r from '../redux'
 import { historyVersionable, deckVersionable } from '../redux/versions'
 import { getTime } from '@hsrs/lib/schedule'
+import CodeInput from '../components/code'
 
 const downloadJSON = (data: object, filename: string) => {
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }),
@@ -25,7 +27,8 @@ const downloadJSON = (data: object, filename: string) => {
 
 export function ImportExport() {
   const elements = r.useSelector((s) => s.deck.elements),
-    dispatch = r.useDispatch()
+    dispatch = r.useDispatch(),
+    deckSettings = r.useSelector((s) => s.deck.settings)
 
   const [loading, setLoading] = useState(false)
 
@@ -115,7 +118,29 @@ export function ImportExport() {
             </WarnButton>
           </div>,
         ],
+        [
+          'Retention',
+          <div className={inputWrapper}>
+            <CodeInput
+              value={
+                deckSettings.retention ? deckSettings.retention + '' : '0.985'
+              }
+              throttle
+              onChange={(rt) => {
+                let rtv: number | undefined = undefined
+                try {
+                  rtv = parseFloat(rt ?? '')
+                } catch {}
+                dispatch(r.actions.setDeckSettings({ retention: rtv }))
+              }}
+            />
+          </div>,
+        ],
       ]}
     />
   )
 }
+
+const inputWrapper = cx(css`
+  width: 50px;
+`)
