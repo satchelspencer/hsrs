@@ -2,7 +2,15 @@ import init, { Fsrs, initSync } from 'fsrs-browser'
 
 export { Fsrs } from 'fsrs-browser'
 
-export async function fsrs() {
+export const defaultParams = [
+  4.837098598480225, 8.488668441772461, 13.726399421691895, 15.691049575805664,
+  7.194900035858154, 0.534500002861023, 1.4603999853134155, 0.004600000102072954,
+  1.5457500219345093, 0.11919999867677689, 1.0192500352859497, 1.9394999742507935,
+  0.10999999940395355, 0.2960500121116638, 2.2697999477386475, 0.23149999976158142,
+  2.989799976348877, 0.5165500044822693, 0.6621000170707703,
+]
+
+export async function fsrs(params = defaultParams) {
   if (typeof window !== 'undefined') {
     // @ts-ignore
     const wasmUrl = await import('fsrs-browser/fsrs_browser_bg.wasm?url')
@@ -15,10 +23,5 @@ export async function fsrs() {
     const wasmBuffer = fs.readFileSync(wasmPath)
     initSync(wasmBuffer)
   }
-  return new Fsrs(
-    new Float32Array([
-      0.4072, 1.1829, 3.1262, 15.4722, 7.2102, 0.5316, 1.0651, 0.0234, 1.616, 0.1544,
-      1.0824, 1.9813, 0.0953, 0.2975, 2.2042, 0.2407, 2.9466, 0.5034, 0.6567,
-    ])
-  )
+  return new Fsrs(new Float32Array(params))
 }

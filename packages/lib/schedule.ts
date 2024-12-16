@@ -1,14 +1,33 @@
-import { fsrs as init, Fsrs } from './fsrs'
+import { fsrs as init, Fsrs, defaultParams } from './fsrs'
 import { card2Id, id2Card } from './session'
 import * as t from './types'
 import _ from 'lodash'
 
 let fsrs: Fsrs | null = null,
-  waiting: (() => void)[] = []
+  waiting: (() => void)[] = [],
+  params = defaultParams
+
 init().then((f) => {
   fsrs = f
   waiting.forEach((c) => c())
 })
+
+export async function setParams(params?: number[]) {
+  fsrs = await init(params)
+}
+
+export function getLearnTargetStability() {
+  return params[2] * 0.9
+}
+
+export function computeParams(
+  cids: BigInt64Array,
+  ratings: Uint8Array,
+  ids: BigInt64Array,
+  types: Uint8Array
+) {
+  return fsrs!.computeParametersAnki(0, cids, ratings, ids, types)
+}
 
 export async function ready() {
   if (fsrs) return
@@ -18,7 +37,7 @@ export async function ready() {
     })
 }
 
-export const TARGET_RETENTION = 0.98 //TODO put in store
+export const TARGET_RETENTION = 0.985 //TODO put in store
 
 export const grades = ['again', 'hard', 'good', 'easy']
 
@@ -80,7 +99,7 @@ export function nextState(
     const intd = (1 - probability) * memoryState.difficulty + probability * nextDifficulty
 
     return {
-      stability: Math.max(r, 0.25),
+      stability: Math.max(r, getLearnTargetStability() / 4),
       difficulty: intd,
     }
   }
@@ -91,11 +110,6 @@ export function getRetr(state: t.MemoryState, secondsElapsed: number) {
     1 + (19 / 81) * (secondsElapsed / (state.stability * (3600 * 24))),
     -0.5
   )
-}
-
-export function getNdayStability(desiredRetention: number, days: number) {
-  const dr2 = desiredRetention * desiredRetention
-  return (19 * days * dr2) / (81 * (1 - dr2))
 }
 
 export function getTime() {

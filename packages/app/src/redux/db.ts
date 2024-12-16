@@ -26,6 +26,10 @@ class CardLearningDatabase extends Dexie {
     this.version(1).stores({
       cardLearning: '++id, cardId, time, *elIds',
     })
+
+    this.version(2).stores({
+      cardLearning: '++id, cardId, time, *elIds, [cardId+id]',
+    })
   }
 }
 

@@ -6,7 +6,7 @@
   "dependencies": {
     "@types/jexl": "^2.3.4",
     "@types/lodash": "^4.17.12",
-    "fsrs-browser": "^1.3.4",
+    "fsrs-browser": "^1.4.4",
     "hierarchical-clustering": "^1.1.0",
     "jexl": "^2.3.0",
     "lodash": "^4.17.21"

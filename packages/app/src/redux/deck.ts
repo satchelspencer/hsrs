@@ -2,7 +2,11 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
 import { createLearningSession, gradeCard, id2Card, undoGrade } from '@hsrs/lib/session'
-import { applyHistoryToCards, getLearningCardDiff } from '@hsrs/lib/schedule'
+import {
+  applyHistoryToCards,
+  computeParams,
+  getLearningCardDiff,
+} from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
 
 const deckInit: t.Deck = {
@@ -56,6 +60,7 @@ export const deck = createSlice({
 
       const diff = getLearningCardDiff(state.cards, _.last(state.session.history)!),
         round = (n: number) => Math.floor(n * 100) / 100
+
       for (const key in diff) {
         const v = diff[key],
           { element, property } = id2Card(key),
@@ -97,6 +102,10 @@ export const deck = createSlice({
       state.cards = {}
       state.session = null
     })
+
+    builder.addCase(deckThunks.computeParams.fulfilled, (state, action) => {
+      state.settings.fsrsParams = action.payload
+    })
   },
 })
 
@@ -112,18 +121,80 @@ export const deckThunks = {
   ),
   clearHistory: createAsyncThunk<void, void, { state: { deck: t.Deck } }>(
     'deck/clearHistory',
-    async (_, { getState }) => {
+    async (_) => {
       await db.cardLearning.clear()
     }
   ),
   recomputeCards: createAsyncThunk<t.CardStates, void, { state: { deck: t.Deck } }>(
     'deck/recomputeCards',
-    async (_, { getState }) => {
+    async (_) => {
       const newCards: t.CardStates = {}
       await db.cardLearning.orderBy('id').each((learning) => {
         applyHistoryToCards(newCards, [learning])
       })
       return newCards
+    }
+  ),
+  computeParams: createAsyncThunk<t.FSRSParams, void, { state: { deck: t.Deck } }>(
+    'deck/computeParams',
+    async (x, { getState }) => {
+      const cids: number[] = [],
+        ratings: number[] = [],
+        ids: number[] = [],
+        types: number[] = []
+
+      const deck = getState().deck
+
+      let learnSet: t.CardLearning[] = [],
+        currentId: string | null = null
+
+      const count = await db.cardLearning.count()
+
+      await db.cardLearning
+        .orderBy(['cardId', 'id'])
+        .offset(Math.max(count - 10000, 0))
+        .each((learning) => {
+          if (learning.score === 0) return
+          if (currentId && learning.cardId !== currentId) {
+            if (learnSet.length > 1) {
+              const cid = learnSet[0].time * 1000 - 24 * 3600
+              let lastSeen: number | null = null
+              let firstSession = true
+              let relearning = false
+              let first = true
+              for (const l of learnSet) {
+                const delta = lastSeen ? l.time - lastSeen : 0
+                if (delta > 3600 * 6) {
+                  firstSession = false
+                  relearning = false
+                }
+                const custom = !(delta < 3600 * 12 && !(relearning || l.score === 1))
+
+                cids.push(cid)
+                ratings.push(l.score)
+                ids.push(l.time)
+                types.push(first ? 0 : relearning ? 2 : custom ? 3 : 1)
+
+                lastSeen = l.time
+                if (!firstSession && l.score === 1) relearning = true
+                first = false
+              }
+            }
+
+            learnSet = []
+          }
+          currentId = learning.cardId
+          learnSet.push(learning)
+        })
+
+      const params = computeParams(
+        new BigInt64Array(cids.map((n) => BigInt(n))),
+        new Uint8Array(ratings),
+        new BigInt64Array(ids.map((n) => BigInt(n))),
+        new Uint8Array(types)
+      )
+
+      return Array.from(params)
     }
   ),
 }

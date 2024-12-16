@@ -1,10 +1,9 @@
 import { getAllCards, getElementAndParents, getElementProps } from './props'
 import {
   applyHistoryToCards,
-  getNdayStability,
+  getLearnTargetStability,
   getTime,
   nextCardState,
-  TARGET_RETENTION,
 } from './schedule'
 import * as t from './types'
 import { sampleElementIstance } from './props'
@@ -74,10 +73,6 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   return _.mapValues(res, (v) => ({ ...v, ...all }))
 }
 
-export function getTargetStability() {
-  return getNdayStability(TARGET_RETENTION, 1)
-}
-
 export function gradeCard(
   session: t.LearningSession,
   grade: number,
@@ -101,30 +96,48 @@ export function gradeCard(
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
-    targetStability = getTargetStability(),
+    targetStability = getLearnTargetStability(),
+    learning = cardState.stability < targetStability,
+    minGraduatedIndex = session.stack.findIndex((v) => {
+      const state = session.cards[card2Id(v)]
+      return state && state.stability >= targetStability
+    }),
+    graduatedIndex = // if graduated reinsert randomly in the end of the stack already graduated, past index 10
+      minGraduatedIndex === -1
+        ? session.stack.length
+        : Math.max(
+            minGraduatedIndex +
+              Math.floor(Math.random() * (session.stack.length - minGraduatedIndex)),
+            10
+          ),
+    learningIndex = Math.min(
+      // if learning reinsert proportional to stability/target
+      1 + Math.pow(cardState.stability / targetStability, 3) * 20,
+      Math.floor(session.stack.length / 2)
+    ),
     newIndex = Math.max(
       Math.min(
-        Math.floor(
-          cardState.stability < targetStability
-            ? 1 + Math.pow(cardState.stability, 3) * 30
-            : session.stack.length
-        ) + jitter,
+        Math.floor(learning ? learningIndex : graduatedIndex) + jitter,
         session.stack.length
       ),
       1
     )
+
   session.stack.splice(newIndex, 0, currentCard)
 
   return session
 }
 
-export function getSessionDone(session: t.LearningSession): boolean {
+export function getSessionDone(session: t.LearningSession | null) {
+  if (!session) return { sessionDone: false, targetStability: 1 }
   const states = _.values(session.cards),
-    targetStability = getTargetStability()
-  return (
-    states.length >= session.stack.length &&
-    _.every(states, (c) => c.stability > targetStability)
-  )
+    targetStability = getLearnTargetStability()
+  return {
+    sessionDone:
+      states.length >= session.stack.length &&
+      _.every(states, (c) => c.stability >= targetStability),
+    targetStability,
+  }
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
@@ -199,8 +212,11 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
       state = deck.cards[cardId],
       card = id2Card(cardId),
       hasProps = !!deck.elements[card.element].props[card.property]
-    if (hasProps && state.due)
-      sampleAndAdd(state.due < now ? dueCards : nextCards, cardId, deck, learnable)
+    if (hasProps && state.due && state.lastSeen) {
+      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable)
+      else if (state.lastSeen < now - 3600 * 12)
+        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h
+    }
   }
 
   return { dueCards, nextCards }

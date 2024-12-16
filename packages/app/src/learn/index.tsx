@@ -30,12 +30,12 @@ export function Learn() {
         .map((e) => elements[e].name)
         .find((e) => settings.plugins[e]),
     pluginUrl = plugin && settings.plugins[plugin],
-    sessionDone = session && getSessionDone(session)
+    { sessionDone, targetStability } = getSessionDone(session)
 
   // console.log(
   //   plugin,
   //   sessionDone,
-  //   settings.plugins[plugin ?? ''],
+  //   targetStability,
   //   JSON.stringify(
   //     session?.stack.map((s) =>
   //       [
@@ -187,8 +187,9 @@ export function Learn() {
               <div className={actionsInner} style={{ justifyContent: 'start' }}>
                 <div className={sessionProgress}>
                   {
-                    session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1)
-                      .length
+                    session.stack.filter(
+                      (s) => session.cards[card2Id(s)]?.stability >= targetStability
+                    ).length
                   }
                   /{session.stack.length}
                 </div>

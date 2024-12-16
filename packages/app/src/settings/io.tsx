@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import _ from 'lodash'
 
-import { Button, SolidButton } from '../components/button'
+import { Button, SolidButton, WarnButton } from '../components/button'
 import { Icon } from '../components/icon'
 import { LabelGroup } from '../components/labels'
 import { db, db2learning, learning2db } from '../redux/db'
@@ -101,6 +101,19 @@ export function ImportExport() {
           <Button onClick={() => dispatch(r.actions.recomputeCards())}>
             Re-schedule
           </Button>,
+        ],
+        [
+          'Parameters',
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Button onClick={() => dispatch(r.actions.computeParams())}>Optimize</Button>
+            <WarnButton
+              onClick={() =>
+                dispatch(r.actions.setDeckSettings({ fsrsParams: undefined }))
+              }
+            >
+              Reset
+            </WarnButton>
+          </div>,
         ],
       ]}
     />

@@ -35,9 +35,11 @@ export interface Deck {
   settings: DeckSettings
 }
 
+export type FSRSParams = number[] | undefined
 export interface DeckSettings {
   newSessionSize: 1 | 2 | 3 | 4
   allowNew: boolean
+  fsrsParams?: FSRSParams
 }
 
 export interface MemoryState {
