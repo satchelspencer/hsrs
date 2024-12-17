@@ -82,7 +82,6 @@ export function Learn() {
   useEffect(() => {
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.origin === pluginUrl) {
-        //console.log('load')
         if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
         setPluginLoaded(true)
       }
@@ -96,11 +95,10 @@ export function Learn() {
       window.removeEventListener('message', handleMessage)
       window.removeEventListener('keydown', keyHanlder)
     }
-  }, [])
+  }, [pluginRef.current])
 
   useEffect(() => {
     if (pluginRef.current?.contentWindow && pluginUrl && pluginLoaded) {
-      //console.log('send')
       pluginRef.current.contentWindow.postMessage(
         {
           type: 'state',
@@ -148,9 +146,9 @@ export function Learn() {
             <div className={desc}>
               {session.history.length} reviews done in{' '}
               {sessionSeconds > 60 ? (
-                <>{Math.floor(sessionSeconds) / 60} minutes</>
+                <>{(sessionSeconds / 60).toFixed(1)} minutes</>
               ) : (
-                <>{sessionSeconds} seconds</>
+                <>{sessionSeconds.toFixed(1)} seconds</>
               )}
               . {accuracy && Math.floor(accuracy * 100)}% accuracy
             </div>
@@ -164,10 +162,6 @@ export function Learn() {
                   className={frame}
                   ref={pluginRef}
                   src={pluginUrl}
-                  onLoad={() => {
-                    //console.log('start')
-                    setPluginLoaded(false)
-                  }}
                 />
               ) : (
                 <LabelGroup
