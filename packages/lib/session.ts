@@ -98,22 +98,23 @@ export function gradeCard(
   const jitter = Math.floor(Math.random() * 3 - 1),
     targetStability = getLearnTargetStability(),
     learning = cardState.stability < targetStability,
-    minGraduatedIndex = session.stack.findIndex((v) => {
+    minGraduatedIndex = session.stack.findLastIndex((v) => {
       const state = session.cards[card2Id(v)]
-      return state && state.stability >= targetStability
+      return !state || state.stability < targetStability
     }),
-    graduatedIndex = // if graduated reinsert randomly in the end of the stack already graduated, past index 10
+    midPoint = Math.floor(session.stack.length / 2),
+    graduatedIndex = // if graduated reinsert randomly in the end of the stack already graduated, past half way
       minGraduatedIndex === -1
         ? session.stack.length
         : Math.max(
             minGraduatedIndex +
               Math.floor(Math.random() * (session.stack.length - minGraduatedIndex)),
-            10
+            midPoint
           ),
     learningIndex = Math.min(
       // if learning reinsert proportional to stability/target
       1 + Math.pow(cardState.stability / targetStability, 3) * 20,
-      Math.floor(session.stack.length / 2)
+      midPoint
     ),
     newIndex = Math.max(
       Math.min(
@@ -213,9 +214,9 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
       card = id2Card(cardId),
       hasProps = !!deck.elements[card.element].props[card.property]
     if (hasProps && state.due && state.lastSeen) {
-      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable)
-      else if (state.lastSeen < now - 3600 * 12)
-        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h
+      if (state.due < now + 3600 * 12) sampleAndAdd(dueCards, cardId, deck, learnable)
+      else if (state.lastSeen < now - 3600 * 12 || state.due < now + 3600 * 12)
+        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h, or ones that are due in the next 12
     }
   }
 
@@ -231,16 +232,20 @@ function sampleAndAdd(
   deck: t.Deck,
   learnable: t.IdMap<t.IdMap<t.Element>>
 ) {
-  const { element, property } = id2Card(cardId),
-    el = deck.elements[element]
+  const { element, property } = id2Card(cardId)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
+      const elElements: t.IdMap<t.Element> = {}
+      for (const eid of getElementAndParents(element, deck.elements)) {
+        elElements[eid] = deck.elements[eid]
+      }
+
       res.push({
         ...sampleElementIstance(
           element,
-          { ...learnable[property], [element]: el },
+          { ...learnable[property], ...elElements },
           undefined,
 
           (elId) => {
