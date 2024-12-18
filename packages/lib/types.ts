@@ -51,6 +51,7 @@ export interface MemoryState {
 export interface CardState extends MemoryState {
   due?: number
   lastSeen?: number
+  lastScore?: number
 }
 
 export type CardStates = IdMap<CardState>

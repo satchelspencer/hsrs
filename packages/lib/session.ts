@@ -17,8 +17,7 @@ export function createLearningSession(
   const learned = getLearnedElements(deck),
     { dueCards, nextCards } = getDue(deck, size, learned),
     newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, learned)) : [],
-    ncFactor = getNewCardFactor(deck),
-    previewCards = _.take(nextCards, size - dueCards.length - newCards.length * ncFactor)
+    previewCards = _.take(nextCards, size - dueCards.length - newCards.length) //don't use ncfactor here for better padding
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
@@ -27,7 +26,9 @@ export function createLearningSession(
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
     ],
-    stack = _.shuffle(allowNew ? [...dueCards] : [...dueCards, ...previewCards])
+    stack = _.shuffle(
+      allowNew ? [...dueCards, ...previewCards] : [...dueCards, ...previewCards]
+    )
 
   let d = 0
   for (const gap of sumSpac) {
@@ -92,12 +93,15 @@ export function gradeCard(
     took,
   })
 
-  const cardState = nextCardState(session.cards[cardId], grade, 1, now)
+  const lastCardState: t.CardState | undefined = session.cards[cardId],
+    cardState = nextCardState(lastCardState, grade, 1, now)
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
     targetStability = getLearnTargetStability(),
-    learning = cardState.stability < targetStability,
+    graduated =
+      cardState.stability > targetStability &&
+      (!lastCardState || lastCardState.stability > targetStability),
     minGraduatedIndex = session.stack.findLastIndex((v) => {
       const state = session.cards[card2Id(v)]
       return !state || state.stability < targetStability
@@ -107,18 +111,20 @@ export function gradeCard(
       minGraduatedIndex === -1
         ? session.stack.length
         : Math.max(
-            minGraduatedIndex +
+            1 +
+              minGraduatedIndex +
               Math.floor(Math.random() * (session.stack.length - minGraduatedIndex)),
             midPoint
           ),
     learningIndex = Math.min(
       // if learning reinsert proportional to stability/target
-      1 + Math.pow(cardState.stability / targetStability, 3) * 20,
-      midPoint
+      2 + Math.pow(cardState.stability / targetStability, 5) * 20 + jitter,
+      //midPoint,
+      20
     ),
     newIndex = Math.max(
       Math.min(
-        Math.floor(learning ? learningIndex : graduatedIndex) + jitter,
+        Math.floor(!graduated ? learningIndex : graduatedIndex),
         session.stack.length
       ),
       1
@@ -212,11 +218,22 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
       card = id2Card(cardId),
-      hasProps = !!deck.elements[card.element].props[card.property]
+      props = getElementProps(card.element, deck.elements),
+      hasProps = !!props[card.property]
+
     if (hasProps && state.due && state.lastSeen) {
-      if (state.due < now + 3600 * 12) sampleAndAdd(dueCards, cardId, deck, learnable)
-      else if (state.lastSeen < now - 3600 * 12 || state.due < now + 3600 * 12)
-        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h, or ones that are due in the next 12
+      if (
+        state.due < now + 3600 * 12 ||
+        (state.lastScore === 1 && state.lastSeen > now - 3600 * 12)
+      )
+        sampleAndAdd(
+          dueCards,
+          cardId,
+          deck,
+          learnable
+        ) // cards due due date in less than 12h or missed in last 12h
+      else if (state.lastSeen < now - 3600 * 12)
+        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h
     }
   }
 

@@ -57,6 +57,7 @@ export function nextCardState(
   return {
     ...memoryState,
     lastSeen: now,
+    lastScore: grade,
     due:
       now +
       Math.floor(
