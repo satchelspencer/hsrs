@@ -6,6 +6,7 @@ import {
   applyHistoryToCards,
   computeParams,
   getLearningCardDiff,
+  nextInterval,
 } from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
 
@@ -63,7 +64,8 @@ export const deck = createSlice({
           _.last(state.session.history)!,
           state.settings.retention
         ),
-        round = (n: number) => Math.floor(n * 100) / 100
+        round = (n: number) => Math.floor(n * 100) / 100,
+        retention = state.settings.retention ?? 0.9
 
       for (const key in diff) {
         const v = diff[key],
@@ -72,10 +74,10 @@ export const deck = createSlice({
 
         console.log(
           `${state.elements[element].name}:${property} %cs:${round(
-            current?.stability
-          )}->${round(v.stability)} %cd:${round(current?.difficulty)}->${round(
-            v.difficulty
-          )}`,
+            nextInterval(current?.stability, retention) / 24 / 3600
+          )}->${round(nextInterval(v.stability, retention) / 24 / 3600)} %cd:${round(
+            current?.difficulty
+          )}->${round(v.difficulty)}`,
           `color: ${!current || current?.stability < v.stability ? 'green' : 'red'};`,
           `color: ${!current || current?.difficulty > v.difficulty ? 'green' : 'red'};`
         )
@@ -94,12 +96,7 @@ export const deck = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {
-      applyHistoryToCards(
-        state.cards,
-        action.payload,
-        false,
-        state.settings.retention
-      )
+      applyHistoryToCards(state.cards, action.payload, false, state.settings.retention)
       state.session = null
     })
 

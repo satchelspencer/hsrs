@@ -80,6 +80,8 @@ export function Learn() {
     [pluginLoaded, setPluginLoaded] = useState(false)
 
   useEffect(() => {
+    setPluginLoaded(false)
+    
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.origin === pluginUrl) {
         if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)

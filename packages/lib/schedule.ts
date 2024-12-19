@@ -58,12 +58,12 @@ export function nextCardState(
     ...memoryState,
     lastSeen: now,
     lastScore: grade,
-    due:
-      now +
-      Math.floor(
-        fsrs!.nextInterval(memoryState.stability, retention, 3) * 24 * 3600
-      ),
+    due: now + nextInterval(memoryState.stability, retention),
   }
+}
+
+export function nextInterval(stability: number, retention: number) {
+  return Math.floor(fsrs!.nextInterval(stability, retention, 3) * 24 * 3600)
 }
 
 export function nextState(
