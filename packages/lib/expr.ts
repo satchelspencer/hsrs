@@ -16,10 +16,17 @@ export function isValid(expr: string) {
   }
 }
 
+const compileCache: { [expr: string]: any } = {}
+function cacheJexl(expr: string, context: any) {
+  compileCache[expr] ??= jexl.compile(expr)
+  return compileCache[expr].evalSync(context)
+}
+
 export function run(expr: string, context: any) {
   if (expr === 'null') return undefined
+  if (!expr.includes('.') && !expr.includes('|') && !expr.includes('+')) return expr
   try {
-    const res = jexl.evalSync(expr, context) ?? expr
+    const res = cacheJexl(expr, context) ?? expr
     return _.isNaN(res) ? expr : res
   } catch {
     return expr

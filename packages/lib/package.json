@@ -9,7 +9,8 @@
     "fsrs-browser": "^1.4.4",
     "hierarchical-clustering": "^1.1.0",
     "jexl": "^2.3.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "node-lcs": "^1.0.4"
   },
   "devDependencies": {
     "@types/node": "^22.8.2"

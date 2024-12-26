@@ -12,6 +12,7 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
+import { findAliases } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -208,21 +209,18 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        {/* <Button
+        <Button
           onClick={() => {
             console.log(
-              JSON.stringify(
-                _.mapValues(findMissingInstances(props.id, elements), (v) =>
-                  v.map((i) => elements[i].name)
-                ),
-                null,
-                2
+              exampleInstance,
+              findAliases(exampleInstance, 'tl', elements).map((c) =>
+                computeElementInstance(c, elements)
               )
             )
           }}
         >
           <Icon name="test" />
-        </Button> */}
+        </Button>
         {canShowRelation && (
           <Button
             onClick={() =>

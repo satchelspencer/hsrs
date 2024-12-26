@@ -1,5 +1,7 @@
 import _ from 'lodash'
 import * as t from './types'
+import { computeElementInstance } from './expr'
+import lcs from 'node-lcs'
 
 export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
   const res: string[] = [],
@@ -97,6 +99,141 @@ export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
 
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
 }
+
+type MetaInstance = t.ElementInstance & {
+  s: number
+  v: string
+}
+
+export function findAliases(
+  instance: t.ElementInstance,
+  propName: string,
+  elements: t.IdMap<t.Element>
+) {
+  const tv = computeElementInstance(instance, elements),
+    target = tv[propName] as string,
+    matchingInstances: { [iid: string]: MetaInstance } = {},
+    exactInstances: { [iid: string]: t.ElementInstance } = {}
+
+  for (let i = 0; i < 3; i++) {
+    const simTarget = i + 1
+    for (const elId in elements) {
+      const element = elements[elId]
+
+      if (element.virtual) continue
+
+      const params = getElementParams(elId, elements),
+        propNames = Object.keys(getElementProps(elId, elements)),
+        matchingParams: { [paramName: string]: MetaInstance[] } = {}
+
+      for (const paramName in params) {
+        matchingParams[paramName] ??= []
+        const param = params[paramName]
+        for (const iid in matchingInstances) {
+          const inst = matchingInstances[iid]
+          if (getElementAndParents(inst.element, elements).includes(param))
+            matchingParams[paramName].push(inst)
+        }
+      }
+
+      const paramNames = Object.keys(params),
+        paramValues = paramNames.map((p) =>
+          _.take(
+            _.sortBy(matchingParams[p], (v) => -v.s),
+            5
+          )
+        ),
+        instances: t.ElementInstance[] = paramNames.length
+          ? _.compact(
+              permute(paramValues).map((perm) => {
+                if (failsConstraint(perm, element.constraint)) return false
+                const oinstance: t.ElementInstance = { element: elId, params: {} }
+                for (const i in paramNames) oinstance.params![paramNames[i]] = perm[i]
+                return oinstance
+              })
+            )
+          : [{ element: elId, params: {} }]
+
+      for (const oinstance of instances) {
+        const iv = computeElementInstance(oinstance, elements),
+          fvalue = getFlatPropValue(iv, propName),
+          sim = getSimilarity(fvalue, target),
+          iid = getInstanceId(oinstance)
+
+        if (matchingInstances[iid]) continue
+        if (sim >= simTarget) matchingInstances[iid] = { ...oinstance, s: sim, v: fvalue }
+        if (
+          iv[propName] === target &&
+          !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames))
+        ) {
+          exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
+        }
+      }
+    }
+  }
+
+  return Object.values(exactInstances)
+}
+
+function failsConstraint(insts: MetaInstance[], constraint?: string): boolean {
+  const constraints: { [paramName: string]: string } = {}
+  let failed = false
+  for (const inst of insts) {
+    for (const paramName in inst.params) {
+      const paramValue = inst.params?.[paramName]
+      if (!paramValue) continue
+
+      if (
+        constraint?.includes(paramName) &&
+        constraints[paramName] &&
+        constraints[paramName] !== paramValue.element
+      ) {
+        failed = true
+        break
+      } else {
+        constraints[paramName] = paramValue?.element
+      }
+    }
+    if (failed) break
+  }
+  return failed
+}
+
+function getInstanceId(i: t.ElementInstance) {
+  return `${i.element}:(${Object.keys(i.params ?? {})
+    .map((k) => `${k}:${getInstanceId(i.params?.[k]!)}`)
+    .join(',')})`
+}
+
+function getFlatPropValue(pi: t.PropsInstance, propName: string) {
+  let res = ''
+  for (const j in pi) {
+    const v = pi[j]
+    if (j === propName) res += v
+    if (v && typeof v !== 'string') res += '.' + getFlatPropValue(v, propName)
+  }
+  return res
+}
+
+function getSimilarity(a: string, b: string): number {
+  return lcs(a, b)['sequence'].length
+}
+
+function permute<T>(lists: T[][]) {
+  const [first, ...rest] = lists
+  if (rest.length) {
+    const rests = permute(rest),
+      res: T[][] = []
+
+    for (const l of first) {
+      for (const r of rests) {
+        res.push([l, ...r])
+      }
+    }
+    return res
+  } else return (first ?? []).map((v) => [v])
+}
+
 
 export function sampleElementIstance(
   id: string,
