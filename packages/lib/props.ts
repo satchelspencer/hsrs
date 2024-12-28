@@ -20,6 +20,27 @@ export function getElementAndParents(elementId: string, elements: t.IdMap<t.Elem
   return res
 }
 
+export function isParent(
+  elementId: string,
+  parent: string,
+  elements: t.IdMap<t.Element>
+) {
+  const stack: string[] = [..._.castArray(elementId)]
+
+  while (stack.length) {
+    const id = stack.pop()!,
+      element = elements[id]
+    if (!element) continue
+
+    if (id === parent) return true
+    for (const etype of element.parents ?? []) {
+      stack.push(etype)
+    }
+  }
+
+  return false
+}
+
 export function getElementChildren(
   parentId: string | undefined,
   elements: t.IdMap<t.Element>
@@ -131,7 +152,7 @@ export function findAliases(
         const param = params[paramName]
         for (const iid in matchingInstances) {
           const inst = matchingInstances[iid]
-          if (getElementAndParents(inst.element, elements).includes(param))
+          if (isParent(inst.element, param, elements))
             matchingParams[paramName].push(inst)
         }
       }
@@ -233,7 +254,6 @@ function permute<T>(lists: T[][]) {
     return res
   } else return (first ?? []).map((v) => [v])
 }
-
 
 export function sampleElementIstance(
   id: string,
