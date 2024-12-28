@@ -6,13 +6,19 @@ type WorkerMessage = {
   instance: t.ElementInstance
   propName: string
   elements: t.IdMap<t.Element>
+  cards: t.CardStates
 }
 
 self.onmessage = (event) => {
   const message = event.data as WorkerMessage
 
   if (message.type === 'findAliases') {
-    const result = findAliases(message.instance, message.propName, message.elements)
+    const result = findAliases(
+      message.instance,
+      message.propName,
+      message.elements,
+      message.cards
+    )
 
     self.postMessage(result)
   }

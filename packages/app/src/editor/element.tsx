@@ -47,6 +47,7 @@ export function ElementEditor(props: ElementEditorProps) {
       )
 
   const elements = r.useSelector((state) => state.deck.elements),
+    cards = r.useSelector((state) => state.deck.cards),
     [exampleSeed, setExampleSeed] = useState(0),
     { example, exampleInstance } = useMemo(() => {
       const next = elementInstanceGenerator.next().value
@@ -213,7 +214,7 @@ export function ElementEditor(props: ElementEditorProps) {
           onClick={() => {
             console.log(
               exampleInstance,
-              findAliases(exampleInstance, 'tl', elements).map((c) =>
+              findAliases(exampleInstance, 'jp', elements, cards).map((c) =>
                 computeElementInstance(c, elements)
               )
             )

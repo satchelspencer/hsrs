@@ -39,15 +39,18 @@ export function Learn() {
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
   useEffect(() => {
     setAliases([])
-    worker.onmessage = ({ data }) => {
-      setAliases(data.map((d) => computeElementInstance(d, elements)))
+    if (card) {
+      worker.onmessage = ({ data }) => {
+        setAliases(data.map((d) => computeElementInstance(d, elements)))
+      }
+      worker.postMessage({
+        type: 'findAliases',
+        instance: card,
+        propName: card?.property,
+        elements: elements,
+        cards: deck.cards,
+      })
     }
-    worker.postMessage({
-      type: 'findAliases',
-      instance: card,
-      propName: card?.property,
-      elements: elements,
-    })
   }, [card])
 
   // console.log(

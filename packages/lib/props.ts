@@ -2,6 +2,7 @@ import _ from 'lodash'
 import * as t from './types'
 import { computeElementInstance } from './expr'
 import lcs from 'node-lcs'
+import { card2Id } from './session'
 
 export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
   const res: string[] = [],
@@ -129,7 +130,8 @@ type MetaInstance = t.ElementInstance & {
 export function findAliases(
   instance: t.ElementInstance,
   propName: string,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  cards: t.CardStates
 ) {
   const tv = computeElementInstance(instance, elements),
     target = tv[propName] as string,
@@ -185,14 +187,14 @@ export function findAliases(
         if (sim >= simTarget) matchingInstances[iid] = { ...oinstance, s: sim, v: fvalue }
         if (
           iv[propName] === target &&
-          !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames))
+          !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
+          !!cards[card2Id({ element: oinstance.element, property: propName })]
         ) {
           exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
         }
       }
     }
   }
-
   return Object.values(exactInstances)
 }
 
