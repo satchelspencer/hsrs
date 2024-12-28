@@ -15,7 +15,8 @@
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "types": ["vite/client"]
   },
   "include": ["packages/**/*.ts", "packages/**/*.tsx"]
 }

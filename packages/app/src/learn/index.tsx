@@ -12,6 +12,10 @@ import { card2Id, createLearningSession, getSessionDone } from '@hsrs/lib/sessio
 import { getElementAndParents } from '@hsrs/lib/props'
 import { getTime, grades } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
+import Worker from '../worker?worker'
+import * as t from '@hsrs/lib/types'
+
+const worker = new Worker()
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
@@ -31,6 +35,20 @@ export function Learn() {
         .find((e) => settings.plugins[e]),
     pluginUrl = plugin && settings.plugins[plugin],
     { sessionDone, targetStability } = getSessionDone(session)
+
+  const [aliases, setAliases] = useState<t.PropsInstance[]>([])
+  useEffect(() => {
+    setAliases([])
+    worker.onmessage = ({ data }) => {
+      setAliases(data.map((d) => computeElementInstance(d, elements)))
+    }
+    worker.postMessage({
+      type: 'findAliases',
+      instance: card,
+      propName: card?.property,
+      elements: elements,
+    })
+  }, [card])
 
   // console.log(
   //   plugin,
@@ -81,7 +99,7 @@ export function Learn() {
 
   useEffect(() => {
     setPluginLoaded(false)
-    
+
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.origin === pluginUrl) {
         if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
@@ -106,6 +124,7 @@ export function Learn() {
           type: 'state',
           state: {
             value,
+            aliases,
             vars: settings.vars,
             revealed,
             property: card?.property,
@@ -115,7 +134,7 @@ export function Learn() {
         pluginUrl
       )
     }
-  }, [shownValue, settings.vars, revealed, pluginLoaded])
+  }, [shownValue, settings.vars, revealed, pluginLoaded, aliases])
 
   const allowNew = r.useSelector((s) => s.deck.settings?.allowNew),
     sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1),
