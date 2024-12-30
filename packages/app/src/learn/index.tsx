@@ -8,14 +8,37 @@ import { Button } from '../components/button'
 import { computeElementInstance } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
-import { card2Id, createLearningSession, getSessionDone } from '@hsrs/lib/session'
+import {
+  card2Id,
+  createLearningSession,
+  getSessionDone,
+  id2Card,
+} from '@hsrs/lib/session'
 import { getElementAndParents } from '@hsrs/lib/props'
-import { getTime, grades } from '@hsrs/lib/schedule'
+import {
+  applyHistoryToCards,
+  getLearningCardDiff,
+  getLearnTargetStability,
+  getTime,
+  grades,
+  nextCardState,
+  nextInterval,
+} from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
 import Worker from '../worker?worker'
 import * as t from '@hsrs/lib/types'
 
 const worker = new Worker()
+
+type CardStat =
+  | {
+      cardId: string
+      gradf: number
+      graduated: boolean
+    }
+  | { cardId: string; s: number; sdiff: number }
+
+const round = (n: number) => Math.floor(n * 100) / 100
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
@@ -78,10 +101,48 @@ export function Learn() {
     setTime(getTime())
   }, [card])
 
+  const stats = useMemo<CardStat[]>(() => {
+    const learning = _.last(session?.history)
+    if (!learning || !session) return []
+
+    const nextStats: CardStat[] = [],
+      retention = deck.settings.retention ?? 0.9,
+      { cardId, score } = learning,
+      lastHistory = _.dropRight(session.history, 1),
+      lastCards = {}
+    applyHistoryToCards(lastCards, lastHistory, true, retention)
+
+    if (deck.cards[cardId] && !lastCards[cardId]) {
+      const diff = getLearningCardDiff(deck.cards, learning, deck.settings.retention)
+      for (const key in diff) {
+        const v = diff[key],
+          current = deck.cards[key],
+          currentInt = nextInterval(current?.stability, retention),
+          nextInt = nextInterval(v.stability, retention),
+          currentVal = currentInt / 24 / 3600,
+          nextVal = nextInt / 24 / 3600
+
+        nextStats.push({ cardId: key, s: nextVal, sdiff: nextVal - currentVal })
+      }
+    } else {
+      const nextState = nextCardState(lastCards[cardId], score, 1, getTime()),
+        targetInterval = getLearnTargetStability()
+      nextStats.push({
+        cardId,
+        gradf: Math.min(nextState.stability / targetInterval, 1),
+        graduated:
+          nextState.stability >= targetInterval &&
+          (!lastCards[cardId] || lastCards[cardId].stability >= targetInterval),
+      })
+    }
+    return nextStats
+  }, [session?.history])
+
   const setGrade = (grade: number) => {
     setRevealed(false)
     dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
   }
+
   const handleKey = useRef<(key: string, meta: boolean) => void>()
   handleKey.current = (key, meta) => {
     if (key === ' ') {
@@ -199,6 +260,42 @@ export function Learn() {
                 <Button onClick={() => dispatch(r.actions.endSession())}>
                   <Icon name="close" />
                 </Button>
+              </div>
+              <div className={sessionStats}>
+                {stats.map((stat, i) => {
+                  const card = id2Card(stat.cardId)
+                  return (
+                    <div key={i}>
+                      {deck.elements[card.element].name} {card.property}&nbsp;
+                      {'s' in stat ? (
+                        <>
+                          <span>{round(stat.s)}d&nbsp;</span>
+                          {stat.sdiff === 0 ? null : (
+                            <span style={{ color: stat.sdiff >= 0 ? 'green' : 'red' }}>
+                              {stat.sdiff > 0 ? '+' : ''}
+                              {round(stat.sdiff)}d
+                            </span>
+                          )}
+                        </>
+                      ) : stat.graduated ? (
+                        <span style={{ color: 'green' }}>graduated!</span>
+                      ) : (
+                        <span
+                          style={{
+                            color:
+                              stat.gradf >= 1
+                                ? 'green'
+                                : stat.gradf > 0.55
+                                ? '#a19100'
+                                : 'red',
+                          }}
+                        >
+                          {round(stat.gradf * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
             <div className={cardActions}>
@@ -338,6 +435,19 @@ const sessionActions = cx(css`
   display: flex;
   align-items: center;
   gap: 8px;
+`)
+
+const sessionStats = cx(css`
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+  font-size: 0.5em;
+  opacity: 0.5;
 `)
 
 const sessionProgress = cx(css`

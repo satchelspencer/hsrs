@@ -148,8 +148,10 @@ export function getLearningCardDiff(
     const flearning = flearnings[i],
       state = cards[flearning.cardId]
 
-    if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12)
+    if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12) {
+      stateChanges[flearning.cardId] = cards[flearning.cardId]
       continue
+    }
 
     const successProb = successProbs[i],
       probability =
