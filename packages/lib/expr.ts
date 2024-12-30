@@ -7,6 +7,12 @@ jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replaceAll(search, replace)
 )
 
+jexl.addTransform('cr', (val: string, search, replace) => {
+  let res = val
+  for (const i in search) res = res.replace(search[i], replace[i])
+  return res
+})
+
 export function isValid(expr: string) {
   try {
     jexl.evalSync(expr)

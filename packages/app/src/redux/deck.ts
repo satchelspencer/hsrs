@@ -133,11 +133,12 @@ export const deckThunks = {
   ),
   recomputeCards: createAsyncThunk<t.CardStates, void, { state: { deck: t.Deck } }>(
     'deck/recomputeCards',
-    async (_, { getState }) => {
+    async (x, { getState }) => {
       const newCards: t.CardStates = {},
-        retention = getState().deck.settings.retention
+        deck = getState().deck
       await db.cardLearning.orderBy('id').each((learning) => {
-        applyHistoryToCards(newCards, [learning], false, retention)
+        if (_.every(learning.elIds, (e) => deck.elements[e]))
+          applyHistoryToCards(newCards, [learning], false, deck.settings.retention)
       })
       return newCards
     }

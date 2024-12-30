@@ -248,6 +248,8 @@ function sampleAndAdd(
 ) {
   const { element, property } = id2Card(cardId)
 
+  if (!deck.elements[element]) return
+
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
