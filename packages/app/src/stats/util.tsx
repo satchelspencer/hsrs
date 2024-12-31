@@ -81,11 +81,15 @@ export async function getStats(
         ? now - 3600 * 24
         : Infinity
 
+  const seen: Record<string, boolean> = {}
   await db.cardLearning
     .where('elIds')
     .anyOf(children)
     .and((l) => l.time > startTime)
     .each((record) => {
+      const k = record.cardId + record.time
+      if (seen[k]) return
+      seen[k] = true
       for (const i in statsDefs) {
         const stat = statsDefs[i],
           accum = accumulators[i]

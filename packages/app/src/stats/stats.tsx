@@ -71,7 +71,7 @@ export const useAvgTimeSpent = createStatHook(() => ({
   finalize: (acc) => acc,
   render: (data) => (
     <div>
-      <i>{data.total}</i> over <i>{(data.total / 3600).toFixed(2)}</i> hours, averaging{' '}
+      <i>{data.count}</i> over <i>{(data.total / 3600).toFixed(2)}</i> hours, averaging{' '}
       <i>{(data.total / data.count).toFixed(2)}</i> seconds
     </div>
   ),
