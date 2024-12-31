@@ -15,9 +15,7 @@ export const selectSelections = createSelector(
   [(state) => state.ui.selections, (state) => state.deck.elements],
   (selections, elements): Selection[][] =>
     _.takeWhile(selections, (selection) =>
-      _.every(selection, (selection) =>
-        selection && selection.type === 'element' ? !!elements[selection.id] : false
-      )
+      _.every(selection, (selection) => (selection ? !!elements[selection.id] : false))
     )
 )
 

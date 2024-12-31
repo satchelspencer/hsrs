@@ -6,10 +6,9 @@ export type UiState = {
 }
 
 export type Selection = {
-  type: 'element' | 'view'
+  type: 'element' | 'relation' | 'stats'
   id: string
   jump?: boolean
-  relation?: boolean
 }
 
 const uiInit: UiState = {

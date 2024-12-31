@@ -78,6 +78,9 @@ const customIcons = {
   upload: [
     <path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" />,
   ],
+  stats: [
+    <path d="M640-160v-280h160v280H640Zm-240 0v-640h160v640H400Zm-240 0v-440h160v440H160Z" />,
+  ],
 }
 
 export const Icon: React.FC<IconProps> = (props) => {

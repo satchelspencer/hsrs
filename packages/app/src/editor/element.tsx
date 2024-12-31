@@ -12,7 +12,6 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance } from '@hsrs/lib/expr'
-import { findAliases } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -76,32 +75,48 @@ export function ElementEditor(props: ElementEditorProps) {
           >
             <Icon name="back" />
           </Button>
-          {searching ? (
-            <div style={{ minWidth: 150, display: 'flex' }}>
-              <ElPicker
-                value={undefined}
-                autoFocus
-                onChange={(value) => {
-                  if (value) {
+          <div className={exampleHead}>
+            {searching ? (
+              <div style={{ minWidth: 150, display: 'flex' }}>
+                <ElPicker
+                  value={undefined}
+                  autoFocus
+                  onChange={(value) => {
+                    if (value) {
+                      dispatch(
+                        r.actions.setSelection({
+                          index: props.index + 1,
+                          selection: [{ id: value, type: 'element', jump: true }],
+                        })
+                      )
+                      setSearching(false)
+                    }
+                  }}
+                  onClear={() => setSearching(false)}
+                  onBlur={() => setSearching(false)}
+                  placeholder={'Open element...'}
+                />
+              </div>
+            ) : (
+              <>
+                <Button
+                  onClick={() =>
                     dispatch(
                       r.actions.setSelection({
                         index: props.index + 1,
-                        selection: [{ id: value, type: 'element', jump: true }],
+                        selection: [{ type: 'stats', id: props.id }],
                       })
                     )
-                    setSearching(false)
                   }
-                }}
-                onClear={() => setSearching(false)}
-                onBlur={() => setSearching(false)}
-                placeholder={'Open element...'}
-              />
-            </div>
-          ) : (
-            <Button className={backButton} onClick={() => setSearching(true)}>
-              <Icon name="caret-right" />
-            </Button>
-          )}
+                >
+                  <Icon name="stats" />
+                </Button>
+                <Button onClick={() => setSearching(true)}>
+                  <Icon name="search" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
         <LabelGroup
           items={[
@@ -210,7 +225,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        <Button
+        {/* <Button
           onClick={() => {
             console.log(
               exampleInstance,
@@ -221,14 +236,14 @@ export function ElementEditor(props: ElementEditorProps) {
           }}
         >
           <Icon name="test" />
-        </Button>
+        </Button> */}
         {canShowRelation && (
           <Button
             onClick={() =>
               dispatch(
                 r.actions.setSelection({
                   index: props.index + 1,
-                  selection: [{ id: props.id, type: 'element', relation: true }],
+                  selection: [{ id: props.id, type: 'relation' }],
                 })
               )
             }
@@ -244,7 +259,7 @@ export function ElementEditor(props: ElementEditorProps) {
   )
 }
 
-const editorWrapperOuter = cx(css`
+export const editorWrapperOuter = cx(css`
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -256,12 +271,12 @@ const exampleHead = cx(css`
   align-items: center;
 `)
 
-const backButton = cx(css`
+export const backButton = cx(css`
   align-self: flex-start;
   font-size: 16px;
 `)
 
-const editorWrapper = cx(css`
+export const editorWrapper = cx(css`
   display: flex;
   min-width: 450px;
   flex-direction: column;
@@ -273,7 +288,7 @@ const editorWrapper = cx(css`
   }
 `)
 
-const editorHeader = cx(css`
+export const editorHeader = cx(css`
   display: flex;
   align-items: center;
   justify-content: space-between;

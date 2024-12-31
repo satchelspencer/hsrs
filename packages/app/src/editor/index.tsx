@@ -4,16 +4,9 @@ import { css, cx } from '@emotion/css'
 import * as styles from '../styles'
 import { Column } from './column'
 import * as r from '../redux'
-import { getAllCards } from '@hsrs/lib/props'
 
 export function Editor() {
-  const selDepth = r.useSelector((s) => r.selectors.selectSelections(s).length),
-    cards = r.useSelector((s) =>
-      getAllCards(s.deck.elements).map(
-        (c) => `${s.deck.elements[c.element].name}:${c.property}`
-      )
-    )
-  //console.log(cards.join('\n'))
+  const selDepth = r.useSelector((s) => r.selectors.selectSelections(s).length)
   return (
     <Wrapper>
       {new Array(selDepth + 1).fill(0).map((v, index) => {

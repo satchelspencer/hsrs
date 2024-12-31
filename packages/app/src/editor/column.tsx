@@ -7,6 +7,7 @@ import * as r from '../redux'
 import { ElementEditor } from './element'
 import { ElementsList } from './el-list'
 import { RelationEditor } from './relation'
+import { Stats } from '../stats'
 
 interface ColumnProps {
   index: number
@@ -21,7 +22,7 @@ export function Column(props: ColumnProps) {
 
   useEffect(() => {
     if (wrapperRef.current && props.last) wrapperRef.current.scrollIntoView()
-  }, [!!wrapperRef.current, selection?.[0]?.relation])
+  }, [!!wrapperRef.current, selection?.[0]?.type])
 
   return (
     <div
@@ -31,24 +32,29 @@ export function Column(props: ColumnProps) {
       {props.index === -1 ? (
         <ElementsList index={props.index} />
       ) : selection.length === 1 ? (
-        selection.map(
-          (selection) =>
-            selection.type === 'element' &&
-            (selection.relation ? (
-              <RelationEditor
-                key={selection.id}
-                id={selection.id}
-                index={props.index}
-                last={props.last}
-              />
-            ) : (
-              <ElementEditor
-                key={selection.id}
-                id={selection.id}
-                index={props.index}
-                last={props.last}
-              />
-            ))
+        selection.map((selection) =>
+          selection.type === 'element' ? (
+            <ElementEditor
+              key={selection.id}
+              id={selection.id}
+              index={props.index}
+              last={props.last}
+            />
+          ) : selection.type === 'relation' ? (
+            <RelationEditor
+              key={selection.id}
+              id={selection.id}
+              index={props.index}
+              last={props.last}
+            />
+          ) : selection.type === 'stats' ? (
+            <Stats
+              key={selection.id}
+              id={selection.id}
+              index={props.index}
+              last={props.last}
+            />
+          ) : null
         )
       ) : null}
     </div>

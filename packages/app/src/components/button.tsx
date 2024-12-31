@@ -74,3 +74,46 @@ const solidWrapper = cx(css`
   background: ${styles.color(0.97)};
   border: 1px solid ${styles.color(0.95)};
 `)
+
+interface RadioGroupProps<T> {
+  value: T
+  onChange: (v: T) => void
+  options: { value: T; label: React.ReactNode }[]
+  buttonClassName?: string
+}
+
+export function RadioGroup<T>(props: RadioGroupProps<T>) {
+  return (
+    <div className={radioWrapper}>
+      {props.options.map((option, i) => {
+        return (
+          <Button
+            key={i}
+            onClick={() => props.onChange(option.value)}
+            className={cx(
+              selectableButton(props.value === option.value),
+              props.buttonClassName
+            )}
+          >
+            {option.label}
+          </Button>
+        )
+      })}
+    </div>
+  )
+}
+
+const radioWrapper = cx(css`
+  display: flex;
+  gap: 16px;
+  padding: 1px;
+`)
+
+const selectableButton = (selected?: boolean) =>
+  cx(css`
+    background: ${styles.color(0.95)};
+    ${selected &&
+    css`
+      outline: 2px solid ${styles.color.active()} !important;
+    `}
+  `)

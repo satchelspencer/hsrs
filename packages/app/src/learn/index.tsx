@@ -4,7 +4,7 @@ import _ from 'lodash'
 
 import * as styles from '../styles'
 import * as r from '../redux'
-import { Button } from '../components/button'
+import { Button, RadioGroup } from '../components/button'
 import { computeElementInstance } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
@@ -356,23 +356,19 @@ export function Learn() {
             <Icon size={1.2} name="plus" />
             &nbsp;start session
           </Button>
-          <div className={sizePicker}>
-            {['S', 'M', 'L', 'XL'].map((s, index) => {
-              return (
-                <Button
-                  key={index}
-                  className={sizeButton(sessionSize === index + 1)}
-                  onClick={() =>
-                    dispatch(
-                      r.actions.setDeckSettings({ newSessionSize: (index + 1) as any })
-                    )
-                  }
-                >
-                  {s}
-                </Button>
-              )
-            })}
-          </div>
+          <RadioGroup
+            value={sessionSize}
+            onChange={(s) =>
+              dispatch(r.actions.setDeckSettings({ newSessionSize: s as any }))
+            }
+            options={[
+              { label: 'S', value: 1 },
+              { label: 'M', value: 2 },
+              { label: 'L', value: 3 },
+              { label: 'XL', value: 4 },
+            ]}
+            buttonClassName={sizeButton}
+          />
           <div className={desc}>
             {cardsDue} due, {cardsAvailable} new, {nextDue} review
           </div>
@@ -392,24 +388,15 @@ export function Learn() {
   )
 }
 
-const sizePicker = cx(css`
-  display: flex;
-  gap: 20px;
-`)
-
-const sizeButton = (selected?: boolean) =>
-  cx(css`
-    background: ${styles.color(0.95)};
+const sizeButton = cx(
+  css`
     width: 30px;
     height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    ${selected &&
-    css`
-      outline: 2px solid ${styles.color.active()} !important;
-    `}
-  `)
+  `
+)
 
 const desc = cx(css`
   font-size: 0.9em;

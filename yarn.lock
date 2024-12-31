@@ -605,10 +605,12 @@ __metadata:
     "@types/culori": ^2.1.1
     "@uiw/react-codemirror": ^4.23.6
     "@vitejs/plugin-react": ^4.3.3
+    chart.js: ^4.4.7
     codemirror: ^6.0.1
     culori: ^4.0.1
     dexie: ^4.0.10
     react: ^18.3.1
+    react-chartjs-2: ^5.2.0
     react-codemirror2: ^8.0.0
     react-dom: ^18.3.1
     react-redux: ^9.1.2
@@ -684,6 +686,13 @@ __metadata:
     "@jridgewell/resolve-uri": ^3.1.0
     "@jridgewell/sourcemap-codec": ^1.4.14
   checksum: 9d3c40d225e139987b50c48988f8717a54a8c994d8a948ee42e1412e08988761d0754d7d10b803061cc3aebf35f92a5dbbab493bd0e1a9ef9e89a2130e83ba34
+  languageName: node
+  linkType: hard
+
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.4
+  resolution: "@kurkle/color@npm:0.3.4"
+  checksum: b95c6abe0241ba1745b3c84de3b464296b95ce577110b54f46e6c6dcc9a0966491533df43812bd6c66f92cf818e385d1390b280cd5851d4afb52fc37f8a6c0b9
   languageName: node
   linkType: hard
 
@@ -1312,6 +1321,15 @@ __metadata:
     loupe: ^3.1.0
     pathval: ^2.0.0
   checksum: f2341967ab5632612548d372c27b46219adad3af35021d8cba2ae3c262f588de2c60cb3f004e6ad40e363a9cad6d20d0de51f00e7e9ac31cce17fb05d4efa316
+  languageName: node
+  linkType: hard
+
+"chart.js@npm:^4.4.7":
+  version: 4.4.7
+  resolution: "chart.js@npm:4.4.7"
+  dependencies:
+    "@kurkle/color": ^0.3.0
+  checksum: c0f0e9efd935b21a37286d1544046277bb607c08fb3e012b4c501104187a42a0c6541c8d7575782c7f1f3e0a91537b7d6a2eb9cd57122eb176609493838a9543
   languageName: node
   linkType: hard
 
@@ -2305,6 +2323,16 @@ __metadata:
     err-code: ^2.0.2
     retry: ^0.12.0
   checksum: f96a3f6d90b92b568a26f71e966cbbc0f63ab85ea6ff6c81284dc869b41510e6cdef99b6b65f9030f0db422bf7c96652a3fff9f2e8fb4a0f069d8f4430359429
+  languageName: node
+  linkType: hard
+
+"react-chartjs-2@npm:^5.2.0":
+  version: 5.2.0
+  resolution: "react-chartjs-2@npm:5.2.0"
+  peerDependencies:
+    chart.js: ^4.1.1
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+  checksum: ace702185be1450e5888a8bcd8b5fc1995067e3b11d236764a67f5567a3d7c32ff16923b8d48d3d39bda6e45135da6c044c9b43fbe8e1978f95aca9d2c0ce348
   languageName: node
   linkType: hard
 
