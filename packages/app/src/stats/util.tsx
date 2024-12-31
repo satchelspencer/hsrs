@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import _ from 'lodash'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,12 +29,13 @@ import * as t from '@hsrs/lib/types'
 import { db } from '../redux/db'
 import { getNonVirtualDescendents } from '@hsrs/lib/props'
 import { getTime } from '@hsrs/lib/schedule'
+import { id2Card } from '@hsrs/lib/session'
 
 export interface StatDefinition<TAcc = any, TFinal = any> {
   name: string
   initAcc: () => TAcc
   accumulator: (accumulatedData: TAcc, item: t.CardLearning) => void
-  finalize: (accumulatedData: TAcc) => TFinal
+  finalize: (accumulatedData: TAcc, cards: t.CardStates) => TFinal
   render: (finalData: TFinal) => React.ReactNode
   singleLine?: boolean
 }
@@ -94,7 +96,10 @@ export async function getStats(
   return statsDefs.map((stat, i) => ({
     ...stat,
     renderFn: stat.render,
-    finalData: stat.finalize(accumulators[i]),
+    finalData: stat.finalize(
+      accumulators[i],
+      _.pickBy(deck.cards, (c, v) => children.includes(id2Card(v).element))
+    ),
   }))
 }
 

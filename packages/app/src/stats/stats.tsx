@@ -76,3 +76,55 @@ export const useAvgTimeSpent = createStatHook(() => ({
     </div>
   ),
 }))
+
+export const useStabilityDist = createStatHook((options: StatsOptions) => ({
+  name: 'Stability distribution',
+  initAcc: () => ({}),
+  accumulator: () => {},
+  finalize: (x, cards: t.CardStates) => {
+    const stabilityValues = Object.values(cards).map((card) => card.stability),
+      sortedStabilities = _.sortBy(stabilityValues),
+      ninetyPercentileValue =
+        sortedStabilities[Math.floor(0.9 * sortedStabilities.length)] || 0,
+      filteredStabilities = stabilityValues.filter(
+        (stability) => stability <= ninetyPercentileValue
+      ),
+      minStability = Math.min(...filteredStabilities),
+      maxStability = Math.max(...filteredStabilities, 0),
+      range = Math.max(maxStability - minStability, 0),
+      binSize = range / options.maxGroups || 1,
+      bins = Array(options.maxGroups).fill(0)
+
+    for (const stability of filteredStabilities)
+      bins[
+        Math.min(Math.floor((stability - minStability) / binSize), options.maxGroups - 1)
+      ]++
+
+    return {
+      labels: bins.map((_, i) => `${(minStability + i * binSize).toFixed(0)}d`),
+      data: bins,
+    }
+  },
+  render: (data) => {
+    return (
+      <Bar
+        data={{
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Card Count',
+              data: data.data,
+              backgroundColor: '#518bc150',
+              borderColor: '#518bc1',
+              borderWidth: 1,
+            },
+          ],
+        }}
+        options={{
+          ...commonChartOptions,
+          scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+        }}
+      />
+    )
+  },
+}))
