@@ -26,9 +26,7 @@ export function createLearningSession(
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
     ],
-    stack = _.shuffle(
-      allowNew ? [...dueCards, ...previewCards] : [...dueCards, ...previewCards]
-    )
+    stack = _.shuffle([...dueCards, ...previewCards])
 
   let d = 0
   for (const gap of sumSpac) {
@@ -118,9 +116,9 @@ export function gradeCard(
           ),
     learningIndex = Math.min(
       // if learning reinsert proportional to stability/target
-      2 + Math.pow(cardState.stability / targetStability, 5) * 20 + jitter,
+      2 + Math.pow(cardState.stability / targetStability, 4) * 30 + jitter,
       //midPoint,
-      20
+      30
     ),
     newIndex = Math.max(
       Math.min(
