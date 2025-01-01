@@ -244,7 +244,8 @@ function sampleAndAdd(
   deck: t.Deck,
   learnable: t.IdMap<t.IdMap<t.Element>>
 ) {
-  const { element, property } = id2Card(cardId)
+  const { element, property } = id2Card(cardId),
+    now = getTime()
 
   if (!deck.elements[element]) return
 
@@ -264,12 +265,13 @@ function sampleAndAdd(
 
           (elId) => {
             const jitter =
-              Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
-              jitterScale *
-              (Math.random() > 0.5 ? 1 : -1)
-            return (
-              (deck.cards[card2Id({ element: elId, property })]?.due ?? Infinity) + jitter
-            )
+                Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
+                jitterScale *
+                (Math.random() > 0.5 ? 1 : -1),
+              card = deck.cards[card2Id({ element: elId, property })],
+              dueIn = (card?.due ?? Infinity) - now,
+              seenAgo = now - (card?.lastSeen ?? now)
+            return dueIn - seenAgo + jitter
           }
         ),
         property,
