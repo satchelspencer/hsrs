@@ -257,6 +257,21 @@ function permute<T>(lists: T[][]) {
   } else return (first ?? []).map((v) => [v])
 }
 
+function walkParamsDeep(
+  params: t.ParamsInstance | undefined,
+  cb: (paramName: string, el: t.ElementInstance) => void
+) {
+  if (params) {
+    for (const paramName in params) {
+      const el = params[paramName]
+      if (el) {
+        cb(paramName, el)
+        if (el.params) walkParamsDeep(el.params, cb)
+      }
+    }
+  }
+}
+
 export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
@@ -284,13 +299,14 @@ export function sampleElementIstance(
       params: {},
     }
 
-    const constraints: t.Params = {}
+    const constraints: t.Params = _.pickBy(fixedParams ?? {}, (_, v) =>
+      del.constraint?.includes(v)
+    )
     for (const param of _.shuffle(Object.keys(params))) {
       const pinst = sampleElementIstance(params[param], elements, constraints, order)
-      for (const childParam in pinst.params) {
-        if (del.constraint?.includes(childParam))
-          constraints[childParam] = pinst.params[childParam]!.element
-      }
+      walkParamsDeep(pinst.params, (childParam, el) => {
+        if (del.constraint?.includes(childParam)) constraints[childParam] = el.element
+      })
       inst.params![param] = pinst
     }
 

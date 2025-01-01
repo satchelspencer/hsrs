@@ -18,7 +18,7 @@ export interface ElementInstance {
   params?: ParamsInstance
 }
 
-type ParamsInstance = IdMap<ElementInstance | undefined>
+export type ParamsInstance = IdMap<ElementInstance | undefined>
 export interface Card {
   element: string
   property: string
