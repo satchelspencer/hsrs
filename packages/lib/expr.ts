@@ -4,12 +4,22 @@ import * as t from './types'
 import { getElementProps } from './props'
 
 jexl.addTransform('r', (val: string, search, replace) =>
-  (val + '').replaceAll(search, replace)
+  (val + '').replace(new RegExp(search + '$'), replace)
 )
 
 jexl.addTransform('cr', (val: string, search, replace) => {
   let res = val
-  for (const i in search) res = res.replace(search[i], replace[i])
+  for (const i in search) res = res.replace(new RegExp(search[i] + '$'), replace[i])
+  return res
+})
+
+jexl.addTransform('pr', (val: string, search, replace) =>
+  (val + '').replace(new RegExp('^' + search), replace)
+)
+
+jexl.addTransform('pcr', (val: string, search, replace) => {
+  let res = val
+  for (const i in search) res = res.replace(new RegExp('^' + search[i]), replace[i])
   return res
 })
 
