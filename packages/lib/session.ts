@@ -139,7 +139,7 @@ export function getSessionDone(session: t.LearningSession | null) {
     targetStability = getLearnTargetStability()
   return {
     sessionDone:
-      states.length >= session.stack.length &&
+      states.length >= _.uniqBy(session.stack, (c) => card2Id(c)).length &&
       _.every(states, (c) => c.stability >= targetStability),
     targetStability,
   }
