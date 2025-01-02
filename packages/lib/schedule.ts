@@ -148,12 +148,11 @@ export function getLearningCardDiff(
     const flearning = flearnings[i],
       state = cards[flearning.cardId]
 
-    if (!shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 12) {
-      stateChanges[flearning.cardId] = cards[flearning.cardId]
-      continue
-    }
-
-    const successProb = successProbs[i],
+    const recencyFactor =
+        !shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 6
+          ? (flearning.time - state.lastSeen) / (3600 * 6)
+          : 1,
+      successProb = successProbs[i],
       probability =
         !shallow && flearning.score === 1 && state
           ? (1 - successProb) / (1 - totalSuccessProb)
@@ -162,7 +161,7 @@ export function getLearningCardDiff(
     stateChanges[flearning.cardId] = nextCardState(
       state,
       flearning.score,
-      probability,
+      probability * recencyFactor,
       learning.time,
       retention
     )

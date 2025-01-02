@@ -221,14 +221,14 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
 
     if (hasProps && state.due && state.lastSeen) {
       if (
-        state.due < now + 3600 * 12 ||
+        state.due < now + 3600 * 6 ||
         ((state.lastScore === 1 || state.lastScore === 2) &&
-          state.lastSeen > now - 3600 * 12)
+          state.lastSeen > now - 3600 * 6)
       )
         sampleAndAdd(dueCards, cardId, deck, learnable)
-      // cards due due date in less than 12h or missed in last 12h
-      else if (state.lastSeen < now - 3600 * 12)
-        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 12h
+      // cards due due date in less than 6h or missed in last 6h
+      else if (state.lastSeen < now - 3600 * 6)
+        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 6h
     }
   }
 
