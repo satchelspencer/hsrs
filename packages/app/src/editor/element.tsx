@@ -299,6 +299,7 @@ interface ElListPickerProps {
   value: string[]
   onChange: (value: string[]) => void
   onClear?: () => void
+  placeholder?: string
 }
 
 const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
@@ -310,7 +311,7 @@ const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
       )
     )
 
-function ElListPicker(props: ElListPickerProps) {
+export function ElListPicker(props: ElListPickerProps) {
   const elements = r.useSelector((s) => s.deck.elements),
     [raw, setRaw] = useState(''),
     [focused, setFocused] = useState(false),
@@ -332,6 +333,7 @@ function ElListPicker(props: ElListPickerProps) {
       varColor="#689d6a"
       throttle
       multiline
+      placeholder={props.placeholder}
       onChange={(str) => {
         setRaw(str ?? '')
         props.onChange(raw2els(str ?? '', elements))

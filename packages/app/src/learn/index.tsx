@@ -27,6 +27,7 @@ import {
 import { Icon } from '../components/icon'
 import Worker from '../worker?worker'
 import * as t from '@hsrs/lib/types'
+import { ElListPicker } from '../editor/element'
 
 const worker = new Worker()
 
@@ -200,16 +201,15 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded, aliases])
 
-  const allowNew = r.useSelector((s) => s.deck.settings?.allowNew),
-    sessionSize = r.useSelector((s) => s.deck.settings?.newSessionSize ?? 1),
-    actualSessionSize = Math.pow(2, sessionSize) * 30,
+  const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings),
+    actualSessionSize = Math.pow(2, newSessionSize) * 30,
     {
       new: cardsAvailable,
       due: cardsDue,
       next: nextDue,
     } = useMemo(
-      () => createLearningSession(deck, actualSessionSize, allowNew),
-      [sessionSize, allowNew]
+      () => createLearningSession(deck, actualSessionSize, allowNew, filter ?? []),
+      [newSessionSize, allowNew, filter, !!session]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
@@ -349,6 +349,43 @@ export function Learn() {
         ) : null
       ) : (
         <>
+          <div className={desc}>
+            <RadioGroup
+              value={newSessionSize}
+              onChange={(s) =>
+                dispatch(r.actions.setDeckSettings({ newSessionSize: s as any }))
+              }
+              options={[
+                { label: 'S', value: 1 },
+                { label: 'M', value: 2 },
+                { label: 'L', value: 3 },
+                { label: 'XL', value: 4 },
+              ]}
+              buttonClassName={sizeButton}
+            />
+            &nbsp; &nbsp;
+            <div style={{ minWidth: 150 }}>
+              <ElListPicker
+                placeholder="All cards..."
+                value={filter ?? []}
+                onChange={(value) =>
+                  dispatch(r.actions.setDeckSettings({ filter: value }))
+                }
+              />
+            </div>
+          </div>
+          <div className={desc} style={{ opacity: 0.7 }}>
+            <b>{cardsDue}</b>&nbsp;due,&nbsp;
+            <b>{cardsAvailable}</b>&nbsp;new,&nbsp;<b>{nextDue}</b>&nbsp;review.&nbsp;
+            <input
+              type="checkbox"
+              checked={!!allowNew}
+              onChange={() =>
+                dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
+              }
+            />
+            <span>Allow new</span>
+          </div>
           <Button
             className={mainAction}
             onClick={() => dispatch(r.actions.createSession({ size: actualSessionSize }))}
@@ -356,32 +393,6 @@ export function Learn() {
             <Icon size={1.2} name="plus" />
             &nbsp;start session
           </Button>
-          <RadioGroup
-            value={sessionSize}
-            onChange={(s) =>
-              dispatch(r.actions.setDeckSettings({ newSessionSize: s as any }))
-            }
-            options={[
-              { label: 'S', value: 1 },
-              { label: 'M', value: 2 },
-              { label: 'L', value: 3 },
-              { label: 'XL', value: 4 },
-            ]}
-            buttonClassName={sizeButton}
-          />
-          <div className={desc}>
-            {cardsDue} due, {cardsAvailable} new, {nextDue} review
-          </div>
-          <div className={desc}>
-            <input
-              type="checkbox"
-              checked={!!allowNew}
-              onChange={() =>
-                dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
-              }
-            />{' '}
-            <span>Allow new cards</span>
-          </div>
         </>
       )}
     </div>
@@ -390,8 +401,8 @@ export function Learn() {
 
 const sizeButton = cx(
   css`
-    width: 30px;
-    height: 30px;
+    width: 25px;
+    height: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -400,13 +411,12 @@ const sizeButton = cx(
 
 const desc = cx(css`
   font-size: 0.9em;
-  opacity: 0.7;
   display: flex;
   align-items: center;
 `)
 
 const mainAction = cx(css`
-  font-size: 1.3em;
+  font-size: 1.1em;
   /* background: ${styles.color(0.95)};
   border: 1px solid ${styles.color(0.93)};
   color: ${styles.color(0.4)};

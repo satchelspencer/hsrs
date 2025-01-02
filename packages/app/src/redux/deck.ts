@@ -47,7 +47,8 @@ export const deck = createSlice({
       state.session = createLearningSession(
         state,
         action.payload.size,
-        state.settings.allowNew
+        state.settings.allowNew,
+        state.settings.filter ?? []
       ).session
     },
     gradeCard: (state, action: PayloadAction<{ grade: number; took: number }>) => {

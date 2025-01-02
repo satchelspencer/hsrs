@@ -1,4 +1,10 @@
-import { getAllCards, getElementAndParents, getElementProps } from './props'
+import {
+  getAllCards,
+  getElementAndParents,
+  getElementProps,
+  isParent,
+  sampleElementIstance,
+} from './props'
 import {
   applyHistoryToCards,
   getLearnTargetStability,
@@ -6,17 +12,19 @@ import {
   nextCardState,
 } from './schedule'
 import * as t from './types'
-import { sampleElementIstance } from './props'
 import _ from 'lodash'
 
 export function createLearningSession(
   deck: t.Deck,
   size: number,
-  allowNew: boolean
+  allowNew: boolean,
+  filter: string[]
 ): { session: t.LearningSession; new: number; due: number; next: number } {
   const learned = getLearnedElements(deck),
-    { dueCards, nextCards } = getDue(deck, size, learned),
-    newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, learned)) : [],
+    { dueCards, nextCards } = getDue(deck, size, learned, filter),
+    newCards = allowNew
+      ? _.shuffle(getNew(deck, size - dueCards.length, learned, filter))
+      : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length) //don't use ncfactor here for better padding
 
   const gaps = newCards.length,
@@ -175,13 +183,14 @@ function getNewCardFactor(deck: t.Deck) {
   return 4 //TODO
 }
 
-function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
+function getNew(
+  deck: t.Deck,
+  limit: number,
+  learnable: t.IdMap<t.IdMap<t.Element>>,
+  filter: string[]
+) {
   const res: t.CardInstance[] = [],
     cards = _.shuffle(getAllCards(deck.elements)),
-    // _.sortBy(
-    //   _.shuffle(_.uniq(getAllCards(deck.elements))),
-    //   (card) => Object.keys(deck.elements[card.element].params ?? {}).length //for testing nesteds
-    // ),
     usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor(deck)
 
@@ -194,7 +203,7 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
     for (const property in props) {
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
-        sampleAndAdd(res, id, deck, learnable)
+        sampleAndAdd(res, id, deck, learnable, filter)
         usedEls[card.element] = true
       }
     }
@@ -203,7 +212,12 @@ function getNew(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
   return res
 }
 
-function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Element>>) {
+function getDue(
+  deck: t.Deck,
+  limit: number,
+  learnable: t.IdMap<t.IdMap<t.Element>>,
+  filter: string[]
+) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     cardsIds = _.sortBy(
@@ -225,10 +239,10 @@ function getDue(deck: t.Deck, limit: number, learnable: t.IdMap<t.IdMap<t.Elemen
         ((state.lastScore === 1 || state.lastScore === 2) &&
           state.lastSeen > now - 3600 * 6)
       )
-        sampleAndAdd(dueCards, cardId, deck, learnable)
+        sampleAndAdd(dueCards, cardId, deck, learnable, filter)
       // cards due due date in less than 6h or missed in last 6h
       else if (state.lastSeen < now - 3600 * 6)
-        sampleAndAdd(nextCards, cardId, deck, learnable) //only sample nextCards that haven't been seen in the last 6h
+        sampleAndAdd(nextCards, cardId, deck, learnable, filter) //only sample nextCards that haven't been seen in the last 6h
     }
   }
 
@@ -242,12 +256,18 @@ function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
   deck: t.Deck,
-  learnable: t.IdMap<t.IdMap<t.Element>>
+  learnable: t.IdMap<t.IdMap<t.Element>>,
+  filter: string[]
 ) {
   const { element, property } = id2Card(cardId),
     now = getTime()
 
   if (!deck.elements[element]) return
+  if (
+    filter.length &&
+    !_.some(filter, (f) => f === element || isParent(element, f, deck.elements))
+  )
+    return
 
   let i = 0
   while (i < SAMPLE_TRIES) {

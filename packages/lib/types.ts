@@ -41,6 +41,7 @@ export interface DeckSettings {
   allowNew: boolean
   fsrsParams?: FSRSParams
   retention?: number
+  filter?: string[]
 }
 
 export interface MemoryState {
