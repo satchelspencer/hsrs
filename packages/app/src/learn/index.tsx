@@ -37,7 +37,7 @@ type CardStat =
       gradf: number
       graduated: boolean
     }
-  | { cardId: string; s: number; sdiff: number }
+  | { cardId: string; s: number; sdiff: number; duediff: number }
 
 const round = (n: number) => Math.floor(n * 100) / 100
 
@@ -110,7 +110,9 @@ export function Learn() {
       retention = deck.settings.retention ?? 0.9,
       { cardId, score } = learning,
       lastHistory = _.dropRight(session.history, 1),
-      lastCards = {}
+      lastCards = {},
+      now = getTime()
+
     applyHistoryToCards(lastCards, lastHistory, true, retention)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
@@ -123,7 +125,12 @@ export function Learn() {
           currentVal = currentInt / 24 / 3600,
           nextVal = nextInt / 24 / 3600
 
-        nextStats.push({ cardId: key, s: nextVal, sdiff: nextVal - currentVal })
+        nextStats.push({
+          cardId: key,
+          s: nextVal,
+          sdiff: nextVal - currentVal,
+          duediff: current.due ? (now - current.due) / 24 / 3600 : 0,
+        })
       }
     } else {
       const nextState = nextCardState(lastCards[cardId], score, 1, getTime()),
@@ -134,6 +141,7 @@ export function Learn() {
         graduated:
           nextState.stability >= targetInterval &&
           (!lastCards[cardId] || lastCards[cardId].stability >= targetInterval),
+        duediff: 0,
       })
     }
     return nextStats
@@ -266,10 +274,19 @@ export function Learn() {
                   const card = id2Card(stat.cardId)
                   return (
                     <div key={i}>
-                      {deck.elements[card.element].name} {card.property}&nbsp;
+                      <b>
+                        {deck.elements[card.element].name} {card.property}
+                      </b>
+                      &nbsp;
                       {'s' in stat ? (
                         <>
-                          <span>{round(stat.s)}d&nbsp;</span>
+                          {stat.duediff === 0 ? null : (
+                            <span style={{ opacity: 0.7 }}>
+                              {round(Math.abs(stat.duediff))}d{' '}
+                              {stat.duediff < 0 ? 'early' : 'late'}&nbsp;
+                            </span>
+                          )}
+                          <span>now {round(stat.s)}d&nbsp;</span>
                           {stat.sdiff === 0 ? null : (
                             <span style={{ color: stat.sdiff >= 0 ? 'green' : 'red' }}>
                               {stat.sdiff > 0 ? '+' : ''}
