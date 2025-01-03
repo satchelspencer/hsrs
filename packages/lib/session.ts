@@ -58,7 +58,8 @@ export function createLearningSession(
 
 function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   const res: t.IdMap<t.IdMap<t.Element>> = {},
-    all: t.IdMap<t.Element> = {}
+    all: t.IdMap<t.Element> = {},
+    targetStability = getLearnTargetStability()
 
   for (const elid in deck.elements) {
     const el = deck.elements[elid],
@@ -70,7 +71,8 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
     } else {
       for (const propName of props) {
         res[propName] ??= {}
-        if (deck.cards[card2Id({ element: elid, property: propName })]) {
+        const state = deck.cards[card2Id({ element: elid, property: propName })]
+        if (state && state.stability >= targetStability) {
           for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
         }
       }
@@ -124,7 +126,7 @@ export function gradeCard(
           ),
     learningIndex = Math.min(
       // if learning reinsert proportional to stability/target
-      2 + Math.pow(cardState.stability / targetStability, 4) * 30 + jitter,
+      2 + Math.pow(cardState.stability / targetStability, 3) * 30 + jitter,
       //midPoint,
       30
     ),
