@@ -4,8 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "vite src",
-    "build": "vite build src"
+    "dev": "vite src --config vite.config.ts",
+    "build": "vite build src --config vite.config.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.2",

@@ -1,4 +1,5 @@
 import init, { Fsrs, initSync } from 'fsrs-browser'
+import wasmUrl from 'fsrs-browser/fsrs_browser_bg.wasm?url'
 
 export { Fsrs } from 'fsrs-browser'
 
@@ -9,17 +10,20 @@ export const defaultParams = [
   0.10999999940395355, 0.2960500121116638, 2.2697999477386475, 0.23149999976158142,
   2.989799976348877, 0.5165500044822693, 0.6621000170707703,
 ]
+const isNode =
+  typeof process !== 'undefined' &&
+  process.versions != null &&
+  process.versions.node != null
 
 export async function fsrs(params = defaultParams) {
-  if (typeof window !== 'undefined') {
-    // @ts-ignore
-    const wasmUrl = await import('fsrs-browser/fsrs_browser_bg.wasm?url')
-    await init(wasmUrl.default)
+  if (!isNode) {
+    await init(wasmUrl)
   } else {
-    const fs = await import('fs')
-    const { webcrypto } = await import('node:crypto')
-    globalThis.crypto = webcrypto as any
-    const wasmPath = require.resolve('fsrs-browser/fsrs_browser_bg.wasm')
+    const fs = eval('require')('fs') as typeof import('fs')
+    const { webcrypto } = eval('require')('node:crypto') as typeof import('crypto')
+    globalThis.crypto = webcrypto as unknown as Crypto
+
+    const wasmPath = eval('require').resolve('fsrs-browser/fsrs_browser_bg.wasm')
     const wasmBuffer = fs.readFileSync(wasmPath)
     initSync(wasmBuffer)
   }

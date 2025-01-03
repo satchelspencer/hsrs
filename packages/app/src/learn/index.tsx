@@ -174,10 +174,8 @@ export function Learn() {
     setPluginLoaded(false)
 
     const handleMessage = (e: MessageEvent<any>) => {
-      if (e.origin === pluginUrl) {
-        if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
-        setPluginLoaded(true)
-      }
+      if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
+      if (e.data.type === 'ready') setPluginLoaded(true)
     }
     window.addEventListener('message', handleMessage)
 
