@@ -63,7 +63,7 @@ export const deck = createSlice({
       state.settings = { ...deckInit.settings, ...state.settings, ...action.payload }
     },
     importElements: (state, action: PayloadAction<t.DeckExport>) => {
-      state.elements = _.merge(state.elements, action.payload.elements)
+      state.elements = { ...state.elements, ...action.payload.elements }
     },
   },
   extraReducers: (builder) => {
