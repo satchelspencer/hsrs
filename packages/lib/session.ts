@@ -239,9 +239,7 @@ function getDue(
         (state.lastMiss && state.lastMiss > now - 3600 * 6)
       )
         sampleAndAdd(dueCards, cardId, deck, learnable, filter)
-      // cards due due date in less than 6h or missed in last 6h
-      else if (state.lastSeen < now - 3600 * 6)
-        sampleAndAdd(nextCards, cardId, deck, learnable, filter) //only sample nextCards that haven't been seen in the last 6h
+      else sampleAndAdd(nextCards, cardId, deck, learnable, filter)
     }
   }
 
