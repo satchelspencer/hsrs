@@ -29,7 +29,7 @@ export function createLearningSession(
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (dueCards.length + newCards.length) / actual,
+    gapFactor = (dueCards.length + nextCards.length + newCards.length) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -236,8 +236,7 @@ function getDue(
     if (hasProps && state.due && state.lastSeen) {
       if (
         state.due < now + 3600 * 6 ||
-        ((state.lastScore === 1 || state.lastScore === 2) &&
-          state.lastSeen > now - 3600 * 6)
+        (state.lastMiss && state.lastMiss > now - 3600 * 6)
       )
         sampleAndAdd(dueCards, cardId, deck, learnable, filter)
       // cards due due date in less than 6h or missed in last 6h

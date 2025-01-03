@@ -58,6 +58,7 @@ export function nextCardState(
     ...memoryState,
     lastSeen: now,
     lastScore: grade,
+    lastMiss: grade > 2 ? cardState?.lastMiss : now,
     due: now + nextInterval(memoryState.stability, retention),
   }
 }
