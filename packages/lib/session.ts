@@ -1,7 +1,7 @@
 import {
   getAllCards,
   getElementAndParents,
-  getElementProps,
+  getInheritedElement,
   isParent,
   sampleElementIstance,
 } from './props'
@@ -199,7 +199,7 @@ function getNew(
 
   while (res.length < limit / newCardFactor && cards.length) {
     const card = cards.pop()!,
-      props = getElementProps(card.element, deck.elements)
+      { props } = getInheritedElement(card.element, deck.elements)
 
     if (usedEls[card.element]) continue
 
@@ -233,7 +233,7 @@ function getDue(
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
       card = id2Card(cardId),
-      props = getElementProps(card.element, deck.elements),
+      { props } = getInheritedElement(card.element, deck.elements),
       hasProps = !!props[card.property]
 
     if (hasProps && state.due && state.lastSeen) {

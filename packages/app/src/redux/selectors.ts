@@ -1,11 +1,10 @@
 import {
-  getElementProps,
-  getElementParams,
   getElementParamsAndProps,
   getVariables,
   getNonVirtualDescendents,
   getElementChildren,
   generateElementInstanceSamples,
+  getInheritedElement,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import _ from 'lodash'
@@ -42,17 +41,10 @@ export const selectElementById = createSelector(
   }
 )
 
-export const selectElementPropsById = createSelector(
+export const selectInheritedElementById = createSelector(
   [(s) => s.deck.elements, (s, elementId: string) => elementId],
   (elements, elementId) => {
-    return getElementProps(elementId, elements)
-  }
-)
-
-export const selectElementParamsById = createSelector(
-  [(s) => s.deck.elements, (s, elementId: string) => elementId],
-  (elements, elementId) => {
-    return getElementParams(elementId, elements)
+    return getInheritedElement(elementId, elements)
   }
 )
 

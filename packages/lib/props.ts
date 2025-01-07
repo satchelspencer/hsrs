@@ -74,45 +74,41 @@ export function getElementParamsAndProps(
 
   if (!depth) return res
 
-  Object.assign(res, getElementProps(elementId, elements))
-
-  const params = _.mapValues(getElementParams(elementId, elements), (paramElement) =>
-    getElementParamsAndProps(paramElement, elements, depth - 1)
-  )
-
+  const element = getInheritedElement(elementId, elements),
+    params = _.mapValues(element.params ?? {}, (paramElement) =>
+      getElementParamsAndProps(paramElement, elements, depth - 1)
+    )
+  Object.assign(res, element.props)
   Object.assign(res, params)
 
   return res
 }
 
-export function getElementProps(elementId: string, elements: t.IdMap<t.Element>) {
-  const elementIds = getElementAndParents(elementId, elements).reverse(),
-    res: t.Props = {}
+export function getInheritedElement(
+  elementId: string,
+  elements: t.IdMap<t.Element>
+): t.Element {
+  const element = { ...elements[elementId] },
+    inheritedProps: t.Props = {},
+    inheritedParams: t.Params = {}
+  let inheritedConstraint: string = ''
 
-  for (const elementId of elementIds) {
-    const element = elements[elementId]
+  for (const id of getElementAndParents(elementId, elements).reverse()) {
+    const element = elements[id]
     if (!element) continue
     for (const propId in element.props) {
-      if (element.props[propId] || !res[propId]) res[propId] = element.props[propId]
+      if (element.props[propId] || !inheritedProps[propId])
+        inheritedProps[propId] = element.props[propId]
     }
-  }
-
-  return res
-}
-
-export function getElementParams(elementId: string, elements: t.IdMap<t.Element>) {
-  const elementIds = getElementAndParents(elementId, elements).reverse(),
-    res: t.Params = {}
-
-  for (const elementId of elementIds) {
-    const element = elements[elementId]
-    if (!element) continue
     for (const propId in element.params) {
-      if (element.params[propId]) res[propId] = element.params[propId]
+      if (element.params[propId]) inheritedParams[propId] = element.params[propId]
     }
+    if (element.constraint) inheritedConstraint = element.constraint
   }
-
-  return res
+  element.props = inheritedProps
+  if (Object.keys(inheritedParams).length) element.params = inheritedParams
+  if (inheritedConstraint) element.constraint = inheritedConstraint
+  return element
 }
 
 export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
@@ -145,8 +141,8 @@ export function findAliases(
 
       if (element.virtual) continue
 
-      const params = getElementParams(elId, elements),
-        propNames = Object.keys(getElementProps(elId, elements)),
+      const { props, params = {}, constraint } = getInheritedElement(elId, elements),
+        propNames = Object.keys(props),
         matchingParams: { [paramName: string]: MetaInstance[] } = {}
 
       for (const paramName in params) {
@@ -169,7 +165,7 @@ export function findAliases(
         instances: t.ElementInstance[] = paramNames.length
           ? _.compact(
               permute(paramValues).map((perm) => {
-                if (failsConstraint(perm, element.constraint)) return false
+                if (failsConstraint(perm, constraint)) return false
                 const oinstance: t.ElementInstance = { element: elId, params: {} }
                 for (const i in paramNames) oinstance.params![paramNames[i]] = perm[i]
                 return oinstance
@@ -285,8 +281,7 @@ export function sampleElementIstance(
     const index = Math.floor(Math.pow(Math.random(), 8) * descendents.length),
       [descendent] = descendents.splice(index, 1)
 
-    const del = elements[descendent],
-      params = getElementParams(descendent, elements)
+    const { params = {}, constraint } = getInheritedElement(descendent, elements)
 
     let failed = false
     for (const fparam in fixedParams) {
@@ -304,12 +299,12 @@ export function sampleElementIstance(
     }
 
     const constraints: t.Params = _.pickBy(fixedParams ?? {}, (_, v) =>
-      del.constraint?.includes(v)
+      constraint?.includes(v)
     )
     for (const param of _.shuffle(Object.keys(params))) {
       const pinst = sampleElementIstance(params[param], elements, constraints, order)
       walkParamsDeep(pinst.params, (childParam, el) => {
-        if (del.constraint?.includes(childParam)) constraints[childParam] = el.element
+        if (constraint?.includes(childParam)) constraints[childParam] = el.element
       })
       inst.params![param] = pinst
     }
@@ -367,7 +362,7 @@ export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
 
 export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
   const cards: t.Card[] = [],
-    props = getElementProps(id, elements)
+    { props } = getInheritedElement(id, elements)
 
   for (const propId in props) {
     const prop = props[propId]
@@ -381,7 +376,7 @@ function getResolvedElements(
   elements: t.IdMap<t.Element>,
   paramName: string
 ): string[] {
-  const paramValue = getElementParams(id, elements)
+  const { params: paramValue = {} } = getInheritedElement(id, elements)
   const element = elements[id]
   if (!element.virtual) return paramValue[paramName] ? [paramValue[paramName]] : []
   const res: string[] = []
@@ -416,7 +411,7 @@ function findMissingElements(
 }
 
 export function findMissingInstances(id: string, elements: t.IdMap<t.Element>) {
-  const params = getElementParams(id, elements)
+  const { params = {} } = getInheritedElement(id, elements)
   const res: { [n: string]: string[] } = {}
   for (const paramName in params) {
     const resolved = getResolvedElements(id, elements, paramName),

@@ -23,12 +23,11 @@ export function ElementEditor(props: ElementEditorProps) {
   const element = r.useSelector((state) =>
       r.selectors.selectElementById(state, props.id)
     ),
-    elementProps = r.useSelector((state) =>
-      r.selectors.selectElementPropsById(state, props.id)
-    ),
-    elementParams = r.useSelector((state) =>
-      r.selectors.selectElementParamsById(state, props.id)
-    ),
+    {
+      props: elementProps,
+      params: elementParams = {},
+      constraint: elementConstraint,
+    } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
     )
@@ -180,7 +179,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
             !!Object.keys(elementParams).length && [
               'Constrain',
-              element.constraint === undefined ? (
+              elementConstraint === undefined ? (
                 <Button onClick={() => handleChange({ ...element, constraint: '' })}>
                   <Icon name="plus" />
                   Add
@@ -188,7 +187,7 @@ export function ElementEditor(props: ElementEditorProps) {
               ) : (
                 <CodeInput
                   value={element.constraint}
-                  placeholder="Enter parameters..."
+                  placeholder={elementConstraint || 'Enter parameters...'}
                   onChange={(constraint) => handleChange({ ...element, constraint })}
                   onClear={() => handleChange(_.omit(element, 'constraint'))}
                 />

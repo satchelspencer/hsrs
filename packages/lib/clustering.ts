@@ -2,7 +2,7 @@ import _ from 'lodash'
 import cluster from 'hierarchical-clustering'
 
 import * as t from '@hsrs/lib/types'
-import { getElementParams, getNonVirtualDescendents } from '@hsrs/lib/props'
+import { getInheritedElement, getNonVirtualDescendents } from '@hsrs/lib/props'
 
 export type AdjLists = { [id: string]: string[] }[]
 
@@ -14,7 +14,7 @@ export function getRelationAdjs(elementId: string, elements: t.IdMap<t.Element>)
   const adjLists: AdjLists = [{}, {}]
 
   for (const nonVirtualId of nonVirtuals) {
-    const veParams = getElementParams(nonVirtualId, elements)
+    const { params: veParams = {} } = getInheritedElement(nonVirtualId, elements)
     for (let axisIndex = 0; axisIndex < axes.length; axisIndex++) {
       const axisParam = veParams[axes[axisIndex]],
         otherIndex = (axisIndex + 1) % 2,

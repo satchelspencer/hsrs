@@ -1,7 +1,7 @@
 import jexl from 'jexl'
 import _ from 'lodash'
 import * as t from './types'
-import { getElementProps } from './props'
+import { getInheritedElement } from './props'
 
 jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
@@ -95,7 +95,7 @@ export function computeElementInstance(
     (a) => !!a
   )
 
-  const elProps = getElementProps(instace.element, elements),
+  const { props: elProps } = getInheritedElement(instace.element, elements),
     result: t.Props = {},
     execOrder = getPropExecOrder(elProps)
 

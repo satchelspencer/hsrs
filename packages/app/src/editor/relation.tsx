@@ -11,7 +11,7 @@ import {
   findCommonAncestors,
   getElementAndParents,
   getElementChildren,
-  getElementParams,
+  getInheritedElement,
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
 import { uid } from '@hsrs/lib/uid'
@@ -62,8 +62,8 @@ function getNodes(
   flatOpened: string[],
   order: string[][]
 ) {
-  const params = getElementParams(elementId, elements),
-    axes = _.sortBy(Object.keys(params ?? {}))
+  const { params = {} } = getInheritedElement(elementId, elements),
+    axes = _.sortBy(Object.keys(params))
 
   return order.map((idList, i) => {
     return expandNodes(
@@ -120,7 +120,7 @@ export function RelationEditor(props: RelationEditorProps) {
       )
     },
     dispatch = r.useDispatch(), //(act) => console.log(act.type, JSON.stringify(showNames(act.payload), null, 2)), // r.useDispatch(),
-    params = getElementParams(props.id, elements),
+    { params = {} } = getInheritedElement(props.id, elements),
     [opened, setOpened] = useState<string[]>([]),
     [flatOpened, setFlatOpened] = useState<string[]>([]),
     [clusterIndexes, setClusterIndexesRaw] = useState([0, 0]),
