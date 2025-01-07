@@ -17,7 +17,7 @@ export async function setParams(params?: number[]) {
 }
 
 export function getLearnTargetStability() {
-  return params[2] * 0.9
+  return fsrs!.memoryState(new Uint32Array([3]), new Uint32Array([0]))[0] * 0.9
 }
 
 export function computeParams(

@@ -138,9 +138,7 @@ export function Learn() {
       nextStats.push({
         cardId,
         gradf: Math.min(nextState.stability / targetInterval, 1),
-        graduated:
-          nextState.stability >= targetInterval &&
-          (!lastCards[cardId] || lastCards[cardId].stability >= targetInterval),
+        graduated: nextState.stability >= targetInterval,
         duediff: 0,
       })
     }

@@ -46,7 +46,6 @@ export function ElementEditor(props: ElementEditorProps) {
       )
 
   const elements = r.useSelector((state) => state.deck.elements),
-    cards = r.useSelector((state) => state.deck.cards),
     [exampleSeed, setExampleSeed] = useState(0),
     { example, exampleInstance } = useMemo(() => {
       const next = elementInstanceGenerator.next().value
@@ -179,7 +178,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
-            !!Object.keys(element.params ?? {}).length && [
+            !!Object.keys(elementParams).length && [
               'Constrain',
               element.constraint === undefined ? (
                 <Button onClick={() => handleChange({ ...element, constraint: '' })}>
