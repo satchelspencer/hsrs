@@ -92,14 +92,8 @@ export function nextState(
       nextDifficulty = nextMemoryState.difficulty,
       nextStability = nextMemoryState.stability
 
-    const l = (p) => (p * p) / (1 - p * p),
-      linv = (p) => Math.sqrt(p / (p + 1)),
-      lprev = l(memoryState.stability),
-      lnext = l(nextStability),
-      lint = (1 - probability) * lprev + probability * lnext,
-      r = linv(lint)
-
-    const intd = (1 - probability) * memoryState.difficulty + probability * nextDifficulty
+    const r = (1 - probability) * memoryState.stability + probability * nextStability,
+      intd = (1 - probability) * memoryState.difficulty + probability * nextDifficulty
 
     return {
       stability: Math.max(r, getLearnTargetStability() / 4),
@@ -154,10 +148,7 @@ export function getLearningCardDiff(
           ? (flearning.time - state.lastSeen) / (3600 * 6)
           : 1,
       successProb = successProbs[i],
-      probability =
-        !shallow && flearning.score === 1 && state
-          ? (1 - successProb) / (1 - totalSuccessProb)
-          : 1
+      probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
