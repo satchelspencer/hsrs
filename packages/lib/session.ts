@@ -19,7 +19,7 @@ export function createLearningSession(
   size: number,
   allowNew: boolean,
   filter: string[]
-): { session: t.LearningSession; new: number; due: number; next: number } {
+): { session: t.LearningSession; new: number; due: number; next: number; maxp: number } {
   const learned = getLearnedElements(deck),
     { dueCards, nextCards } = getDue(deck, size, learned, filter),
     newCards = allowNew
@@ -53,6 +53,7 @@ export function createLearningSession(
     new: gaps,
     due: dueCards.length,
     next: previewCards.length,
+    maxp: Math.max(0, ...previewCards.map((card) => deck.cards[card2Id(card)].due ?? 0)),
   }
 }
 
