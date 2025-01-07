@@ -12,7 +12,12 @@ import {
   editorWrapperOuter,
 } from '../editor/element'
 import { getStats, StatResult, StatsOptions } from './util'
-import { useAvgTimeSpent, useCountGroupedByDayAndScore, useStabilityDist } from './stats'
+import {
+  useAvgTimeSpent,
+  useCountGroupedByDayAndScore,
+  useStabilityDist,
+  useSeenPercentage,
+} from './stats'
 import { css, cx } from '@emotion/css'
 
 interface StatsEditorProps {
@@ -29,7 +34,13 @@ export function Stats(props: StatsEditorProps) {
   const countGroupedByDayAndScore = useCountGroupedByDayAndScore(options),
     avgTimeSpent = useAvgTimeSpent(),
     stabilityDist = useStabilityDist(options),
-    statsDefs = [avgTimeSpent, countGroupedByDayAndScore, stabilityDist],
+    seenPercentage = useSeenPercentage(),
+    statsDefs = [
+      avgTimeSpent,
+      countGroupedByDayAndScore,
+      seenPercentage,
+      stabilityDist,
+    ],
     [stats, setStats] = useState<StatResult[]>([])
 
   useEffect(() => {

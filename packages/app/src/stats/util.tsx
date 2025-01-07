@@ -35,7 +35,7 @@ export interface StatDefinition<TAcc = any, TFinal = any> {
   name: string
   initAcc: () => TAcc
   accumulator: (accumulatedData: TAcc, item: t.CardLearning) => void
-  finalize: (accumulatedData: TAcc, cards: t.CardStates) => TFinal
+  finalize: (accumulatedData: TAcc, deck: t.Deck) => TFinal
   render: (finalData: TFinal) => React.ReactNode
   singleLine?: boolean
 }
@@ -100,10 +100,11 @@ export async function getStats(
   return statsDefs.map((stat, i) => ({
     ...stat,
     renderFn: stat.render,
-    finalData: stat.finalize(
-      accumulators[i],
-      _.pickBy(deck.cards, (c, v) => children.includes(id2Card(v).element))
-    ),
+    finalData: stat.finalize(accumulators[i], {
+      ...deck,
+      elements: _.pickBy(deck.elements, (e, id) => children.includes(id)),
+      cards: _.pickBy(deck.cards, (c, v) => children.includes(id2Card(v).element)),
+    }),
   }))
 }
 

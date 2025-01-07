@@ -6,6 +6,8 @@ import * as t from '@hsrs/lib/types'
 
 import { formatDate, groupByTimescale } from './time'
 import { commonChartOptions, createStatHook, StatsOptions } from './util'
+import { getAllCards } from '@hsrs/lib/props'
+import { card2Id } from '@hsrs/lib/session'
 
 export const useCountGroupedByDayAndScore = createStatHook((options: StatsOptions) => ({
   name: 'Hours spent',
@@ -81,8 +83,8 @@ export const useStabilityDist = createStatHook((options: StatsOptions) => ({
   name: 'Stability distribution',
   initAcc: () => ({}),
   accumulator: () => {},
-  finalize: (x, cards: t.CardStates) => {
-    const stabilityValues = Object.values(cards).map((card) => card.stability),
+  finalize: (x, deck) => {
+    const stabilityValues = Object.values(deck.cards).map((card) => card.stability),
       sortedStabilities = _.sortBy(stabilityValues),
       ninetyPercentileValue =
         sortedStabilities[Math.floor(0.95 * sortedStabilities.length)] || 0,
@@ -127,4 +129,24 @@ export const useStabilityDist = createStatHook((options: StatsOptions) => ({
       />
     )
   },
+}))
+
+export const useSeenPercentage = createStatHook(() => ({
+  name: 'Progress',
+  singleLine: true,
+  initAcc: () => ({}),
+  accumulator: () => {},
+  finalize: (acc, deck) => {
+    const allCards = getAllCards(deck.elements),
+      totalCards = allCards.length,
+      seenCount = allCards.filter((c) => !!deck.cards[card2Id(c)]).length,
+      percentage = totalCards > 0 ? ((seenCount / totalCards) * 100).toFixed(2) : '0.00'
+    return { seenCount, totalCards: totalCards, percentage }
+  },
+  render: (data) => (
+    <div>
+      <i>{data.seenCount}</i> seen of <i>{data.totalCards}</i> cards available (
+      <i>{data.percentage}%</i>)
+    </div>
+  ),
 }))
