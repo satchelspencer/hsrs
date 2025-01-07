@@ -280,7 +280,11 @@ export function sampleElementIstance(
 ): t.ElementInstance {
   const nonV = getNonVirtualDescendents(id, elements),
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
-  for (const descendent of descendents) {
+
+  while (descendents.length) {
+    const index = Math.floor(Math.pow(Math.random(), 8) * descendents.length),
+      [descendent] = descendents.splice(index, 1)
+
     const del = elements[descendent],
       params = getElementParams(descendent, elements)
 
