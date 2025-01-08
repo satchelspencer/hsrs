@@ -49,17 +49,19 @@ export function nextCardState(
   retention = defaultretention
 ): t.CardState {
   const memoryState = nextState(
-    cardState,
+      cardState,
     cardState?.lastSeen ? now - cardState.lastSeen : 0,
-    grade,
-    probability
-  )
+      grade,
+      probability
+    ),
+    base = (1 - probability) * (cardState?.lastBase ?? now) + probability * now
   return {
     ...memoryState,
+    lastBase: base,
     lastSeen: now,
     lastScore: grade,
     lastMiss: grade > 2 ? cardState?.lastMiss : now,
-    due: now + nextInterval(memoryState.stability, retention),
+    due: base + nextInterval(memoryState.stability, retention),
   }
 }
 
