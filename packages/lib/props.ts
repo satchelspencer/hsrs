@@ -278,7 +278,9 @@ export function sampleElementIstance(
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
 
   while (descendents.length) {
-    const index = Math.floor(Math.pow(Math.random(), 8) * descendents.length),
+    const index = Math.floor(
+        Math.pow(Math.random(), 8) * Math.min(descendents.length, 10)
+      ),
       [descendent] = descendents.splice(index, 1)
 
     const { params = {}, constraint } = getInheritedElement(descendent, elements)
