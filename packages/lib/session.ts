@@ -29,7 +29,7 @@ export function createLearningSession(
 
   const gaps = newCards.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (dueCards.length + nextCards.length + newCards.length) / actual,
+    gapFactor = (0.66 * (dueCards.length + nextCards.length + newCards.length)) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -229,14 +229,21 @@ function getDue(
     ),
     now = getTime()
 
+  // console.log(
+  //   cardsIds.map((c) => [
+  //     deck.elements[id2Card(c).element].name,
+  //     deck.cards[c].due && new Date(deck.cards[c].due * 1000),
+  //   ])
+  // )
+
   while (dueCards.length + nextCards.length < limit && cardsIds.length) {
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
       card = id2Card(cardId),
-      { props } = getInheritedElement(card.element, deck.elements),
+      { props, virtual } = getInheritedElement(card.element, deck.elements),
       hasProps = !!props[card.property]
 
-    if (hasProps && state.due && state.lastSeen) {
+    if (!virtual && hasProps && state.due && state.lastSeen) {
       if (
         state.due < now + 3600 * 6 ||
         (state.lastMiss && state.lastMiss > now - 3600 * 6)
