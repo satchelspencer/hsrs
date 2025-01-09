@@ -53,7 +53,7 @@ export function App() {
 const appNav = cx(
   css`
     border-right: 1px solid ${styles.color(0.93)};
-    box-shadow: 0 0 13px 0px #00000014;
+    box-shadow: 0 0 13px 0px #00000009;
     z-index: 2;
     display: flex;
     flex-direction: column;

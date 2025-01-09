@@ -47,12 +47,8 @@ export function groupByTimescale<T>(
   items: T[],
   getTime: (item: T) => number,
   maxGroups: number
-) {
-  if (!items || !items.length)
-    return {
-      grouped: {} as Record<number, T[]>,
-      timescaleFn: startOfDay,
-    }
+): Record<number, T[]> {
+  if (!items || !items.length) return {}
 
   let minTime = Number.POSITIVE_INFINITY,
     maxTime = Number.NEGATIVE_INFINITY

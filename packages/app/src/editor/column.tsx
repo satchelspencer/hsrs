@@ -71,7 +71,7 @@ const columnWrapper = (first: boolean, jump: boolean) =>
       z-index: 1;
       flex: none;
       &:not(:first-child) {
-        box-shadow: 1px 0px 10px #00000010;
+        box-shadow: 1px 0px 10px #00000009;
       }
       background: ${styles.color(0.985)};
       ${jump &&

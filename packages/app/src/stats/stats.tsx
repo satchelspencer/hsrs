@@ -103,7 +103,9 @@ export const useStabilityDist = createStatHook((options: StatsOptions) => ({
       ]++
 
     return {
-      labels: bins.map((_, i) => `${(minStability + i * binSize).toFixed(0)}d`),
+      labels: bins.map((c, i) =>
+        c ? `${(minStability + i * binSize).toFixed(0)}d` : undefined
+      ),
       data: bins,
     }
   },
