@@ -27,7 +27,7 @@ ChartJS.register(
 
 import * as t from '@hsrs/lib/types'
 import { db } from '../redux/db'
-import { getNonVirtualDescendents } from '@hsrs/lib/props'
+import { getNonVirtualDescendents, isParent } from '@hsrs/lib/props'
 import { getTime } from '@hsrs/lib/schedule'
 import { id2Card } from '@hsrs/lib/session'
 
@@ -97,13 +97,19 @@ export async function getStats(
       }
     })
 
+  const elements = _.pickBy(
+    _.pickBy(deck.elements, (e, id) =>
+      children.find((cid) => cid === id || isParent(cid, id, deck.elements))
+    )
+  )
+
   return statsDefs.map((stat, i) => ({
     ...stat,
     renderFn: stat.render,
     finalData: stat.finalize(accumulators[i], {
       ...deck,
-      elements: _.pickBy(deck.elements, (e, id) => children.includes(id)),
-      cards: _.pickBy(deck.cards, (c, v) => children.includes(id2Card(v).element)),
+      elements,
+      cards: _.pickBy(deck.cards, (c, v) => !!elements[id2Card(v).element]),
     }),
   }))
 }

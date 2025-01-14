@@ -63,7 +63,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
     targetStability = getLearnTargetStability()
 
   for (const elid in deck.elements) {
-    const el = deck.elements[elid],
+    const el = getInheritedElement(elid, deck.elements),
       props = Object.keys(el.props),
       elAndParents = getElementAndParents(elid, deck.elements)
 
