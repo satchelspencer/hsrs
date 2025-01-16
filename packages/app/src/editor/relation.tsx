@@ -90,7 +90,7 @@ function inRelation(
   let indirectMatch = false,
     directMatch: string | null = null
   for (const nonVir of nonVirtuals) {
-    const nonVirParams = elements[nonVir].params!,
+    const nonVirParams = elements[nonVir].params ?? {},
       matchingParams = _.mapValues(paramParentLists, (parents, paramName) =>
         parents.filter((p) => nonVirParams[paramName] === p)
       )
