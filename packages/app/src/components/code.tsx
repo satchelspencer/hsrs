@@ -150,7 +150,7 @@ export default function CodeInput(props: CodeInputProps) {
     onChangeRef.current = props.onChange
   }, [props.onChange])
 
-  const [internalValue, setInternalValue] = useState(props.value)
+  const [internalValue, setInternalValue] = useState<string | undefined>(undefined)
 
   return (
     <CodeMirror
@@ -165,9 +165,8 @@ export default function CodeInput(props: CodeInputProps) {
       style={{ fontSize: 12, flex: 1, minHeight: 25 }}
       onFocus={props.onFocus}
       onBlur={(e) => {
-        props.onChange?.(internalValue)
         setInternalValue(undefined)
-        throttleOnChange.cancel()
+        throttleOnChange.flush()
         props.onBlur?.(e)
       }}
       placeholder={props.placeholder}
