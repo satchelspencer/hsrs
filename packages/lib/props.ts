@@ -283,7 +283,7 @@ export function sampleElementIstance(
       ),
       [descendent] = descendents.splice(index, 1)
 
-    const { params = {}, constraint } = getInheritedElement(descendent, elements)
+    const { params = {}, constraint = '' } = getInheritedElement(descendent, elements)
 
     let failed = false
     for (const fparam in fixedParams) {
@@ -300,13 +300,16 @@ export function sampleElementIstance(
       params: {},
     }
 
-    const constraints: t.Params = _.pickBy(fixedParams ?? {}, (_, v) =>
-      constraint?.includes(v)
+    const constraints: t.Params = _.pickBy(
+      { ...params, ...(fixedParams ?? {}) },
+      (_, v) => constraint.includes(v)
     )
-    for (const param of _.shuffle(Object.keys(params))) {
+    for (const param of _.sortBy(Object.keys(params), (pname) =>
+      constraints[pname] ? 0 : 1
+    )) {
       const pinst = sampleElementIstance(params[param], elements, constraints, order)
-      walkParamsDeep(pinst.params, (childParam, el) => {
-        if (constraint?.includes(childParam)) constraints[childParam] = el.element
+      walkParamsDeep({ [param]: pinst }, (childParam, el) => {
+        if (constraint.includes(childParam)) constraints[childParam] = el.element
       })
       inst.params![param] = pinst
     }
