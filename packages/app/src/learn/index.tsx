@@ -380,6 +380,7 @@ export function Learn() {
             &nbsp; &nbsp;
             <div style={{ minWidth: 150 }}>
               <ElListPicker
+                multiline={false}
                 placeholder="All cards..."
                 value={filter ?? []}
                 onChange={(value) =>

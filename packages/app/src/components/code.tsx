@@ -1,11 +1,13 @@
 import _ from 'lodash'
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import {
   autocompletion,
   acceptCompletion,
   startCompletion,
   CompletionContext,
+  moveCompletionSelection,
+  completionStatus,
 } from '@codemirror/autocomplete'
 import { LRLanguage, LanguageSupport } from '@codemirror/language'
 import { parser } from '@lezer/javascript'
@@ -107,6 +109,22 @@ export default function CodeInput(props: CodeInputProps) {
         },
         { key: 'Backspace', run: handleBackspaceEmpty },
         { key: 'Enter', run: handleEnter },
+        {
+          key: 'ArrowDown',
+          run: (view) => {
+            if (completionStatus(view.state) === 'active')
+              moveCompletionSelection(true)(view)
+            return true
+          },
+        },
+        {
+          key: 'ArrowUp',
+          run: (view) => {
+            if (completionStatus(view.state) === 'active')
+              moveCompletionSelection(false)(view)
+            return true
+          },
+        },
       ])
     ),
     autocompletion({
@@ -132,16 +150,26 @@ export default function CodeInput(props: CodeInputProps) {
     onChangeRef.current = props.onChange
   }, [props.onChange])
 
+  const [internalValue, setInternalValue] = useState(props.value)
+
   return (
     <CodeMirror
       ref={editorRef}
-      value={props.value}
-      onChange={throttleOnChange}
+      value={internalValue ?? props.value}
+      onChange={(value) => {
+        setInternalValue(value)
+        throttleOnChange(value)
+      }}
       extensions={extensions}
       indentWithTab={false}
       style={{ fontSize: 12, flex: 1, minHeight: 25 }}
       onFocus={props.onFocus}
-      onBlur={props.onBlur}
+      onBlur={(e) => {
+        props.onChange?.(internalValue)
+        setInternalValue(undefined)
+        throttleOnChange.cancel()
+        props.onBlur?.(e)
+      }}
       placeholder={props.placeholder}
       autoFocus={props.autoFocus}
       basicSetup={{

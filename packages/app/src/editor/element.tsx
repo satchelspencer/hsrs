@@ -298,6 +298,7 @@ interface ElListPickerProps {
   onChange: (value: string[]) => void
   onClear?: () => void
   placeholder?: string
+  multiline?: boolean
 }
 
 const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
@@ -330,7 +331,7 @@ export function ElListPicker(props: ElListPickerProps) {
       onClear={props.onClear}
       varColor="#689d6a"
       throttle
-      multiline
+      multiline={props.multiline ?? true}
       placeholder={props.placeholder}
       onChange={(str) => {
         setRaw(str ?? '')
