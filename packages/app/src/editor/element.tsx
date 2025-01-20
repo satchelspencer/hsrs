@@ -290,12 +290,12 @@ export const editorWrapperOuter = cx(css`
 const exampleHead = cx(css`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0px;
   & > span {
     margin-top: -2px;
   }
   height: 25px;
-  margin: -6px 0;
+  margin: -8px 0;
 `)
 
 export const backButton = cx(css`

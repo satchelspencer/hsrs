@@ -101,19 +101,22 @@ export function MapAdder(props: MapAdderProps) {
   return (
     <div className={mapEditorAddWrapper}>
       {adding && (
-        <CodeInput
-          placeholder={props.placeholder}
-          value={newName}
-          onChange={(value) => setNewName(value ?? '')}
-          onEnter={addNew}
-          onBlur={cancel}
-          onClear={cancel}
-          autoFocus
-        />
+        <>
+          &nbsp;
+          <CodeInput
+            placeholder={props.placeholder}
+            value={newName}
+            onChange={(value) => setNewName(value ?? '')}
+            onEnter={addNew}
+            onBlur={cancel}
+            onClear={cancel}
+            autoFocus
+          />
+        </>
       )}
       {!adding && (
         <Button onClick={() => setAdding((a) => !a)}>
-          <Icon name="plus" /> new
+          <Icon name="plus" />
         </Button>
       )}
     </div>
