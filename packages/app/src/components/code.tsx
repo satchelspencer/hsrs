@@ -53,12 +53,14 @@ interface CodeInputProps {
   throttle?: boolean
   multiline?: boolean
   noActivateOnTyping?: boolean
+  hilight?: boolean
 }
 
 export default function CodeInput(props: CodeInputProps) {
   const editorRef = React.useRef<ReactCodeMirrorRef>(null)
 
   const extension = useMemo(() => {
+    if (!props.hilight) return []
     const highlightStyle = HighlightStyle.define([
       { tag: tags.variableName, color: props.varColor ?? '#468588' },
       { tag: tags.propertyName, color: props.varColor ?? '#468588' },
@@ -66,7 +68,7 @@ export default function CodeInput(props: CodeInputProps) {
       { tag: tags.literal, color: '#7c6f64' },
     ])
     return new LanguageSupport(language, [syntaxHighlighting(highlightStyle)])
-  }, [props.varColor])
+  }, [props.varColor, props.hilight])
 
   function variableAutocomplete(context: CompletionContext) {
     const word = context.matchBefore(/[\w-]*/),
@@ -162,7 +164,12 @@ export default function CodeInput(props: CodeInputProps) {
       }}
       extensions={extensions}
       indentWithTab={false}
-      style={{ fontSize: 12, flex: 1, minHeight: 25 }}
+      style={{
+        fontSize: 12,
+        flex: 1,
+        minHeight: 25,
+        color: props.hilight ? undefined : props.varColor ?? '#757575',
+      }}
       onFocus={props.onFocus}
       onBlur={(e) => {
         setInternalValue(undefined)

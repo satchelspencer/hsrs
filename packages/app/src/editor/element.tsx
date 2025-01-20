@@ -186,6 +186,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 </Button>
               ) : (
                 <CodeInput
+                  varColor="#884646"
                   value={element.constraint}
                   placeholder={elementConstraint || 'Enter parameters...'}
                   onChange={(constraint) => handleChange({ ...element, constraint })}
@@ -396,6 +397,7 @@ function PropsEditor(props: PropsEditorProps) {
                 onClear={() => {
                   if (!value) onDelete()
                 }}
+                hilight
                 placeholder={placeholder ?? ''}
                 varColor={props.varColor}
                 variables={_.without(props.variables, '_.' + key)}

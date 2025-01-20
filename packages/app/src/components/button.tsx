@@ -6,6 +6,7 @@ import * as styles from '../styles'
 interface ButtonProps {
   children: React.ReactNode
   onClick: React.MouseEventHandler
+  doubleClick?: boolean
   disabled?: boolean
   active?: boolean
   className?: string
@@ -15,7 +16,8 @@ export function Button(props: ButtonProps) {
   return (
     <button
       disabled={props.disabled}
-      onClick={props.onClick}
+      onClick={!props.doubleClick ? props.onClick : undefined}
+      onDoubleClick={props.doubleClick ? props.onClick : undefined}
       className={cx(linkWrapper(props.disabled, props.active), props.className)}
     >
       {props.children}

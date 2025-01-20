@@ -301,7 +301,7 @@ function ElListActions(props: ElListActionsProps) {
     <div className={actionsWrapper}>
       {nextSelection && (
         <>
-          <Button onClick={() => handleAction('del')}>
+          <Button doubleClick onClick={() => handleAction('del')}>
             <Icon name="delete" />
           </Button>
           <Button onClick={() => handleAction('move')}>
