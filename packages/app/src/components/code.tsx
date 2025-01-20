@@ -95,7 +95,7 @@ export default function CodeInput(props: CodeInputProps) {
     if (props.onEnter) {
       props.onEnter?.()
       return true
-    } else return props.multiline ? false : true
+    } else return true//props.multiline ? false : true
   }
 
   const extensions = [

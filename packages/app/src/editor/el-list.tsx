@@ -330,7 +330,6 @@ function ElListActions(props: ElListActionsProps) {
           actions[activeAction].callback(string!)
           cancelAction()
         }}
-        noActivateOnTyping
       />
     </div>
   )
