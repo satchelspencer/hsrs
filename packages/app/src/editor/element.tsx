@@ -6,7 +6,7 @@ import * as t from '@hsrs/lib/types'
 import * as styles from '../styles'
 import * as r from '../redux'
 import CodeInput from '../components/code'
-import { MapEditor, propName } from '../components/map'
+import { MapAdder, MapEditor, propName } from '../components/map'
 import { LabelGroup } from '../components/labels'
 import { Button } from '../components/button'
 import { ElementsList } from './el-list'
@@ -153,7 +153,18 @@ export function ElementEditor(props: ElementEditorProps) {
           vert
           items={[
             [
-              'Properties',
+              <div className={exampleHead}>
+                <span>Properties</span>
+                <MapAdder
+                  onAdd={(newName) =>
+                    handleChange({
+                      ...element,
+                      props: { ...element.props, [newName]: null },
+                    })
+                  }
+                  placeholder="new property name..."
+                />
+              </div>,
               <PropsEditor
                 value={element.props}
                 onChange={(p) => handleChange({ ...element, props: p })}
@@ -162,7 +173,18 @@ export function ElementEditor(props: ElementEditorProps) {
               />,
             ],
             [
-              'Params',
+              <div className={exampleHead}>
+                <span>Params</span>
+                <MapAdder
+                  onAdd={(newName) =>
+                    handleChange({
+                      ...element,
+                      params: { ...element.params, [newName]: '' },
+                    })
+                  }
+                  placeholder="new param name..."
+                />
+              </div>,
               <ElementParamsEditor
                 value={element}
                 onChange={handleChange}
@@ -182,7 +204,7 @@ export function ElementEditor(props: ElementEditorProps) {
               elementConstraint === undefined ? (
                 <Button onClick={() => handleChange({ ...element, constraint: '' })}>
                   <Icon name="plus" />
-                  Add
+                  add
                 </Button>
               ) : (
                 <CodeInput
@@ -197,7 +219,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
             !!example && [
               <div className={exampleHead}>
-                Example
+                <span>Example</span>
                 <Button onClick={() => setExampleSeed(Math.random())}>
                   <Icon name="refresh" />
                 </Button>
@@ -268,6 +290,12 @@ export const editorWrapperOuter = cx(css`
 const exampleHead = cx(css`
   display: flex;
   align-items: center;
+  gap: 8px;
+  & > span {
+    margin-top: -2px;
+  }
+  height: 25px;
+  margin: -6px 0;
 `)
 
 export const backButton = cx(css`
@@ -385,8 +413,6 @@ function PropsEditor(props: PropsEditorProps) {
       value={props.value}
       onChange={props.onChange}
       fixed={props.fixed}
-      defaultValue={null}
-      placeholder="new property name..."
       renderInput={({ value, onChange, onDelete, placeholder, key }) => {
         return (
           <div className={propTupleWrapper(true)}>
@@ -450,8 +476,6 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
       value={props.value.params ?? {}}
       onChange={(params) => handleChange({ ...props.value, params })}
       fixed={props.fixed}
-      defaultValue={''}
-      placeholder="new param name..."
       renderInput={({ value, onChange, onDelete, placeholder, key }) => (
         <div className={paramInnerWrapper}>
           <ElPicker

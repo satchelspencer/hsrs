@@ -21,33 +21,23 @@ interface MapEditorProps<T extends t.IdMap<any>> {
   onChange: (props: T) => void
   renderInput: (props: MapEditorRenderProps<T[keyof T]>) => React.ReactNode
   placeholder?: string
-  defaultValue: T[keyof T]
+  defaultValue?: T[keyof T]
   fixed?: T
   vert?: boolean
 }
 
 export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
-  const [newName, setNewName] = useState(''),
-    [adding, setAdding] = useState(false),
-    addNew = () => {
-      if (newName) {
-        props.onChange({ ...props.value, [newName]: props.defaultValue })
-        cancel()
-      }
-    },
-    cancel = () => {
-      setNewName('')
-      setAdding(false)
-    }
-  return (
+  const hasOwnAdder = props.defaultValue !== undefined,
+    items = _.sortBy([
+      ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
+      ...Object.keys(props.value),
+    ])
+  return hasOwnAdder || items.length > 0 ? (
     <div className={mapWrapper}>
       <LabelGroup
         vert={props.vert}
         flush={props.vert}
-        items={_.sortBy([
-          ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
-          ...Object.keys(props.value),
-        ]).map((propId) => {
+        items={items.map((propId) => {
           return [
             <div className={propName}>
               {propId}
@@ -78,24 +68,54 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
           ]
         })}
       />
-      <div className={mapEditorAddWrapper}>
-        {adding && (
-          <CodeInput
-            placeholder={props.placeholder}
-            value={newName}
-            onChange={(value) => setNewName(value ?? '')}
-            onEnter={addNew}
-            onBlur={cancel}
-            onClear={cancel}
-            autoFocus
-          />
-        )}
-        {!adding && (
-          <Button onClick={() => setAdding((a) => !a)}>
-            <Icon name="plus" /> new
-          </Button>
-        )}
-      </div>
+      {hasOwnAdder && (
+        <MapAdder
+          onAdd={(newName: string) => {
+            props.onChange({ ...props.value, [newName]: props.defaultValue })
+          }}
+          placeholder={props.placeholder}
+        />
+      )}
+    </div>
+  ) : null
+}
+
+interface MapAdderProps {
+  onAdd: (string: string) => void
+  placeholder?: string
+}
+
+export function MapAdder(props: MapAdderProps) {
+  const [newName, setNewName] = useState(''),
+    [adding, setAdding] = useState(false),
+    addNew = () => {
+      if (newName) {
+        props.onAdd(newName)
+        cancel()
+      }
+    },
+    cancel = () => {
+      setNewName('')
+      setAdding(false)
+    }
+  return (
+    <div className={mapEditorAddWrapper}>
+      {adding && (
+        <CodeInput
+          placeholder={props.placeholder}
+          value={newName}
+          onChange={(value) => setNewName(value ?? '')}
+          onEnter={addNew}
+          onBlur={cancel}
+          onClear={cancel}
+          autoFocus
+        />
+      )}
+      {!adding && (
+        <Button onClick={() => setAdding((a) => !a)}>
+          <Icon name="plus" /> new
+        </Button>
+      )}
     </div>
   )
 }
