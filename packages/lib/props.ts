@@ -305,7 +305,7 @@ export function sampleElementIstance(
       (_, v) => constraint.includes(v)
     )
     for (const param of _.sortBy(Object.keys(params), (pname) =>
-      constraints[pname] ? 0 : 1
+      constraints[pname] ? 0 : Math.random()
     )) {
       const pinst = sampleElementIstance(params[param], elements, constraints, order)
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
