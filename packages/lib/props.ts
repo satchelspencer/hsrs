@@ -105,7 +105,8 @@ export function getInheritedElement(
       if (element.params[propId]) inheritedParams[propId] = element.params[propId]
     }
     if (element.constraint) inheritedConstraint = element.constraint
-    if (element.mode) inheritedMode = element.mode
+    if (element.mode)
+      inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
   }
   element.props = inheritedProps
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
@@ -132,7 +133,8 @@ export function satisfiesMode(a: string = '', b: string = '') {
     const av = a[i],
       bv = b[i]
 
-    if (av && bv && av !== '-' && bv !== '-' && av !== bv) return undefined
+    if (av && bv && av !== '-' && av !== '*' && bv !== '-' && bv !== '*' && av !== bv)
+      return undefined
     common = common + getCommon(av, bv)
   }
   return common

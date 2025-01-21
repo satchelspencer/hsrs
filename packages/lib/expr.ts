@@ -23,6 +23,18 @@ jexl.addTransform('pcr', (val: string, search, replace) => {
   return res
 })
 
+jexl.addTransform('mte', (val: string, search) => {
+  const index = val.indexOf(search)
+  if (index === -1) return val
+  return val.slice(0, index) + val.slice(index + search.length) + search
+})
+
+jexl.addTransform('mts', (val: string, search) => {
+  const index = val.indexOf(search)
+  if (index === -1) return val
+  return search + val.slice(0, index) + val.slice(index + search.length)
+})
+
 export function isValid(expr: string) {
   try {
     jexl.evalSync(expr)
@@ -117,12 +129,10 @@ export function computeElementMode(
 ) {
   let mode = getInheritedElement(instace.element, elements).mode
 
-  if (!mode) {
-    for (const paramName in instace.params) {
-      const param = instace.params[paramName]
-      if (param) mode = satisfiesMode(mode, computeElementMode(param, elements)) ?? mode
-    }
+  for (const paramName in instace.params) {
+    const param = instace.params[paramName]
+    if (param) mode = satisfiesMode(mode, computeElementMode(param, elements)) ?? mode
   }
 
-  return mode?.match(/^(-+)?$/i) ? undefined : mode
+  return mode?.match(/^([-*]+)?$/i) ? undefined : mode
 }
