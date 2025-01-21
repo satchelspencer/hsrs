@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import * as t from './types'
-import { computeElementInstance } from './expr'
+import { computeElementInstance, computeElementMode } from './expr'
 import lcs from 'node-lcs'
 import { card2Id } from './session'
 
@@ -91,7 +91,8 @@ export function getInheritedElement(
   const element = { ...elements[elementId] },
     inheritedProps: t.Props = {},
     inheritedParams: t.Params = {}
-  let inheritedConstraint: string = ''
+  let inheritedConstraint: string = '',
+    inheritedMode: string = ''
 
   for (const id of getElementAndParents(elementId, elements).reverse()) {
     const element = elements[id]
@@ -104,10 +105,12 @@ export function getInheritedElement(
       if (element.params[propId]) inheritedParams[propId] = element.params[propId]
     }
     if (element.constraint) inheritedConstraint = element.constraint
+    if (element.mode) inheritedMode = element.mode
   }
   element.props = inheritedProps
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
   if (inheritedConstraint) element.constraint = inheritedConstraint
+  if (inheritedMode) element.mode = inheritedMode
   return element
 }
 
@@ -116,6 +119,23 @@ export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
     bp = getElementAndParents(b, elements)
 
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
+}
+
+function getCommon(a: string = '-', b: string = '-') {
+  return (a === '-' ? b : a) ?? '-'
+}
+
+export function satisfiesMode(a: string = '', b: string = '') {
+  const maxLen = Math.max(a.length, b.length)
+  let common = ''
+  for (let i = 0; i < maxLen; i++) {
+    const av = a[i],
+      bv = b[i]
+
+    if (av && bv && av !== '-' && bv !== '-' && av !== bv) return undefined
+    common = common + getCommon(av, bv)
+  }
+  return common
 }
 
 type MetaInstance = t.ElementInstance & {
@@ -132,7 +152,8 @@ export function findAliases(
   const tv = computeElementInstance(instance, elements),
     target = tv[propName] as string,
     matchingInstances: { [iid: string]: MetaInstance } = {},
-    exactInstances: { [iid: string]: t.ElementInstance } = {}
+    exactInstances: { [iid: string]: t.ElementInstance } = {},
+    targetMode = computeElementMode(instance, elements)
 
   for (let i = 0; i < 3; i++) {
     const simTarget = i + 1
@@ -177,14 +198,16 @@ export function findAliases(
         const iv = computeElementInstance(oinstance, elements),
           fvalue = getFlatPropValue(iv, propName),
           sim = getSimilarity(fvalue, target),
-          iid = getInstanceId(oinstance)
+          iid = getInstanceId(oinstance),
+          omode = computeElementMode(oinstance, elements)
 
         if (matchingInstances[iid]) continue
         if (sim >= simTarget) matchingInstances[iid] = { ...oinstance, s: sim, v: fvalue }
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          !!cards[card2Id({ element: oinstance.element, property: propName })]
+          !!cards[card2Id({ element: oinstance.element, property: propName })] &&
+          targetMode === omode
         ) {
           exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
         }
@@ -272,7 +295,8 @@ export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
   fixedParams?: t.Params,
-  order?: (elId: string) => number
+  order?: (elId: string) => number,
+  commonMode = { mode: '' }
 ): t.ElementInstance {
   const nonV = getNonVirtualDescendents(id, elements),
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
@@ -283,7 +307,17 @@ export function sampleElementIstance(
       ),
       [descendent] = descendents.splice(index, 1)
 
-    const { params = {}, constraint = '' } = getInheritedElement(descendent, elements)
+    const {
+      params = {},
+      constraint = '',
+      mode,
+    } = getInheritedElement(descendent, elements)
+
+    if (fixedParams) {
+      const ncommon = satisfiesMode(commonMode.mode, mode)
+      if (ncommon === undefined) continue
+      if (ncommon) commonMode.mode = ncommon
+    }
 
     let failed = false
     for (const fparam in fixedParams) {
@@ -307,7 +341,13 @@ export function sampleElementIstance(
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
-      const pinst = sampleElementIstance(params[param], elements, constraints, order)
+      const pinst = sampleElementIstance(
+        params[param],
+        elements,
+        constraints,
+        order,
+        commonMode
+      )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
       })

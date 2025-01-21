@@ -1,7 +1,7 @@
 import jexl from 'jexl'
 import _ from 'lodash'
 import * as t from './types'
-import { getInheritedElement } from './props'
+import { getInheritedElement, satisfiesMode } from './props'
 
 jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
@@ -109,4 +109,20 @@ export function computeElementInstance(
   }
 
   return { ...result, ...params }
+}
+
+export function computeElementMode(
+  instace: t.ElementInstance,
+  elements: t.IdMap<t.Element>
+) {
+  let mode = getInheritedElement(instace.element, elements).mode
+
+  if (!mode) {
+    for (const paramName in instace.params) {
+      const param = instace.params[paramName]
+      if (param) mode = satisfiesMode(mode, computeElementMode(param, elements)) ?? mode
+    }
+  }
+
+  return mode?.match(/^(-+)?$/i) ? undefined : mode
 }

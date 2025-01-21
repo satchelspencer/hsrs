@@ -11,7 +11,8 @@ import { LabelGroup } from '../components/labels'
 import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
-import { computeElementInstance } from '@hsrs/lib/expr'
+import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
+import { findAliases } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -27,6 +28,7 @@ export function ElementEditor(props: ElementEditorProps) {
       props: elementProps,
       params: elementParams = {},
       constraint: elementConstraint,
+      mode: elementMode,
     } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
@@ -45,11 +47,13 @@ export function ElementEditor(props: ElementEditorProps) {
       )
 
   const elements = r.useSelector((state) => state.deck.elements),
+    cards = r.useSelector((state) => state.deck.cards),
     [exampleSeed, setExampleSeed] = useState(0),
-    { example, exampleInstance } = useMemo(() => {
+    { example, mode, exampleInstance } = useMemo(() => {
       const next = elementInstanceGenerator.next().value
       return {
         example: next && computeElementInstance(next, elements),
+        mode: next && computeElementMode(next, elements),
         exampleInstance: next,
       }
     }, [element.params, exampleSeed])
@@ -217,6 +221,24 @@ export function ElementEditor(props: ElementEditorProps) {
               ),
               false,
             ],
+            [
+              'Mode',
+              elementMode === undefined ? (
+                <Button onClick={() => handleChange({ ...element, mode: '' })}>
+                  <Icon name="plus" />
+                  add
+                </Button>
+              ) : (
+                <CodeInput
+                  varColor="#468864"
+                  value={element.mode}
+                  placeholder={elementMode || 'Enter mode...'}
+                  onChange={(mode) => handleChange({ ...element, mode })}
+                  onClear={() => handleChange(_.omit(element, 'mode'))}
+                />
+              ),
+              false,
+            ],
             !!example && [
               <div className={exampleHead}>
                 <span>Example</span>
@@ -242,6 +264,11 @@ export function ElementEditor(props: ElementEditorProps) {
                     ])}
                   />
                 )}
+                {mode && (
+                  <LabelGroup
+                    items={[[<div className={propName}>m</div>, <div>{mode}</div>]]}
+                  />
+                )}
               </>,
             ],
           ]}
@@ -250,7 +277,7 @@ export function ElementEditor(props: ElementEditorProps) {
           onClick={() => {
             console.log(
               exampleInstance,
-              findAliases(exampleInstance, 'jp', elements, cards).map((c) =>
+              findAliases(exampleInstance, 'en', elements, cards).map((c) =>
                 computeElementInstance(c, elements)
               )
             )

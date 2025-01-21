@@ -5,6 +5,7 @@ export interface Element {
   params?: Params
   virtual?: true
   constraint?: string
+  mode?: string
 }
 
 export type Params = IdMap<string>

@@ -5,7 +5,7 @@ import _ from 'lodash'
 import * as styles from '../styles'
 import * as r from '../redux'
 import { Button, RadioGroup } from '../components/button'
-import { computeElementInstance } from '@hsrs/lib/expr'
+import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
 import {
@@ -50,6 +50,7 @@ export function Learn() {
 
   const card = session?.stack[0],
     value = card && computeElementInstance(card, elements),
+    mode = card && computeElementMode(card, elements),
     [revealed, setRevealed] = useState(false),
     shownValue = revealed ? value : _.pick(value, card?.property ?? ''),
     plugin =
@@ -199,6 +200,7 @@ export function Learn() {
             revealed,
             property: card?.property,
             id: card2Id(card),
+            mode,
           },
         },
         pluginUrl
