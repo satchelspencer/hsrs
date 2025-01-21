@@ -39,17 +39,7 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
         flush={props.vert}
         items={items.map((propId) => {
           return [
-            <div className={propName}>
-              {propId}
-              <span
-                style={{
-                  color: '#9d0006',
-                  opacity: props.fixed?.[propId] ? 0.5 : 0,
-                }}
-              >
-                *
-              </span>
-            </div>,
+            <div className={propName}>{propId}</div>,
             props.renderInput({
               key: propId,
               value: props.value[propId],
