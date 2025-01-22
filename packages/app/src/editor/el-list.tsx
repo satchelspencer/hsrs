@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { css, cx } from '@emotion/css'
 import _ from 'lodash'
 
@@ -10,6 +10,7 @@ import { Button } from '../components/button'
 import { Selection } from '../redux/ui'
 import { Element } from '@hsrs/lib/types'
 import CodeInput from '../components/code'
+import { getElementOrder } from '@hsrs/lib/props'
 
 interface ElementsListProps {
   parentId?: string
@@ -26,6 +27,10 @@ export function ElementsList(props: ElementsListProps) {
     ),
     elementIds = showVirtual ? allElementIds : nonVirtualElementIds,
     elements = r.useSelector((s) => s.deck.elements),
+    sortedIds = useMemo(
+      () => _.sortBy(elementIds, (id) => getElementOrder(id, elements)),
+      [elementIds]
+    ),
     nextSelection = r.useSelector((s) =>
       r.selectors.selectSelectionByIndex(s, props.index + 1)
     ),
@@ -43,7 +48,7 @@ export function ElementsList(props: ElementsListProps) {
         <ElListActions {...props} />
       </div>
       <div className={elementsListInner}>
-        {elementIds.map((elementId, index) => {
+        {sortedIds.map((elementId, index) => {
           const element = elements[elementId],
             selected = !!nextSelection?.find((s) => s.id === elementId)
           return (
@@ -51,6 +56,7 @@ export function ElementsList(props: ElementsListProps) {
               key={elementId}
               name={element.name}
               virtual={!!element.virtual}
+              order={showVirtual ? element.order : getElementOrder(elementId, elements)}
               selected={selected}
               onClick={(e) => {
                 const otherSelected =
@@ -59,12 +65,12 @@ export function ElementsList(props: ElementsListProps) {
                     : []
 
                 const lastOther = _.last(otherSelected),
-                  lastOtherIndex = lastOther && elementIds.indexOf(lastOther.id),
+                  lastOtherIndex = lastOther && sortedIds.indexOf(lastOther.id),
                   rangeMin = Math.min(lastOtherIndex ?? 0, index),
                   rangeMax = Math.max(lastOtherIndex ?? 0, index),
                   inRange =
                     lastOther && e.shiftKey
-                      ? elementIds.slice(rangeMin + 1, rangeMax)
+                      ? sortedIds.slice(rangeMin + 1, rangeMax)
                       : [],
                   rangeSelected: Selection[] = inRange.map((id) => ({
                     id: id,
@@ -117,7 +123,7 @@ const sidebarListHeader = cx(
     border-bottom: 1px solid ${styles.color(0.93)};
     position: sticky;
     top: 0;
-    z-index:2;
+    z-index: 2;
   `
 )
 
@@ -137,13 +143,17 @@ interface ElementListItemProps {
   name: string
   selected: boolean
   virtual: boolean
+  order?: string
   onClick?: React.EventHandler<React.MouseEvent>
 }
 
 function ElementListItem(props: ElementListItemProps) {
   return (
     <div className={elementListItem(props.selected)} onClick={props.onClick}>
-      &zwnj;{props.name}
+      &zwnj;{props.name}{' '}
+      {props.order && (
+        <span style={{ opacity: 0.3, fontSize: '0.9em' }}>&nbsp;{props.order}</span>
+      )}
       {props.virtual && (
         <div className={elementListIcon}>
           <Icon name="caret-right" />
@@ -173,6 +183,7 @@ const elementListItem = (selected: boolean) =>
       cursor: pointer;
       ${selected && `background:${styles.color(0.96)};`}
       position: relative;
+      align-items: center;
     `
   )
 

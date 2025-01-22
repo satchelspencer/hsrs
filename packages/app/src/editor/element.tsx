@@ -29,6 +29,7 @@ export function ElementEditor(props: ElementEditorProps) {
       params: elementParams = {},
       constraint: elementConstraint,
       mode: elementMode,
+      order: elementOrder,
     } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
@@ -56,7 +57,7 @@ export function ElementEditor(props: ElementEditorProps) {
         mode: next && computeElementMode(next, elements),
         exampleInstance: next,
       }
-    }, [element.params, exampleSeed])
+    }, [element.params, exampleSeed, element.virtual])
 
   const [searching, setSearching] = useState(false)
 
@@ -124,31 +125,47 @@ export function ElementEditor(props: ElementEditorProps) {
           items={[
             [
               'Name',
-              <CodeInput
-                value={element.name}
-                throttle
-                onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
-              />,
+              <div className={hWrapper}>
+                <CodeInput
+                  value={element.name}
+                  throttle
+                  onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
+                />
+                <div className={hWrapper} style={{ minWidth: 63 }}>
+                  Order
+                  <CodeInput
+                    placeholder="0"
+                    value={element.order}
+                    throttle
+                    varColor="#468864"
+                    onChange={(order) => handleChange({ ...element, order })}
+                    onClear={() => handleChange(_.omit(element, 'order'))}
+                  />
+                </div>
+                <div className={cx(hWrapper)} style={{ fontSize: '0.9em', opacity: 0.5 }}>
+                  #{elementOrder ?? '1'}
+                </div>
+                <div className={hWrapper}>
+                  <input
+                    type="checkbox"
+                    checked={!!element.virtual}
+                    onChange={() =>
+                      handleChange(
+                        element.virtual
+                          ? _.omit(element, 'virtual')
+                          : { ...element, virtual: true }
+                      )
+                    }
+                  />
+                  Folder
+                </div>
+              </div>,
             ],
             [
               'Types',
               <ElListPicker
                 value={element.parents}
                 onChange={(value) => handleChange({ ...element, parents: value })}
-              />,
-            ],
-            [
-              'Virtual',
-              <input
-                type="checkbox"
-                checked={!!element.virtual}
-                onChange={() =>
-                  handleChange(
-                    element.virtual
-                      ? _.omit(element, 'virtual')
-                      : { ...element, virtual: true }
-                  )
-                }
               />,
             ],
           ]}
@@ -306,6 +323,12 @@ export function ElementEditor(props: ElementEditorProps) {
     </div>
   )
 }
+
+const hWrapper = cx(css`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`)
 
 export const editorWrapperOuter = cx(css`
   display: flex;

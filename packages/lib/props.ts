@@ -112,7 +112,20 @@ export function getInheritedElement(
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
   if (inheritedConstraint) element.constraint = inheritedConstraint
   if (inheritedMode) element.mode = inheritedMode
+  element.order = getElementOrder(elementId, elements)
   return element
+}
+
+export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>) {
+  let root = elementId
+  const decs: string[] = []
+  while (root) {
+    const el = elements[root]
+    if(!el) break
+    if (el.order) decs.unshift(el.order)
+    root = el.parents[0]
+  }
+  return decs.join('.')
 }
 
 export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {

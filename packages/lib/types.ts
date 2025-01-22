@@ -6,6 +6,7 @@ export interface Element {
   virtual?: true
   constraint?: string
   mode?: string
+  order?: string
 }
 
 export type Params = IdMap<string>

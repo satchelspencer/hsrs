@@ -1,6 +1,7 @@
 import {
   getAllCards,
   getElementAndParents,
+  getElementOrder,
   getInheritedElement,
   isParent,
   sampleElementIstance,
@@ -193,12 +194,15 @@ function getNew(
   filter: string[]
 ) {
   const res: t.CardInstance[] = [],
-    cards = _.shuffle(getAllCards(deck.elements)),
+    cards = _.sortBy(
+      getAllCards(deck.elements),
+      (c) => getElementOrder(c.element, deck.elements) + '.0.' + Math.random()
+    ),
     usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor(deck)
 
   while (res.length < limit / newCardFactor && cards.length) {
-    const card = cards.pop()!,
+    const card = cards.shift()!,
       { props } = getInheritedElement(card.element, deck.elements)
 
     if (usedEls[card.element]) continue
