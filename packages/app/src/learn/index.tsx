@@ -126,7 +126,6 @@ export function Learn() {
           currentVal = currentInt / 24 / 3600,
           nextVal = nextInt / 24 / 3600
 
-        if (!current) console.log(diff, key)
         nextStats.push({
           cardId: key,
           s: nextVal,

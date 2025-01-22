@@ -295,13 +295,15 @@ function sampleAndAdd(
           undefined,
 
           (elId) => {
-            const jitter =
+            const card = deck.cards[card2Id({ element: elId, property })],
+              jitter =
                 Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
                 jitterScale *
-                (Math.random() > 0.5 ? 1 : -1),
-              card = deck.cards[card2Id({ element: elId, property })],
-              dueIn = (card?.due ?? Infinity) - now,
-              seenAgo = now - (card?.lastSeen ?? now)
+                (Math.random() > 0.5 ? 1 : -1)
+            if (!card) return jitter
+
+            const dueIn = (card.due ?? Infinity) - now,
+              seenAgo = now - (card.lastSeen ?? now)
             return dueIn - seenAgo + jitter
           }
         ),
