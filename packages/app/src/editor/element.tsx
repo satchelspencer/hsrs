@@ -166,6 +166,7 @@ export function ElementEditor(props: ElementEditorProps) {
               <ElListPicker
                 value={element.parents}
                 onChange={(value) => handleChange({ ...element, parents: value })}
+                filter={(e) => !!e.virtual}
               />,
             ],
           ]}
@@ -355,7 +356,7 @@ export const backButton = cx(css`
 
 export const editorWrapper = cx(css`
   display: flex;
-  min-width: 450px;
+  width: 450px;
   flex-direction: column;
   gap: 8px;
   padding: 12px;
@@ -378,6 +379,7 @@ interface ElListPickerProps {
   onClear?: () => void
   placeholder?: string
   multiline?: boolean
+  filter?: (e: t.Element) => boolean
 }
 
 const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
@@ -405,7 +407,7 @@ export function ElListPicker(props: ElListPickerProps) {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       variables={Object.values(elements)
-        .filter((e) => e.virtual)
+        .filter(props.filter ?? (() => true))
         .map((e) => e.name)}
       onClear={props.onClear}
       varColor="#689d6a"
