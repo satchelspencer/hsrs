@@ -1,4 +1,5 @@
 import { fsrs as init, Fsrs, defaultParams } from './fsrs'
+import { getInheritedElement } from './props'
 import { card2Id, id2Card } from './session'
 import * as t from './types'
 import _ from 'lodash'
@@ -50,7 +51,7 @@ export function nextCardState(
 ): t.CardState {
   const memoryState = nextState(
       cardState,
-    cardState?.lastSeen ? now - cardState.lastSeen : 0,
+      cardState?.lastSeen ? now - cardState.lastSeen : 0,
       grade,
       probability
     ),
@@ -119,10 +120,10 @@ export function applyHistoryToCards(
   cards: t.CardStates,
   history: t.CardLearning[],
   shallow?: boolean,
-  retention?: number
+  deck?: t.Deck
 ) {
   for (const learning of history) {
-    const diff = getLearningCardDiff(cards, learning, retention, shallow)
+    const diff = getLearningCardDiff(cards, learning, deck, shallow)
     Object.assign(cards, diff)
   }
 }
@@ -130,7 +131,7 @@ export function applyHistoryToCards(
 export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
-  retention?: number,
+  deck?: t.Deck,
   shallow?: boolean
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
@@ -151,6 +152,11 @@ export function getLearningCardDiff(
           : 1,
       successProb = successProbs[i],
       probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1
+
+    const roffset =
+        deck &&
+        getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention,
+      retention = getRetention(deck?.settings.retention ?? 0.9, roffset)
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
@@ -179,4 +185,19 @@ export function flattenCard(learning: t.CardLearning): t.CardLearning[] {
       )
   }
   return _.uniqBy(res, (l) => l.cardId)
+}
+
+function logistic(x: number) {
+  return 1 / (1 + Math.exp(-x))
+}
+
+function logit(p: number) {
+  if (p <= 0 || p >= 1) throw 'p outside range'
+  return Math.log(p / (1 - p))
+}
+
+export function getRetention(baseRetention: number, bonus?: string) {
+  if (bonus === undefined) return baseRetention
+  const float = parseFloat(bonus)
+  return logistic(logit(baseRetention) + (_.isNaN(float) ? 0 : float))
 }

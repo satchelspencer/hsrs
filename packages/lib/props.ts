@@ -92,7 +92,8 @@ export function getInheritedElement(
     inheritedProps: t.Props = {},
     inheritedParams: t.Params = {}
   let inheritedConstraint: string = '',
-    inheritedMode: string = ''
+    inheritedMode: string = '',
+    inheritedRetention: string = ''
 
   for (const id of getElementAndParents(elementId, elements).reverse()) {
     const element = elements[id]
@@ -107,11 +108,13 @@ export function getInheritedElement(
     if (element.constraint) inheritedConstraint = element.constraint
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
+    if(element.retention) inheritedRetention = element.retention
   }
   element.props = inheritedProps
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
   if (inheritedConstraint) element.constraint = inheritedConstraint
   if (inheritedMode) element.mode = inheritedMode
+  if(inheritedRetention) element.retention = inheritedRetention
   element.order = getElementOrder(elementId, elements)
   return element
 }

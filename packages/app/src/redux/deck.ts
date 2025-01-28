@@ -68,7 +68,7 @@ export const deck = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {
-      applyHistoryToCards(state.cards, action.payload, false, state.settings.retention)
+      applyHistoryToCards(state.cards, action.payload, false, state)
       state.session = null
     })
 
@@ -110,7 +110,7 @@ export const deckThunks = {
         deck = getState().deck
       await db.cardLearning.orderBy('id').each((learning) => {
         if (_.every(learning.elIds, (e) => deck.elements[e]))
-          applyHistoryToCards(newCards, [learning], false, deck.settings.retention)
+          applyHistoryToCards(newCards, [learning], false, deck)
       })
       return newCards
     }

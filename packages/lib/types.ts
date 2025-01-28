@@ -7,6 +7,7 @@ export interface Element {
   constraint?: string
   mode?: string
   order?: string
+  retention?: string
 }
 
 export type Params = IdMap<string>

@@ -30,6 +30,7 @@ export function ElementEditor(props: ElementEditorProps) {
       constraint: elementConstraint,
       mode: elementMode,
       order: elementOrder,
+      retention: elementRetention,
     } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
@@ -131,8 +132,19 @@ export function ElementEditor(props: ElementEditorProps) {
                   throttle
                   onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
                 />
-                <div className={hWrapper} style={{ minWidth: 63 }}>
-                  Order
+                <div className={hWrapper} style={{ minWidth: 42 }}>
+                  R
+                  <CodeInput
+                    placeholder={elementRetention ?? '+0'}
+                    value={element.retention}
+                    throttle
+                    varColor="#467588"
+                    onChange={(retention) => handleChange({ ...element, retention })}
+                    onClear={() => handleChange(_.omit(element, 'retention'))}
+                  />
+                </div>
+                <div className={hWrapper} style={{ minWidth: 36 }}>
+                  O
                   <CodeInput
                     placeholder="0"
                     value={element.order}

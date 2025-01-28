@@ -14,11 +14,12 @@ import {
   getSessionDone,
   id2Card,
 } from '@hsrs/lib/session'
-import { getElementAndParents } from '@hsrs/lib/props'
+import { getElementAndParents, getInheritedElement } from '@hsrs/lib/props'
 import {
   applyHistoryToCards,
   getLearningCardDiff,
   getLearnTargetStability,
+  getRetention,
   getTime,
   grades,
   nextCardState,
@@ -114,15 +115,17 @@ export function Learn() {
       lastCards = {},
       now = getTime()
 
-    applyHistoryToCards(lastCards, lastHistory, true, retention)
+    applyHistoryToCards(lastCards, lastHistory, true, deck)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
-      const diff = getLearningCardDiff(deck.cards, learning, deck.settings.retention)
+      const diff = getLearningCardDiff(deck.cards, learning, deck)
       for (const key in diff) {
-        const v = diff[key],
+        const element = getInheritedElement(id2Card(key).element, deck.elements),
+          eretention = getRetention(retention, element.retention),
+          v = diff[key],
           current = deck.cards[key],
-          currentInt = nextInterval(current?.stability, retention),
-          nextInt = nextInterval(v.stability, retention),
+          currentInt = nextInterval(current?.stability, eretention),
+          nextInt = nextInterval(v.stability, eretention),
           currentVal = currentInt / 24 / 3600,
           nextVal = nextInt / 24 / 3600
 
