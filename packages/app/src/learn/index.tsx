@@ -135,7 +135,7 @@ export function Learn() {
         nextStats.push({
           cardId: key,
           s: nextVal,
-          sdiff: nextVal - currentVal,
+          sdiff: ((nextVal - currentVal) / currentVal) * 100,
           duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
         })
       }
@@ -295,7 +295,7 @@ export function Learn() {
                           {stat.sdiff === 0 ? null : (
                             <span style={{ color: stat.sdiff >= 0 ? 'green' : 'red' }}>
                               {stat.sdiff > 0 ? '+' : ''}
-                              {round(stat.sdiff)}d
+                              {Math.round(stat.sdiff)}%
                             </span>
                           )}
                         </>
