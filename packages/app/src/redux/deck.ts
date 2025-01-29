@@ -51,9 +51,12 @@ export const deck = createSlice({
         state.settings.filter ?? []
       ).session
     },
+    cancelSession: (state, action: PayloadAction<{}>) => {
+      state.session = null
+    },
     gradeCard: (state, action: PayloadAction<{ grade: number; took: number }>) => {
       if (!state.session) throw 'no session'
-      state.session = gradeCard(state.session, action.payload.grade, action.payload.took)
+      state.session = gradeCard(state, action.payload.grade, action.payload.took)
     },
     undoGrade: (state, action: PayloadAction<{}>) => {
       if (!state.session) throw 'no session'

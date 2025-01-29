@@ -27,7 +27,9 @@ export interface Card {
   property: string
 }
 
-export interface CardInstance extends Card, ElementInstance {}
+export interface CardInstance extends Card, ElementInstance {
+  new?: boolean
+}
 
 export type IdMap<T> = { [id: string]: T }
 
@@ -74,6 +76,9 @@ export interface LearningSession {
   stack: CardInstance[]
   cards: CardStates
   history: CardLearning[]
+  reviews: number
+  filter: string[]
+  allowNew: boolean
 }
 
 export interface HistoryExport {

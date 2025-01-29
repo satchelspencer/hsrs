@@ -79,24 +79,27 @@ export function Learn() {
     }
   }, [card])
 
-  // console.log(
-  //   plugin,
-  //   sessionDone,
-  //   targetStability,
-  //   JSON.stringify(
-  //     session?.stack.map((s) =>
-  //       [
-  //         elements[s.element].name,
-  //         s?.property,
-  //         s.element,
-  //         //s?.params
-  //         session.cards[card2Id(s)]?.stability,
-  //       ].join(', ')
-  //     ),
-  //     null,
-  //     2
+  // useEffect(() => {
+  //   console.log(
+  //     plugin,
+  //     sessionDone,
+  //     targetStability,
+  //     JSON.stringify(
+  //       session?.stack.map((s) =>
+  //         [
+  //           s.new && !session.cards[card2Id(s)] ? '****' : '    ',
+  //           elements[s.element].name,
+  //           s?.property,
+  //           //s.element,
+  //           //s?.params
+  //           session.cards[card2Id(s)]?.stability,
+  //         ].join(' ')
+  //       ),
+  //       null,
+  //       2
+  //     )
   //   )
-  // )
+  // }, [card])
 
   const [time, setTime] = useState<number>(getTime())
 
