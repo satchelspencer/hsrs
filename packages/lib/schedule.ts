@@ -138,7 +138,7 @@ export function getLearningCardDiff(
     flearnings = shallow ? [learning] : flattenCard(learning),
     successProbs = flearnings.map((l) => {
       const state = cards[l.cardId]
-      return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 0.5
+      return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 1 //if new and in mixed then must be rel
     }),
     totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
 
