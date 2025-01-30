@@ -20,6 +20,7 @@ import {
   getLearningCardDiff,
   getLearnTargetStability,
   getRetention,
+  getRetr,
   getTime,
   grades,
   nextCardState,
@@ -38,7 +39,14 @@ type CardStat =
       gradf: number
       graduated: boolean
     }
-  | { cardId: string; s: number; sdiff: number; duediff: number }
+  | {
+      cardId: string
+      s: number
+      sdiff: number
+      duediff: number
+      seendiff: number
+      retr: number
+    }
 
 const round = (n: number) => Math.floor(n * 100) / 100
 
@@ -135,8 +143,10 @@ export function Learn() {
         nextStats.push({
           cardId: key,
           s: nextVal,
-          sdiff: ((nextVal - currentVal) / currentVal) * 100,
+          sdiff: current ? ((nextVal - currentVal) / currentVal) * 100 : 0,
           duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
+          seendiff: current?.lastSeen ? (now - current.lastSeen) / 24 / 3600 : 0,
+          retr: current?.lastSeen ? getRetr(current, now - current.lastSeen) : 0,
         })
       }
     } else {
@@ -149,7 +159,7 @@ export function Learn() {
         duediff: 0,
       })
     }
-    return nextStats
+    return _.sortBy(nextStats, (s) => ('sdiff' in s ? -Math.abs(s.sdiff) : Infinity))
   }, [session?.history])
 
   const setGrade = (grade: number) => {
@@ -285,6 +295,16 @@ export function Learn() {
                       &nbsp;
                       {'s' in stat ? (
                         <>
+                          {stat.retr === 0 ? null : (
+                            <span style={{ opacity: 0.7 }}>
+                              {round(stat.retr * 100)}%&nbsp;
+                            </span>
+                          )}
+                          {stat.seendiff === 0 ? null : (
+                            <span style={{ opacity: 0.7, color: 'blue' }}>
+                              {round(Math.abs(stat.seendiff))}d ago&nbsp;
+                            </span>
+                          )}
                           {stat.duediff === 0 ? null : (
                             <span style={{ opacity: 0.7 }}>
                               {round(Math.abs(stat.duediff))}d{' '}
@@ -293,7 +313,16 @@ export function Learn() {
                           )}
                           <span>now {round(stat.s)}d&nbsp;</span>
                           {stat.sdiff === 0 ? null : (
-                            <span style={{ color: stat.sdiff >= 0 ? 'green' : 'red' }}>
+                            <span
+                              style={{
+                                color:
+                                  Math.round(stat.sdiff) === 0
+                                    ? 'gray'
+                                    : stat.sdiff >= 0
+                                    ? 'green'
+                                    : 'red',
+                              }}
+                            >
                               {stat.sdiff > 0 ? '+' : ''}
                               {Math.round(stat.sdiff)}%
                             </span>
