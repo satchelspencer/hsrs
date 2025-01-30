@@ -173,7 +173,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
   //console.log('!!', estReviews, session.reviews, delta)
 
   let redist = false
-  if (delta > 0) {
+  if (delta > 5) {
     const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element),
       unseenEls = Object.keys(cardsGroupedByEl).filter((elId) =>
         _.every(cardsGroupedByEl[elId], (c) => !session.cards[card2Id(c)])
@@ -188,7 +188,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
       //console.log('removing', deck.elements[toRemove?.element!].name)
       redist = true
     }
-  } else if (delta < 0 && session.allowNew) {
+  } else if (delta < -5 && session.allowNew) {
     const learned = getLearnedElements(deck),
       newCards = getNew(
         {
