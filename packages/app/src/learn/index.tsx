@@ -382,6 +382,7 @@ export function Learn() {
                       className={cardAction}
                     >
                       {grade}
+                      <span style={{ fontSize: '0.7em', opacity:0.6 }}>&nbsp;[{index + 1}]</span>
                     </Button>
                   ))
                 ) : (

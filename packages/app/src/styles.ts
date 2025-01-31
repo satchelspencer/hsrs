@@ -6,6 +6,15 @@ injectGlobal`
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     font-size:14px;
     font-weight:400;
+    background:white;
+  }
+  @media (prefers-color-scheme: dark) {
+    html {
+      filter: hue-rotate(180deg) invert(1) contrast(0.8);
+    }
+    * {
+      box-shadow:none !important;
+    }
   }
 `
 
