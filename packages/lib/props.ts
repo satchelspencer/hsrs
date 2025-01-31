@@ -3,6 +3,7 @@ import * as t from './types'
 import { computeElementInstance, computeElementMode } from './expr'
 import lcs from 'node-lcs'
 import { card2Id } from './session'
+import { getCache } from './cache'
 
 export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
   const res: string[] = [],
@@ -86,7 +87,8 @@ export function getElementParamsAndProps(
 
 export function getInheritedElement(
   elementId: string,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
 ): t.Element {
   const element = { ...elements[elementId] },
     inheritedProps: t.Props = {},
@@ -95,8 +97,10 @@ export function getInheritedElement(
     inheritedMode: string = '',
     inheritedRetention: string = ''
 
-  for (const id of getElementAndParents(elementId, elements).reverse()) {
-    const element = elements[id]
+  const ancestors = cache.ancestors[elementId]
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    const id = ancestors[i],
+      element = elements[id]
     if (!element) continue
     for (const propId in element.props) {
       if (element.props[propId] || !inheritedProps[propId])
@@ -108,13 +112,14 @@ export function getInheritedElement(
     if (element.constraint) inheritedConstraint = element.constraint
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
-    if(element.retention) inheritedRetention = element.retention
+    if (element.retention) inheritedRetention = element.retention
   }
+
   element.props = inheritedProps
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
   if (inheritedConstraint) element.constraint = inheritedConstraint
   if (inheritedMode) element.mode = inheritedMode
-  if(inheritedRetention) element.retention = inheritedRetention
+  if (inheritedRetention) element.retention = inheritedRetention
   element.order = getElementOrder(elementId, elements)
   return element
 }
@@ -124,16 +129,16 @@ export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>)
   const decs: string[] = []
   while (root) {
     const el = elements[root]
-    if(!el) break
+    if (!el) break
     if (el.order) decs.unshift(el.order)
     root = el.parents[0]
   }
   return decs.join('.')
 }
 
-export function satisfies(a: string, b: string, elements: t.IdMap<t.Element>) {
-  const ap = getElementAndParents(a, elements),
-    bp = getElementAndParents(b, elements)
+export function satisfies(a: string, b: string, cache: t.DeckCache) {
+  const ap = cache.ancestors[a],
+    bp = cache.ancestors[b]
 
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
 }
@@ -165,13 +170,14 @@ export function findAliases(
   instance: t.ElementInstance,
   propName: string,
   elements: t.IdMap<t.Element>,
-  cards: t.CardStates
+  cards: t.CardStates,
+  cache: t.DeckCache
 ) {
-  const tv = computeElementInstance(instance, elements),
+  const tv = computeElementInstance(instance, elements, cache),
     target = tv[propName] as string,
     matchingInstances: { [iid: string]: MetaInstance } = {},
     exactInstances: { [iid: string]: t.ElementInstance } = {},
-    targetMode = computeElementMode(instance, elements)
+    targetMode = computeElementMode(instance, elements, cache)
 
   for (let i = 0; i < 3; i++) {
     const simTarget = i + 1
@@ -180,7 +186,11 @@ export function findAliases(
 
       if (element.virtual) continue
 
-      const { props, params = {}, constraint } = getInheritedElement(elId, elements),
+      const {
+          props,
+          params = {},
+          constraint,
+        } = getInheritedElement(elId, elements, cache),
         propNames = Object.keys(props),
         matchingParams: { [paramName: string]: MetaInstance[] } = {}
 
@@ -213,11 +223,11 @@ export function findAliases(
           : [{ element: elId, params: {} }]
 
       for (const oinstance of instances) {
-        const iv = computeElementInstance(oinstance, elements),
+        const iv = computeElementInstance(oinstance, elements, cache),
           fvalue = getFlatPropValue(iv, propName),
           sim = getSimilarity(fvalue, target),
           iid = getInstanceId(oinstance),
-          omode = computeElementMode(oinstance, elements)
+          omode = computeElementMode(oinstance, elements, cache)
 
         if (matchingInstances[iid]) continue
         if (sim >= simTarget) matchingInstances[iid] = { ...oinstance, s: sim, v: fvalue }
@@ -312,11 +322,12 @@ function walkParamsDeep(
 export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
+  cache: t.DeckCache,
   fixedParams?: t.Params,
   order?: (elId: string) => number,
   commonMode = { mode: '' }
 ): t.ElementInstance {
-  const nonV = getNonVirtualDescendents(id, elements),
+  const nonV = getNonVirtualDescendents(id, elements, cache),
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
 
   while (descendents.length) {
@@ -329,7 +340,7 @@ export function sampleElementIstance(
       params = {},
       constraint = '',
       mode,
-    } = getInheritedElement(descendent, elements)
+    } = getInheritedElement(descendent, elements, cache)
 
     if (fixedParams) {
       const ncommon = satisfiesMode(commonMode.mode, mode)
@@ -340,7 +351,7 @@ export function sampleElementIstance(
     let failed = false
     for (const fparam in fixedParams) {
       if (!params[fparam]) continue
-      const common = satisfies(fixedParams[fparam], params[fparam], elements)
+      const common = satisfies(fixedParams[fparam], params[fparam], cache)
       if (!common) failed = true
       else params[fparam] = common
     }
@@ -362,6 +373,7 @@ export function sampleElementIstance(
       const pinst = sampleElementIstance(
         params[param],
         elements,
+        cache,
         constraints,
         order,
         commonMode
@@ -381,10 +393,11 @@ export function* generateElementInstanceSamples(
   id: string,
   elements: t.IdMap<t.Element>
 ): Generator<t.ElementInstance> {
+  const cache = getCache(elements)
   let fails = 0
   while (fails < 1000) {
     try {
-      yield sampleElementIstance(id, elements)
+      yield sampleElementIstance(id, elements, cache)
       fails = 0
     } catch {
       fails++
@@ -392,7 +405,11 @@ export function* generateElementInstanceSamples(
   }
 }
 
-export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element>) {
+export function getNonVirtualDescendents(
+  id: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache
+) {
   const thisEl = elements[id]
   if (!thisEl.virtual) return [id]
 
@@ -401,12 +418,11 @@ export function getNonVirtualDescendents(id: string, elements: t.IdMap<t.Element
 
   while (parents.length) {
     const parent = parents.pop()!
-    for (const elId in elements) {
+    for (const elId of cache.children[parent]) {
       const el = elements[elId]
-      if (el.parents.includes(parent)) {
-        if (el.virtual) parents.push(elId)
-        else if (!output.includes(elId)) output.push(elId)
-      }
+      if (!el) continue
+      else if (el.virtual) parents.push(elId)
+      else if (!output.includes(elId)) output.push(elId)
     }
   }
 
@@ -458,7 +474,8 @@ function findMissingElements(
   resolved: string[]
 ): string[] {
   const element = elements[id],
-    parents = getElementAndParents(id, elements)
+    cache = getCache(elements),
+    parents = cache.ancestors[id]
   if (!element.virtual) return _.intersection(resolved, parents).length ? [] : [id]
   const res: string[] = []
   let whollyMissing = true
@@ -489,7 +506,8 @@ export function findCommonAncestors(
   ids: string[],
   elements: t.IdMap<t.Element>
 ) {
-  const ancestors = ids.map((id) => getElementAndParents(id, elements))
+  const cache = getCache(elements),
+    ancestors = ids.map((id) => cache.ancestors[id])
 
   const stack: string[] = [parentId]
   let common: string | null = null,

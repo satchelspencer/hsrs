@@ -3,12 +3,13 @@ import cluster from 'hierarchical-clustering'
 
 import * as t from '@hsrs/lib/types'
 import { getInheritedElement, getNonVirtualDescendents } from '@hsrs/lib/props'
+import { getCache } from './cache'
 
 export type AdjLists = { [id: string]: string[] }[]
 
 export function getRelationAdjs(elementId: string, elements: t.IdMap<t.Element>) {
   const element = elements[elementId],
-    nonVirtuals = getNonVirtualDescendents(elementId, elements),
+    nonVirtuals = getNonVirtualDescendents(elementId, elements, getCache(elements)),
     axes = _.sortBy(Object.keys(element.params ?? {}))
 
   const adjLists: AdjLists = [{}, {}]

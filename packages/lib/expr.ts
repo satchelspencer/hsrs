@@ -2,6 +2,7 @@ import jexl from 'jexl'
 import _ from 'lodash'
 import * as t from './types'
 import { getInheritedElement, satisfiesMode } from './props'
+import { getCache } from './cache'
 
 jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
@@ -97,17 +98,18 @@ function getPropExecOrder(props: t.Props): string[] {
 
 export function computeElementInstance(
   instace: t.ElementInstance,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
 ): t.PropsInstance {
   const params: t.PropsInstance = _.pickBy(
     _.mapValues(instace.params, (paramElInstance) => {
       if (!paramElInstance) return paramElInstance
-      return computeElementInstance(paramElInstance, elements)
+      return computeElementInstance(paramElInstance, elements, cache)
     }),
     (a) => !!a
   )
 
-  const { props: elProps } = getInheritedElement(instace.element, elements),
+  const { props: elProps } = getInheritedElement(instace.element, elements, cache),
     result: t.Props = {},
     execOrder = getPropExecOrder(elProps)
 
@@ -125,13 +127,14 @@ export function computeElementInstance(
 
 export function computeElementMode(
   instace: t.ElementInstance,
-  elements: t.IdMap<t.Element>
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
 ) {
-  let mode = getInheritedElement(instace.element, elements).mode
+  let mode = getInheritedElement(instace.element, elements, cache).mode
 
   for (const paramName in instace.params) {
     const param = instace.params[paramName]
-    if (param) mode = satisfiesMode(mode, computeElementMode(param, elements)) ?? mode
+    if (param) mode = satisfiesMode(mode, computeElementMode(param, elements, cache)) ?? mode
   }
 
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode

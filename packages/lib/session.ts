@@ -1,6 +1,6 @@
+import { getCache } from './cache'
 import {
   getAllCards,
-  getElementAndParents,
   getElementOrder,
   getInheritedElement,
   isParent,
@@ -22,6 +22,7 @@ export function createLearningSession(
   allowNew: boolean,
   filter: string[]
 ): { session: t.LearningSession; new: number; due: number; next: number; maxp: number } {
+  //const t = new Date().getTime()
   const learned = getLearnedElements(deck),
     { dueCards, nextCards } = getDue(deck, size, learned, filter),
     newCards = allowNew
@@ -32,6 +33,7 @@ export function createLearningSession(
       stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
     })
 
+  //console.log('sess', new Date().getTime() - t)
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
@@ -85,12 +87,13 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
 function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   const res: t.IdMap<t.IdMap<t.Element>> = {},
     all: t.IdMap<t.Element> = {},
-    targetStability = getLearnTargetStability()
+    targetStability = getLearnTargetStability(),
+    cache = getCache(deck.elements)
 
   for (const elid in deck.elements) {
     const el = getInheritedElement(elid, deck.elements),
       props = Object.keys(el.props),
-      elAndParents = getElementAndParents(elid, deck.elements)
+      elAndParents = cache.ancestors[elid]
 
     if (!props.length) {
       for (const eid of elAndParents) all[eid] = deck.elements[eid]
@@ -182,7 +185,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
         _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
         _.findLast(session.stack, (c) => unseenEls.includes(c.element)) //fall back to removing a review if needed
 
-     //console.log(toRemove && cardsGroupedByEl[toRemove.element].length)
+    //console.log(toRemove && cardsGroupedByEl[toRemove.element].length)
     if (toRemove && cardsGroupedByEl[toRemove.element].length <= delta) {
       session.stack = session.stack.filter((c) => c.element !== toRemove.element)
       //console.log('removing', deck.elements[toRemove?.element!].name)
@@ -367,7 +370,8 @@ function sampleAndAdd(
   filter: string[]
 ) {
   const { element, property } = id2Card(cardId),
-    now = getTime()
+    now = getTime(),
+    cache = getCache(deck.elements)
 
   if (!deck.elements[element]) return
   if (
@@ -376,33 +380,25 @@ function sampleAndAdd(
   )
     return
 
+  const elElements: t.IdMap<t.Element> = { ...learnable[property] }
+  for (const eid of cache.ancestors[element]) elElements[eid] = deck.elements[eid]
+
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
-      const elElements: t.IdMap<t.Element> = {}
-      for (const eid of getElementAndParents(element, deck.elements)) {
-        elElements[eid] = deck.elements[eid]
-      }
-
       res.push({
-        ...sampleElementIstance(
-          element,
-          { ...learnable[property], ...elElements },
-          undefined,
+        ...sampleElementIstance(element, elElements, cache, undefined, (elId) => {
+          const card = deck.cards[card2Id({ element: elId, property })],
+            jitter =
+              Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
+              jitterScale *
+              (Math.random() > 0.5 ? 1 : -1)
+          if (!card) return jitter
 
-          (elId) => {
-            const card = deck.cards[card2Id({ element: elId, property })],
-              jitter =
-                Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
-                jitterScale *
-                (Math.random() > 0.5 ? 1 : -1)
-            if (!card) return jitter
-
-            const dueIn = (card.due ?? Infinity) - now,
-              seenAgo = now - (card.lastSeen ?? now)
-            return dueIn - seenAgo + jitter
-          }
-        ),
+          const dueIn = (card.due ?? Infinity) - now,
+            seenAgo = now - (card.lastSeen ?? now)
+          return dueIn - seenAgo + jitter
+        }),
         property,
       })
       break

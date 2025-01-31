@@ -90,3 +90,9 @@ export interface DeckExport {
   type: 'deck'
   elements: IdMap<Element>
 }
+
+export type DeckCache = {
+  parents: { [elId: string]: string[] }
+  children: { [elId: string]: string[] }
+  ancestors: { [elId: string]: string[] }
+}

@@ -7,6 +7,7 @@ type WorkerMessage = {
   propName: string
   elements: t.IdMap<t.Element>
   cards: t.CardStates
+  cache: t.DeckCache
 }
 
 self.onmessage = (event) => {
@@ -17,7 +18,8 @@ self.onmessage = (event) => {
       message.instance,
       message.propName,
       message.elements,
-      message.cards
+      message.cards,
+      message.cache
     )
 
     self.postMessage(result)

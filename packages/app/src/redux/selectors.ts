@@ -9,6 +9,7 @@ import {
 import { createSelector } from './store'
 import _ from 'lodash'
 import { Selection } from './ui'
+import { getCache } from '@hsrs/lib/cache'
 
 export const selectSelections = createSelector(
   [(state) => state.ui.selections, (state) => state.deck.elements],
@@ -72,6 +73,8 @@ export const selectElementIdsByParent = createSelector(
 export const selectNonVirtialElementIdsByParent = createSelector(
   [(state) => state.deck.elements, (state, parentId?: string) => parentId],
   (elements, parentId) => {
-    return parentId ? getNonVirtualDescendents(parentId, elements) : []
+    return parentId
+      ? getNonVirtualDescendents(parentId, elements, getCache(elements))
+      : []
   }
 )

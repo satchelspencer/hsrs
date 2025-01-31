@@ -16,6 +16,7 @@ import {
 } from '@hsrs/lib/props'
 import { uid } from '@hsrs/lib/uid'
 import { clusterNodes, getCommonAdjs, getRelationAdjs } from '@hsrs/lib/clustering'
+import { getCache } from '@hsrs/lib/cache'
 
 interface RelationEditorProps {
   id: string
@@ -34,14 +35,15 @@ function expandNodes(
   opened: string[],
   flatOpened: string[]
 ) {
-  const res: Node[] = []
+  const res: Node[] = [],
+    cache = getCache(elements)
   for (const node of nodes) {
     res.push(node)
     const childCtxt = getNodeCtxt(node),
       children = opened.includes(childCtxt)
         ? getElementChildren(node.id, elements)
         : flatOpened.includes(childCtxt)
-        ? getNonVirtualDescendents(node.id, elements)
+        ? getNonVirtualDescendents(node.id, elements, cache)
         : []
     res.push(
       ...expandNodes(
@@ -84,7 +86,7 @@ function inRelation(
   params: t.IdMap<string>,
   elements: t.IdMap<t.Element>
 ): [boolean, string | null] {
-  const nonVirtuals = getNonVirtualDescendents(relationId, elements),
+  const nonVirtuals = getNonVirtualDescendents(relationId, elements, getCache(elements)),
     paramParentLists = _.mapValues(params, (p) => getElementAndParents(p, elements))
 
   let indirectMatch = false,

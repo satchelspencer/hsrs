@@ -30,6 +30,7 @@ import { Icon } from '../components/icon'
 import Worker from '../worker?worker'
 import * as t from '@hsrs/lib/types'
 import { ElListPicker } from '../editor/element'
+import { getCache } from '@hsrs/lib/cache'
 
 const worker = new Worker()
 
@@ -82,6 +83,7 @@ export function Learn() {
         instance: card,
         propName: card?.property,
         elements: elements,
+        cache: getCache(elements),
         cards: deck.cards,
       })
     }
@@ -382,7 +384,9 @@ export function Learn() {
                       className={cardAction}
                     >
                       {grade}
-                      <span style={{ fontSize: '0.7em', opacity:0.6 }}>&nbsp;[{index + 1}]</span>
+                      <span style={{ fontSize: '0.7em', opacity: 0.6 }}>
+                        &nbsp;[{index + 1}]
+                      </span>
                     </Button>
                   ))
                 ) : (

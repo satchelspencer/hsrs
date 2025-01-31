@@ -30,6 +30,7 @@ import { db } from '../redux/db'
 import { getNonVirtualDescendents, isParent } from '@hsrs/lib/props'
 import { getTime } from '@hsrs/lib/schedule'
 import { id2Card } from '@hsrs/lib/session'
+import { getCache } from '@hsrs/lib/cache'
 
 export interface StatDefinition<TAcc = any, TFinal = any> {
   name: string
@@ -65,7 +66,11 @@ export async function getStats(
   statsDefs: StatDefinition[],
   options: StatsOptions
 ): Promise<StatResult[]> {
-  const children = getNonVirtualDescendents(parentId, deck.elements),
+  const children = getNonVirtualDescendents(
+      parentId,
+      deck.elements,
+      getCache(deck.elements)
+    ),
     accumulators = statsDefs.map((stat) => stat.initAcc()),
     now = getTime(),
     startTime =
