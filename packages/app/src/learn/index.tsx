@@ -289,7 +289,20 @@ export function Learn() {
                   const card = id2Card(stat.cardId)
                   return (
                     <div key={i}>
-                      <b>
+                      <b
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          dispatch(
+                            r.actions.setSelection({
+                              selection: [
+                                { type: 'element', jump: true, id: card.element },
+                              ],
+                              index: 0,
+                            })
+                          )
+                          dispatch(r.actions.setRoute({ route: 'lib' }))
+                        }}
+                      >
                         {deck.elements[card.element].name} {card.property}
                       </b>
                       &nbsp;

@@ -136,11 +136,19 @@ export function getLearningCardDiff(
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
     flearnings = shallow ? [learning] : flattenCard(learning),
-    successProbs = flearnings.map((l) => {
+    rets = flearnings.map((flearning) => {
+      const roffset =
+        deck &&
+        getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention
+      return getRetention(deck?.settings.retention ?? 0.9, roffset)
+    }),
+    successProbs = flearnings.map((l, i) => {
       const state = cards[l.cardId]
       return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 1 //if new and in mixed then must be rel
     }),
     totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
+
+  // console.log('??', totalSuccessProb, successProbs)
 
   for (const i in flearnings) {
     const flearning = flearnings[i],
@@ -151,19 +159,23 @@ export function getLearningCardDiff(
           ? (flearning.time - state.lastSeen) / (3600 * 6)
           : 1,
       successProb = successProbs[i],
-      probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1
+      probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
+      previewPenalty = Math.min(rets[i] / successProb, 1)
 
-    const roffset =
-        deck &&
-        getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention,
-      retention = getRetention(deck?.settings.retention ?? 0.9, roffset)
+    // console.log(
+    //   deck?.elements[id2Card(flearning.cardId).element].name,
+    //   probability  * previewPenalty * recencyFactor,
+    //   // previewPenalty,
+    //   // successProb,
+    //   // rets[i]
+    // )
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
       flearning.score,
-      probability * recencyFactor,
+      probability * recencyFactor * previewPenalty,
       learning.time,
-      retention
+      rets[i]
     )
   }
 
