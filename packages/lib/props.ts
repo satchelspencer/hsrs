@@ -97,7 +97,7 @@ export function getInheritedElement(
     inheritedMode: string = '',
     inheritedRetention: string = ''
 
-  const ancestors = cache.ancestors[elementId]
+  const ancestors = cache.ancestors[elementId] ?? []
   for (let i = ancestors.length - 1; i >= 0; i--) {
     const id = ancestors[i],
       element = elements[id]
