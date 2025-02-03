@@ -169,8 +169,8 @@ export function Learn() {
     dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
   }
 
-  const handleKey = useRef<(key: string, meta: boolean) => void>()
-  handleKey.current = (key, meta) => {
+  const handleKey = useRef<(key: string, meta: boolean, ctrl: boolean) => void>()
+  handleKey.current = (key, meta, ctrl) => {
     if (key === ' ') {
       if (revealed) setGrade(3)
       else setRevealed(true)
@@ -178,7 +178,7 @@ export function Learn() {
     else if (key === '2' && revealed) setGrade(2)
     else if (key === '3' && revealed) setGrade(3)
     else if (key === '4' && revealed) setGrade(4)
-    else if (key === 'z' && meta) {
+    else if (key === 'z' && (meta || ctrl)) {
       dispatch(r.actions.undoGrade({}))
       setRevealed(false)
     }
@@ -191,12 +191,13 @@ export function Learn() {
     setPluginLoaded(false)
 
     const handleMessage = (e: MessageEvent<any>) => {
-      if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta)
+      if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta, e.data.ctrl)
       if (e.data.type === 'ready') setPluginLoaded(true)
     }
     window.addEventListener('message', handleMessage)
 
-    const keyHanlder = (e: KeyboardEvent) => handleKey.current?.(e.key, e.metaKey)
+    const keyHanlder = (e: KeyboardEvent) =>
+      handleKey.current?.(e.key, e.metaKey, e.ctrlKey)
     window.addEventListener('keydown', keyHanlder)
 
     return () => {
