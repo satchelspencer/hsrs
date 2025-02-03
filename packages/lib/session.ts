@@ -101,7 +101,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
       for (const propName of props) {
         res[propName] ??= {}
         const state = deck.cards[card2Id({ element: elid, property: propName })]
-        if (state && state.stability >= targetStability) {
+        if (state && state.stability >= targetStability * 2) {
           for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
         }
       }

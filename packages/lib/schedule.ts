@@ -160,7 +160,7 @@ export function getLearningCardDiff(
           : 1,
       successProb = successProbs[i],
       probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
-      previewPenalty = Math.min(rets[i] / successProb, 1)
+      previewPenalty = Math.pow(Math.min(rets[i] / successProb, 1), 2)
 
     // console.log(
     //   deck?.elements[id2Card(flearning.cardId).element].name,
