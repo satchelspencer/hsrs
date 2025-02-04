@@ -21,8 +21,8 @@ export function Column(props: ColumnProps) {
     wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (wrapperRef.current && props.last) wrapperRef.current.scrollIntoView()
-  }, [!!wrapperRef.current, selection?.[0]?.type])
+    if (wrapperRef.current) wrapperRef.current.scrollIntoView({ behavior: 'smooth' })
+  }, [selection?.[0]?.type])
 
   return (
     <div
@@ -31,7 +31,7 @@ export function Column(props: ColumnProps) {
     >
       {props.index === -1 ? (
         <ElementsList index={props.index} />
-      ) : selection.length === 1 ? (
+      ) : selection?.length === 1 ? (
         selection.map((selection) =>
           selection.type === 'element' ? (
             <ElementEditor

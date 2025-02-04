@@ -24,9 +24,17 @@ export const ui = createSlice({
       state,
       action: PayloadAction<{ selection: Selection[]; index: number }>
     ) => {
-      const newSelections = state.selections.slice(0, action.payload.index)
+      const selections = state.selections.filter((a) => !!a),
+        newSelections = selections.slice(0, action.payload.index)
       if (action.payload.selection.length)
         newSelections[action.payload.index] = action.payload.selection
+
+      const rest = selections.slice(
+          action.payload.index + (action.payload.selection.length ? 0 : 1)
+        ),
+        nextJumpIndex = rest.findIndex((j) => j[0]?.jump)
+      if (nextJumpIndex !== -1) newSelections.push(...rest.slice(nextJumpIndex))
+
       state.selections = newSelections
     },
     updateSelection: (

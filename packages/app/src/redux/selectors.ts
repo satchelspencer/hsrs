@@ -30,7 +30,7 @@ export const selectLastJumpSelectionByIndex = createSelector(
   [selectSelections, (state, index: number) => index],
   (selections, index): Selection[] | undefined => {
     return selections[
-      _.take(selections, index).findLastIndex((s) => s.length === 1 && s[0].jump) - 1
+      _.take(selections, index).findLastIndex((s) => s?.length === 1 && s[0].jump) - 1
     ]
   }
 )
