@@ -47,6 +47,7 @@ type CardStat =
       duediff: number
       seendiff: number
       retr: number
+      nextDueDiff: number
     }
 
 const round = (n: number) => Math.floor(n * 100) / 100
@@ -131,7 +132,7 @@ export function Learn() {
     applyHistoryToCards(lastCards, lastHistory, true, deck)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
-      const diff = getLearningCardDiff(deck.cards, learning, deck)
+      const diff = getLearningCardDiff(deck.cards, learning, deck, undefined, now)
       for (const key in diff) {
         const element = getInheritedElement(id2Card(key).element, deck.elements),
           eretention = getRetention(retention, element.retention),
@@ -149,6 +150,7 @@ export function Learn() {
           duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
           seendiff: current?.lastSeen ? (now - current.lastSeen) / 24 / 3600 : 0,
           retr: current?.lastSeen ? getRetr(current, now - current.lastSeen) : 0,
+          nextDueDiff: current?.due && v?.due ? (v.due - current.due) / 24 / 3600 : 0,
         })
       }
     } else {
@@ -341,6 +343,12 @@ export function Learn() {
                             >
                               {stat.sdiff > 0 ? '+' : ''}
                               {Math.round(stat.sdiff)}%
+                            </span>
+                          )}
+                          {stat.nextDueDiff === 0 ? null : (
+                            <span style={{ opacity: 0.7 }}>
+                              {stat.nextDueDiff > 0 ? ' +' : ' -'}
+                              {round(Math.abs(stat.nextDueDiff))}d
                             </span>
                           )}
                         </>
