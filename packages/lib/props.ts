@@ -330,11 +330,29 @@ export function sampleElementIstance(
   const nonV = getNonVirtualDescendents(id, elements, cache),
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
 
-  while (descendents.length) {
-    const index = Math.floor(
-        Math.pow(Math.random(), 8) * Math.min(descendents.length, 10)
-      ),
-      [descendent] = descendents.splice(index, 1)
+  let maxOrder = -Infinity
+  const orders = _.sortBy(
+      nonV.map((v) => {
+        const o = order?.(v) ?? 1
+        if (o > maxOrder) maxOrder = o
+        return o
+      })
+    ),
+    normed = orders.map((o) => maxOrder - o + 1e-10)
+
+  while (normed.length) {
+    const sum = _.sumBy(normed),
+      sample = Math.random() * sum
+
+    let accum = 0,
+      index = 0
+    for (const v of normed) {
+      accum += v
+      if (accum >= sample) break
+      index++
+    }
+    normed.splice(index, 1)
+    const [descendent] = descendents.splice(index, 1)
 
     const {
       params = {},
