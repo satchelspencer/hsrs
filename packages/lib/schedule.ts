@@ -136,15 +136,19 @@ export function getLearningCardDiff(
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
     flearnings = shallow ? [learning] : flattenCard(learning),
-    rets = flearnings.map((flearning) => {
-      const roffset =
+    offsets = flearnings.map(
+      (flearning) =>
         deck &&
         getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention
-      return getRetention(deck?.settings.retention ?? 0.9, roffset)
-    }),
+    ),
+    rets = flearnings.map((flearning, i) =>
+      getRetention(deck?.settings.retention ?? 0.9, offsets[i])
+    ),
     successProbs = flearnings.map((l, i) => {
       const state = cards[l.cardId]
-      return state?.lastSeen ? getRetr(state, l.time - state.lastSeen) : 1 //if new and in mixed then must be rel
+      return state?.lastSeen
+        ? getRetention(getRetr(state, l.time - state.lastSeen), offsets[i], -1)
+        : 1 //if new and in mixed then must be rel
     }),
     totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
 
@@ -155,8 +159,8 @@ export function getLearningCardDiff(
       state = cards[flearning.cardId]
 
     const recencyFactor =
-        !shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 6
-          ? (flearning.time - state.lastSeen) / (3600 * 6)
+        !shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 2
+          ? (flearning.time - state.lastSeen) / (3600 * 2)
           : 1,
       successProb = successProbs[i],
       probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
@@ -164,7 +168,10 @@ export function getLearningCardDiff(
 
     // console.log(
     //   deck?.elements[id2Card(flearning.cardId).element].name,
-    //   probability  * previewPenalty * recencyFactor,
+    //   probability,
+    //   offsets[i],
+    //   successProb
+    //   //probability  * previewPenalty * recencyFactor,
     //   // previewPenalty,
     //   // successProb,
     //   // rets[i]
@@ -208,8 +215,8 @@ function logit(p: number) {
   return Math.log(p / (1 - p))
 }
 
-export function getRetention(baseRetention: number, bonus?: string) {
-  if (bonus === undefined) return baseRetention
+export function getRetention(baseRetention: number, bonus?: string, fac = 1) {
+  if (bonus === undefined || baseRetention === 1) return baseRetention
   const float = parseFloat(bonus)
-  return logistic(logit(baseRetention) + (_.isNaN(float) ? 0 : float))
+  return logistic(logit(baseRetention) + (_.isNaN(float) ? 0 : float * fac))
 }
