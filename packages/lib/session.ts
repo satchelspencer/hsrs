@@ -9,6 +9,7 @@ import {
 import {
   applyHistoryToCards,
   getLearnTargetStability,
+  getRetr,
   getTime,
   nextCardState,
   nextState,
@@ -326,17 +327,28 @@ function getDue(
 ) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    cardsIds = _.sortBy(
-      Object.keys(deck.cards),
-      (cardId) => deck.cards[cardId].due ?? Infinity
-    ),
-    now = getTime()
+    now = getTime(),
+    cardsIds = _.sortBy(Object.keys(deck.cards), (cardId) => {
+      const state = deck.cards[cardId],
+        dueIn = (state.due ?? Infinity) - now,
+        lastOpenMissAgo = now - (state.lastMiss ?? -Infinity)
+      return Math.min(dueIn, lastOpenMissAgo)
+    })
 
   // console.log(
-  //   cardsIds.map((c) => [
-  //     deck.elements[id2Card(c).element].name,
-  //     deck.cards[c].due && new Date(deck.cards[c].due * 1000),
-  //   ])
+  //   cardsIds
+  //     .map((c) => {
+  //       const state = deck.cards[c],
+  //         due = ((state.due ?? Infinity) - now) / 3600 / 24,
+  //         mago = (now - (state.lastMiss ?? -Infinity)) / 3600 / 24
+  //       return [
+  //         mago < due ? '***' : '   ',
+  //         deck.elements[id2Card(c).element].name,
+  //         due,
+  //         mago,
+  //       ].join(' ')
+  //     })
+  //     .join('\n')
   // )
 
   while (dueCards.length + nextCards.length < limit && cardsIds.length) {
@@ -347,11 +359,7 @@ function getDue(
       hasProps = !!props[card.property]
 
     if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (
-        state.due < now + 3600 * 6 ||
-        (state.lastMiss && state.lastMiss > now - 3600 * 6)
-      )
-        sampleAndAdd(dueCards, cardId, deck, learnable, filter)
+      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable, filter)
       else sampleAndAdd(nextCards, cardId, deck, learnable, filter)
     }
   }
@@ -360,7 +368,7 @@ function getDue(
 }
 
 const SAMPLE_TRIES = 20,
-  jitterScale = 3600 * 24 * 30
+  jitterScale = 0.1
 
 function sampleAndAdd(
   res: t.CardInstance[],
@@ -383,6 +391,13 @@ function sampleAndAdd(
   const elElements: t.IdMap<t.Element> = { ...learnable[property] }
   for (const eid of cache.ancestors[element]) elElements[eid] = deck.elements[eid]
 
+  const retr = deck.cards[cardId]
+      ? getRetr(deck.cards[cardId], now - (deck.cards[cardId]?.lastSeen ?? 0))
+      : 0.5,
+    target = deck.settings.retention ?? 0.9,
+    childTarget = target / retr
+  //console.log(elElements[element].name, retr, target, childTarget)
+
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
@@ -395,9 +410,8 @@ function sampleAndAdd(
               (Math.random() > 0.5 ? 1 : -1)
           if (!card) return jitter
 
-          const dueIn = (card.due ?? Infinity) - now,
-            seenAgo = now - (card.lastSeen ?? now)
-          return dueIn - seenAgo + jitter
+          const cr = getRetr(card, now - (card.lastSeen ?? 0))
+          return Math.abs(cr - childTarget) + jitter
         }),
         property,
       })
