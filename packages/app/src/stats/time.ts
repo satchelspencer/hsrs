@@ -1,9 +1,9 @@
 export function formatDate(time: number) {
-  const date = new Date(time * 1000),
-    year = date.getFullYear().toString().slice(-2),
-    month = date.getMonth().toString(),
-    day = date.getDate().toString()
-  return `${month}/${day}/${year}`
+  const date = new Date(time * 1000)
+  return `${date.getMonth() + 1}/${date.getDate()}/${date
+    .getFullYear()
+    .toString()
+    .slice(-2)}`
 }
 
 function startOfDay(time: number) {
