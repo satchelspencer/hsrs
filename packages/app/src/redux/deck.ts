@@ -135,7 +135,7 @@ export const deckThunks = {
 
       await db.cardLearning
         .orderBy(['cardId', 'id'])
-        .offset(Math.max(count - 10000, 0))
+        .offset(Math.max(count - 50000, 0))
         .each((learning) => {
           if (learning.score === 0) return
           if (currentId && learning.cardId !== currentId) {
@@ -155,7 +155,7 @@ export const deckThunks = {
 
                 cids.push(cid)
                 ratings.push(l.score)
-                ids.push(l.time)
+                ids.push(l.time * 1000)
                 types.push(first ? 0 : relearning ? 2 : custom ? 3 : 1)
 
                 lastSeen = l.time
