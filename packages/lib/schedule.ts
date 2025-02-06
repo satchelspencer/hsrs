@@ -122,8 +122,9 @@ export function applyHistoryToCards(
   shallow?: boolean,
   deck?: t.Deck
 ) {
+  const now = getTime()
   for (const learning of history) {
-    const diff = getLearningCardDiff(cards, learning, deck, shallow)
+    const diff = getLearningCardDiff(cards, learning, deck, shallow, now)
     Object.assign(cards, diff)
   }
 }
@@ -132,7 +133,8 @@ export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
   deck?: t.Deck,
-  shallow?: boolean
+  shallow?: boolean,
+  now = getTime()
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
     flearnings = shallow ? [learning] : flattenCard(learning),
@@ -159,18 +161,36 @@ export function getLearningCardDiff(
       state = cards[flearning.cardId]
 
     const recencyFactor =
-        !shallow && state?.lastSeen && flearning.time - state.lastSeen < 3600 * 2
-          ? (flearning.time - state.lastSeen) / (3600 * 2)
+        !shallow &&
+        flearning.score > 2 &&
+        state?.lastSeen &&
+        flearning.time - state.lastSeen < 3600 * 6
+          ? (flearning.time - state.lastSeen) / (3600 * 6)
           : 1,
       successProb = successProbs[i],
       probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
-      previewPenalty = Math.pow(Math.min(rets[i] / successProb, 1), 2)
+      previewPenalty =
+        !shallow && flearning.score > 2
+          ? 1 -
+            Math.max(
+              Math.min(
+                1,
+                ((state?.due ?? Infinity) - now) /
+                  nextInterval(state?.stability ?? 0, rets[i])
+              ),
+              0
+            )
+          : 1
 
     // console.log(
     //   deck?.elements[id2Card(flearning.cardId).element].name,
-    //   probability,
-    //   offsets[i],
-    //   successProb
+    //   previewPenalty,
+    //   recencyFactor,
+    //   probability * recencyFactor * previewPenalty,
+    //   state?.difficulty
+    //   // recencyFactor
+    //   // offsets[i],
+    //   // successProb
     //   //probability  * previewPenalty * recencyFactor,
     //   // previewPenalty,
     //   // successProb,

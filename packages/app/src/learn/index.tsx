@@ -234,7 +234,6 @@ export function Learn() {
       new: cardsAvailable,
       due: cardsDue,
       next: nextDue,
-      maxp,
     } = useMemo(
       () => createLearningSession(deck, actualSessionSize, allowNew, filter ?? []),
       [newSessionSize, allowNew, filter, !!session]
@@ -456,7 +455,6 @@ export function Learn() {
           <div className={desc} style={{ opacity: 0.7 }}>
             <b>{cardsDue}</b>&nbsp;due,&nbsp;
             <b>{cardsAvailable}</b>&nbsp;new,&nbsp;<b>{nextDue}</b>&nbsp;review&nbsp;
-            {maxp ? `(+${((maxp - getTime()) / 24 / 3600).toFixed(2)}d)` : null}
             <input
               type="checkbox"
               checked={!!allowNew}
