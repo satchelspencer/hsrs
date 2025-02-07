@@ -71,7 +71,7 @@ export const deck = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(deckThunks.endSession.fulfilled, (state, action) => {
-      applyHistoryToCards(state.cards, action.payload, false, state)
+      applyHistoryToCards(state.cards, action.payload, state)
       state.session = null
     })
 
@@ -113,7 +113,7 @@ export const deckThunks = {
         deck = getState().deck
       await db.cardLearning.orderBy('id').each((learning) => {
         if (_.every(learning.elIds, (e) => deck.elements[e]))
-          applyHistoryToCards(newCards, [learning], false, deck)
+          applyHistoryToCards(newCards, [learning], deck)
       })
       return newCards
     }
@@ -135,11 +135,14 @@ export const deckThunks = {
 
       await db.cardLearning
         .orderBy(['cardId', 'id'])
-        .offset(Math.max(count - 50000, 0))
+        .offset(Math.max(count - 10000, 0))
         .each((learning) => {
           if (learning.score === 0) return
           if (currentId && learning.cardId !== currentId) {
-            if (learnSet.length > 1) {
+            if (
+              learnSet.length > 1 &&
+              learnSet.find((d, i) => i && d.time - learnSet[i - 1].time > 3600 * 24)
+            ) {
               const cid = learnSet[0].time * 1000 - 24 * 3600
               let lastSeen: number | null = null
               let firstSession = true

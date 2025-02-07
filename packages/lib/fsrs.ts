@@ -17,7 +17,7 @@ const isNode =
 
 export async function fsrs(params = defaultParams) {
   if (!isNode) {
-    await init(wasmUrl)
+    await init({ module_or_path: wasmUrl })
   } else {
     const fs = eval('require')('fs') as typeof import('fs')
     const { webcrypto } = eval('require')('node:crypto') as typeof import('crypto')

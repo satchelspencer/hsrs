@@ -8,6 +8,10 @@ jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
 )
 
+jexl.addTransform('rg', (val: string, search, replace) =>
+  (val + '').replace(new RegExp(search, 'g'), replace)
+)
+
 jexl.addTransform('cr', (val: string, search, replace) => {
   let res = val
   for (const i in search) res = res.replace(new RegExp(search[i] + '$'), replace[i])
@@ -134,7 +138,8 @@ export function computeElementMode(
 
   for (const paramName in instace.params) {
     const param = instace.params[paramName]
-    if (param) mode = satisfiesMode(mode, computeElementMode(param, elements, cache)) ?? mode
+    if (param)
+      mode = satisfiesMode(mode, computeElementMode(param, elements, cache)) ?? mode
   }
 
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode

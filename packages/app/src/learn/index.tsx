@@ -9,21 +9,20 @@ import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { LabelGroup } from '../components/labels'
 import { propName } from '../components/map'
 import {
+  applySessionHistoryToCards,
   card2Id,
   createLearningSession,
   getSessionDone,
   id2Card,
+  nextSessionState,
 } from '@hsrs/lib/session'
 import { getElementAndParents, getInheritedElement } from '@hsrs/lib/props'
 import {
-  applyHistoryToCards,
   getLearningCardDiff,
-  getLearnTargetStability,
   getRetention,
   getRetr,
   getTime,
   grades,
-  nextCardState,
   nextInterval,
 } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
@@ -70,7 +69,7 @@ export function Learn() {
         .map((e) => elements[e].name)
         .find((e) => settings.plugins[e]),
     pluginUrl = plugin && settings.plugins[plugin],
-    { sessionDone, targetStability } = getSessionDone(session)
+    sessionDone = getSessionDone(session)
 
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
   useEffect(() => {
@@ -94,7 +93,6 @@ export function Learn() {
   //   console.log(
   //     plugin,
   //     sessionDone,
-  //     targetStability,
   //     JSON.stringify(
   //       session?.stack.map((s) =>
   //         [
@@ -129,10 +127,10 @@ export function Learn() {
       lastCards = {},
       now = getTime()
 
-    applyHistoryToCards(lastCards, lastHistory, true, deck)
+    applySessionHistoryToCards(lastCards, lastHistory)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
-      const diff = getLearningCardDiff(deck.cards, learning, deck, undefined, now)
+      const diff = getLearningCardDiff(deck.cards, learning, deck)
       for (const key in diff) {
         const element = getInheritedElement(id2Card(key).element, deck.elements),
           eretention = getRetention(retention, element.retention),
@@ -154,12 +152,11 @@ export function Learn() {
         })
       }
     } else {
-      const nextState = nextCardState(lastCards[cardId], score, 1, getTime()),
-        targetInterval = getLearnTargetStability()
+      const nextState = nextSessionState(lastCards[cardId], score)
       nextStats.push({
         cardId,
-        gradf: Math.min(nextState.stability / targetInterval, 1),
-        graduated: nextState.stability >= targetInterval,
+        gradf: Math.min(nextState.stability, 1),
+        graduated: nextState.stability >= 1,
         duediff: 0,
       })
     }
@@ -376,9 +373,8 @@ export function Learn() {
               <div className={actionsInner} style={{ justifyContent: 'start' }}>
                 <div className={sessionProgress}>
                   {
-                    session.stack.filter(
-                      (s) => session.cards[card2Id(s)]?.stability >= targetStability
-                    ).length
+                    session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1)
+                      .length
                   }
                   /{session.stack.length}
                 </div>

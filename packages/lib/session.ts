@@ -6,14 +6,7 @@ import {
   isParent,
   sampleElementIstance,
 } from './props'
-import {
-  applyHistoryToCards,
-  getLearnTargetStability,
-  getRetr,
-  getTime,
-  nextCardState,
-  nextState,
-} from './schedule'
+import { getLearnTargetStability, getRetr, getTime } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 
@@ -102,7 +95,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
       for (const propName of props) {
         res[propName] ??= {}
         const state = deck.cards[card2Id({ element: elid, property: propName })]
-        if (state && state.stability >= targetStability * 2) {
+        if (state && state.stability >= targetStability * 4) {
           for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
         }
       }
@@ -110,6 +103,35 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   }
 
   return _.mapValues(res, (v) => ({ ...v, ...all }))
+}
+
+const initSessionStabs = [0.25, 0.5, 1, 2],
+  sessionIncs = [
+    Math.pow(0.5, 1 / 1), //half in one step
+    Math.pow(0.5, 1 / 2), //half in two steps
+    Math.pow(2, 1 / 2), //double in two steps
+    Math.pow(2, 1 / 1), //double in one step
+  ]
+export function nextSessionState(
+  state: t.CardState | undefined,
+  grade: number
+): t.CardState {
+  return {
+    stability: Math.max(
+      state ? state.stability * sessionIncs[grade - 1] : initSessionStabs[grade - 1],
+      initSessionStabs[0]
+    ),
+    difficulty: 0,
+  }
+}
+
+export function applySessionHistoryToCards(
+  cards: t.CardStates,
+  history: t.CardLearning[]
+) {
+  for (const learning of history) {
+    cards[learning.cardId] = nextSessionState(cards[learning.cardId], learning.score)
+  }
 }
 
 export function gradeCard(deck: t.Deck, grade: number, took: number): t.LearningSession {
@@ -130,18 +152,14 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
     took,
   })
 
-  const lastCardState: t.CardState | undefined = session.cards[cardId],
-    cardState = nextCardState(lastCardState, grade, 1, now)
+  const cardState = nextSessionState(session.cards[cardId], grade)
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),
-    targetStability = getLearnTargetStability(),
-    graduated =
-      cardState.stability > targetStability &&
-      (!lastCardState || lastCardState.stability > targetStability),
+    graduated = cardState.stability >= 1,
     minGraduatedIndex = session.stack.findLastIndex((v) => {
       const state = session.cards[card2Id(v)]
-      return !state || state.stability < targetStability
+      return !state || state.stability < 1
     }),
     midPoint = Math.floor(session.stack.length / 2),
     graduatedIndex = // if graduated reinsert randomly in the end of the stack already graduated, past half way
@@ -154,11 +172,8 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
             midPoint
           ),
     learningIndex = Math.min(
-      // if learning reinsert proportional to stability/target
-      2 + Math.pow(cardState.stability / targetStability, 3) * 30 + jitter,
-      //midPoint,
-      30
-    ),
+      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * 20) + jitter
+    ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
         Math.floor(!graduated ? learningIndex : graduatedIndex),
@@ -226,7 +241,6 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
 
 function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   const ncFactor = getNewCardFactor(),
-    targetStability = getLearnTargetStability(),
     cardReviewsRemaning = _.sumBy(session.stack ?? [], (card) => {
       const tcardId = card2Id(card),
         state = session.cards?.[tcardId]
@@ -234,8 +248,8 @@ function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
 
       let changedState = state,
         i = 0
-      while (changedState.stability < targetStability && i < 10) {
-        changedState = nextState(changedState, 30, i === 0 ? state.lastScore ?? 3 : 3, 1)
+      while (changedState.stability < 1 && i < 10) {
+        changedState = nextSessionState(changedState, i === 0 ? state.lastScore ?? 3 : 3)
         i++
       }
       return i
@@ -245,16 +259,13 @@ function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
 }
 
 export function getSessionDone(session: t.LearningSession | null) {
-  if (!session) return { sessionDone: false, targetStability: 1 }
-  const states = _.values(session.cards),
-    targetStability = getLearnTargetStability()
+  if (!session) return false
+  const states = _.values(session.cards)
 
-  return {
-    sessionDone:
-      states.length >= _.uniqBy(session.stack, (c) => card2Id(c)).length &&
-      _.every(states, (c) => c.stability >= targetStability),
-    targetStability,
-  }
+  return (
+    states.length >= _.uniqBy(session.stack, (c) => card2Id(c)).length &&
+    _.every(states, (c) => c.stability >= 1)
+  )
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
@@ -269,7 +280,7 @@ export function undoGrade(session: t.LearningSession): t.LearningSession {
   session.stack.unshift(cardInstance)
 
   session.cards = {}
-  applyHistoryToCards(session.cards, session.history, true)
+  applySessionHistoryToCards(session.cards, session.history)
 
   return session
 }
@@ -332,7 +343,7 @@ function getDue(
       const state = deck.cards[cardId],
         dueIn = (state.due ?? Infinity) - now,
         lastOpenMissAgo = now - (state.lastMiss ?? -Infinity)
-      return Math.min(dueIn, lastOpenMissAgo)
+      return Math.min(dueIn, lastOpenMissAgo * 4)
     })
 
   // console.log(
@@ -368,7 +379,7 @@ function getDue(
 }
 
 const SAMPLE_TRIES = 20,
-  jitterScale = 0.1
+  jitterScale = 1
 
 function sampleAndAdd(
   res: t.CardInstance[],
@@ -395,8 +406,10 @@ function sampleAndAdd(
       ? getRetr(deck.cards[cardId], now - (deck.cards[cardId]?.lastSeen ?? 0))
       : 0.5,
     target = deck.settings.retention ?? 0.9,
-    childTarget = target / retr
-  //console.log(elElements[element].name, retr, target, childTarget)
+    childTarget = target - (retr - target),
+    stabAvoid = deck.cards[cardId]?.stability ?? 0
+
+  //console.log(elElements[element].name, retr, childTarget, stabAvoid)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
@@ -411,7 +424,11 @@ function sampleAndAdd(
           if (!card) return jitter
 
           const cr = getRetr(card, now - (card.lastSeen ?? 0))
-          return Math.abs(cr - childTarget) + jitter
+          return (
+            Math.abs(cr - childTarget) +
+            Math.abs(card.stability - stabAvoid) / -100 +
+            jitter
+          )
         }),
         property,
       })

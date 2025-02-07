@@ -625,7 +625,7 @@ __metadata:
     "@types/jexl": ^2.3.4
     "@types/lodash": ^4.17.12
     "@types/node": ^22.8.2
-    fsrs-browser: ^1.4.4
+    fsrs-browser: ^2.0.3
     hierarchical-clustering: ^1.1.0
     jexl: ^2.3.0
     lodash: ^4.17.21
@@ -1701,10 +1701,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fsrs-browser@npm:^1.4.4":
-  version: 1.4.4
-  resolution: "fsrs-browser@npm:1.4.4"
-  checksum: 36f764f8e354b42185a5cd348c960078d9f99076692cb4ee73da2b62e57f82613f6e4bbcffe69ca885601f0ae532177666316dd70310209940c6d6eb2e239df4
+"fsrs-browser@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "fsrs-browser@npm:2.0.3"
+  checksum: b497413c2e6a74262c913ecbad868415b38fa725ae7f248ef3ab9e493e07966cd31547a6ba257f0d4a3ae81391939e6bed79b799d720be0224afd65c424ace73
   languageName: node
   linkType: hard
 

@@ -27,7 +27,7 @@ export function computeParams(
   ids: BigInt64Array,
   types: Uint8Array
 ) {
-  return fsrs!.computeParametersAnki(0, cids, ratings, ids, types)
+  return fsrs!.computeParametersAnki(-3 * 60, cids, ratings, ids, types, null, true)
 }
 
 export async function ready() {
@@ -119,12 +119,10 @@ export function getTime() {
 export function applyHistoryToCards(
   cards: t.CardStates,
   history: t.CardLearning[],
-  shallow?: boolean,
-  deck?: t.Deck
+  deck: t.Deck
 ) {
-  const now = getTime()
   for (const learning of history) {
-    const diff = getLearningCardDiff(cards, learning, deck, shallow, now)
+    const diff = getLearningCardDiff(cards, learning, deck)
     Object.assign(cards, diff)
   }
 }
@@ -132,19 +130,16 @@ export function applyHistoryToCards(
 export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
-  deck?: t.Deck,
-  shallow?: boolean,
-  now = getTime()
+  deck: t.Deck
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
-    flearnings = shallow ? [learning] : flattenCard(learning),
+    flearnings = flattenCard(learning),
     offsets = flearnings.map(
       (flearning) =>
-        deck &&
         getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention
     ),
     rets = flearnings.map((flearning, i) =>
-      getRetention(deck?.settings.retention ?? 0.9, offsets[i])
+      getRetention(deck.settings.retention ?? 0.9, offsets[i])
     ),
     successProbs = flearnings.map((l, i) => {
       const state = cards[l.cardId]
@@ -160,47 +155,21 @@ export function getLearningCardDiff(
     const flearning = flearnings[i],
       state = cards[flearning.cardId]
 
-    const recencyFactor =
-        !shallow &&
-        flearning.score > 2 &&
-        state?.lastSeen &&
-        flearning.time - state.lastSeen < 3600 * 6
-          ? (flearning.time - state.lastSeen) / (3600 * 6)
-          : 1,
-      successProb = successProbs[i],
-      probability = !shallow && state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
-      previewPenalty =
-        !shallow && flearning.score > 2
-          ? 1 -
-            Math.max(
-              Math.min(
-                1,
-                ((state?.due ?? Infinity) - now) /
-                  nextInterval(state?.stability ?? 0, rets[i])
-              ),
-              0
-            )
-          : 1
+    const successProb = successProbs[i],
+      probability = state ? (1 - successProb) / (1 - totalSuccessProb) : 1
 
     // console.log(
-    //   deck?.elements[id2Card(flearning.cardId).element].name,
-    //   previewPenalty,
+    //   deck.elements[id2Card(flearning.cardId).element].name,
     //   recencyFactor,
-    //   probability * recencyFactor * previewPenalty,
-    //   state?.difficulty
-    //   // recencyFactor
-    //   // offsets[i],
-    //   // successProb
-    //   //probability  * previewPenalty * recencyFactor,
-    //   // previewPenalty,
-    //   // successProb,
-    //   // rets[i]
+    //   probability,
+    //   // probability * recencyFactor,
+    //   // state?.difficulty
     // )
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
       flearning.score,
-      probability * recencyFactor * previewPenalty,
+      probability,
       learning.time,
       rets[i]
     )
