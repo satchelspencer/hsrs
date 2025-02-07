@@ -5,15 +5,15 @@ import * as t from './types'
 import _ from 'lodash'
 
 let fsrs: Fsrs | null = null,
-  waiting: (() => void)[] = [],
-  params = defaultParams
+  waiting: (() => void)[] = []
 
 init().then((f) => {
   fsrs = f
   waiting.forEach((c) => c())
 })
 
-export async function setParams(params?: number[]) {
+export async function setParams(params = defaultParams) {
+  await ready()
   fsrs = await init(params)
 }
 
