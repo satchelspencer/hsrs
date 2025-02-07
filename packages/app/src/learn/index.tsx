@@ -18,6 +18,7 @@ import {
 } from '@hsrs/lib/session'
 import { getElementAndParents, getInheritedElement } from '@hsrs/lib/props'
 import {
+  defaultretention,
   getLearningCardDiff,
   getRetention,
   getRetr,
@@ -121,7 +122,7 @@ export function Learn() {
     if (!learning || !session) return []
 
     const nextStats: CardStat[] = [],
-      retention = deck.settings.retention ?? 0.9,
+      retention = deck.settings.retention ?? defaultretention,
       { cardId, score } = learning,
       lastHistory = _.dropRight(session.history, 1),
       lastCards = {},

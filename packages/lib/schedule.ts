@@ -38,7 +38,7 @@ export async function ready() {
     })
 }
 
-export const defaultretention = 0.985
+export const defaultretention = 0.965
 
 export const grades = ['again', 'hard', 'good', 'easy']
 
@@ -89,7 +89,7 @@ export function nextState(
     const nextMemoryState = fsrs!.nextStates(
         memoryState.stability,
         memoryState.difficulty,
-        0.9,
+        0.9, //this value is unused because we're ignoring the scheduling from this output
         secondsElapsed / (3600 * 24)
       )[grades[grade - 1]].memory,
       nextDifficulty = nextMemoryState.difficulty,
@@ -139,7 +139,7 @@ export function getLearningCardDiff(
         getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention
     ),
     rets = flearnings.map((flearning, i) =>
-      getRetention(deck.settings.retention ?? 0.9, offsets[i])
+      getRetention(deck.settings.retention ?? defaultretention, offsets[i])
     ),
     successProbs = flearnings.map((l, i) => {
       const state = cards[l.cardId]

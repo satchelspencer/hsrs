@@ -8,7 +8,7 @@ import { LabelGroup } from '../components/labels'
 import { db, db2learning, learning2db } from '../redux/db'
 import * as r from '../redux'
 import { historyVersionable, deckVersionable } from '../redux/versions'
-import { getTime } from '@hsrs/lib/schedule'
+import { defaultretention, getTime } from '@hsrs/lib/schedule'
 import CodeInput from '../components/code'
 
 const downloadJSON = (data: object, filename: string) => {
@@ -123,7 +123,9 @@ export function ImportExport() {
           <div className={inputWrapper}>
             <CodeInput
               value={
-                deckSettings.retention ? deckSettings.retention + '' : '0.985'
+                deckSettings.retention
+                  ? deckSettings.retention + ''
+                  : defaultretention + ''
               }
               throttle
               onChange={(rt) => {

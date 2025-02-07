@@ -6,7 +6,13 @@ import {
   isParent,
   sampleElementIstance,
 } from './props'
-import { getLearnTargetStability, getRetr, getTime } from './schedule'
+import {
+  defaultretention,
+  getLearnTargetStability,
+  getRetention,
+  getRetr,
+  getTime,
+} from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 
@@ -95,7 +101,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
       for (const propName of props) {
         res[propName] ??= {}
         const state = deck.cards[card2Id({ element: elid, property: propName })]
-        if (state && state.stability >= targetStability * 4) {
+        if (state && state.stability >= targetStability) {
           for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
         }
       }
@@ -343,7 +349,7 @@ function getDue(
       const state = deck.cards[cardId],
         dueIn = (state.due ?? Infinity) - now,
         lastOpenMissAgo = now - (state.lastMiss ?? -Infinity)
-      return Math.min(dueIn, lastOpenMissAgo * 4)
+      return Math.min(dueIn, lastOpenMissAgo * 8)
     })
 
   // console.log(
@@ -355,9 +361,10 @@ function getDue(
   //       return [
   //         mago < due ? '***' : '   ',
   //         deck.elements[id2Card(c).element].name,
-  //         due,
-  //         mago,
-  //       ].join(' ')
+  //         // due,
+  //         // mago,
+  //         state.due && new Date(state.due * 1000),
+  //       ] //.join(' ')
   //     })
   //     .join('\n')
   // )
@@ -402,14 +409,15 @@ function sampleAndAdd(
   const elElements: t.IdMap<t.Element> = { ...learnable[property] }
   for (const eid of cache.ancestors[element]) elElements[eid] = deck.elements[eid]
 
-  const retr = deck.cards[cardId]
+  const inhel = getInheritedElement(element, deck.elements),
+    retr = deck.cards[cardId]
       ? getRetr(deck.cards[cardId], now - (deck.cards[cardId]?.lastSeen ?? 0))
       : 0.5,
-    target = deck.settings.retention ?? 0.9,
-    childTarget = target - (retr - target),
+    target = deck.settings.retention ?? defaultretention,
+    childTarget = getRetention(target - (retr - target), inhel.retention),
     stabAvoid = deck.cards[cardId]?.stability ?? 0
 
-  //console.log(elElements[element].name, retr, childTarget, stabAvoid)
+  //console.log(inhel.name, target, retr, childTarget)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
