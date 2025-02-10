@@ -205,6 +205,7 @@ function logit(p: number) {
 }
 
 export function getRetention(baseRetention: number, bonus?: string, fac = 1) {
+  baseRetention = Math.min(Math.max(baseRetention, 0), 1)
   if (bonus === undefined || baseRetention === 1) return baseRetention
   const float = parseFloat(bonus)
   return logistic(logit(baseRetention) + (_.isNaN(float) ? 0 : float * fac))

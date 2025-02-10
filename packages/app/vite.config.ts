@@ -5,4 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   build: { assetsDir: '' },
+  worker: {
+    format: 'es',
+  },
 })
