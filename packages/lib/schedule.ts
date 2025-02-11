@@ -195,7 +195,7 @@ export function flattenCard(learning: t.CardLearning): t.CardLearning[] {
   return _.uniqBy(res, (l) => l.cardId)
 }
 
-function logistic(x: number) {
+export function logistic(x: number) {
   return 1 / (1 + Math.exp(-x))
 }
 
