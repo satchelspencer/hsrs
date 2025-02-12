@@ -166,6 +166,10 @@ type MetaInstance = t.ElementInstance & {
   v: string
 }
 
+const instanceCache: {
+  [key: string]: { iv: t.PropsInstance; fvalue: string; omode: string | undefined }
+} = {}
+
 export function findAliases(
   instance: t.ElementInstance,
   propName: string,
@@ -180,7 +184,6 @@ export function findAliases(
     targetMode = computeElementMode(instance, elements, cache)
 
   for (let i = 0; i < 3; i++) {
-    const simTarget = i + 1
     for (const elId in elements) {
       const element = elements[elId]
 
@@ -199,7 +202,7 @@ export function findAliases(
         const param = params[paramName]
         for (const iid in matchingInstances) {
           const inst = matchingInstances[iid]
-          if (isParent(inst.element, param, elements))
+          if (cache.ancestors[inst.element].includes(param))
             matchingParams[paramName].push(inst)
         }
       }
@@ -223,14 +226,21 @@ export function findAliases(
           : [{ element: elId, params: {} }]
 
       for (const oinstance of instances) {
-        const iv = computeElementInstance(oinstance, elements, cache),
-          fvalue = getFlatPropValue(iv, propName),
-          sim = getSimilarity(fvalue, target),
-          iid = getInstanceId(oinstance),
-          omode = computeElementMode(oinstance, elements, cache)
+        const key = getInstanceId(oinstance)
+        if (!instanceCache[key]) {
+          const iv = computeElementInstance(oinstance, elements, cache)
+          instanceCache[key] = {
+            iv,
+            fvalue: getFlatPropValue(iv, propName),
+            omode: computeElementMode(oinstance, elements, cache),
+          }
+        }
+        const { iv, fvalue, omode } = instanceCache[key],
+          sim = getSimilarity(fvalue, target)
 
-        if (matchingInstances[iid]) continue
-        if (sim >= simTarget) matchingInstances[iid] = { ...oinstance, s: sim, v: fvalue }
+        if (matchingInstances[key]) continue
+        if (sim >= Math.ceil(fvalue.length / 2))
+          matchingInstances[key] = { ...oinstance, s: sim, v: fvalue }
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
@@ -269,10 +279,25 @@ function failsConstraint(insts: MetaInstance[], constraint?: string): boolean {
   return failed
 }
 
-function getInstanceId(i: t.ElementInstance) {
-  return `${i.element}:(${Object.keys(i.params ?? {})
-    .map((k) => `${k}:${getInstanceId(i.params?.[k]!)}`)
-    .join(',')})`
+export function getInstanceId(instance: t.ElementInstance): string {
+  const res: string[] = [instance.element],
+    queue: t.ElementInstance[] = [instance]
+
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    if (node.params) {
+      for (const paramKey in node.params) {
+        res.push(paramKey, '=')
+        const paramValue = node.params[paramKey]
+        if (paramValue) {
+          res.push(paramValue.element)
+          queue.push(paramValue)
+        }
+      }
+    }
+  }
+
+  return res.join('')
 }
 
 function getFlatPropValue(pi: t.PropsInstance, propName: string) {
@@ -339,6 +364,11 @@ export function sampleElementIstance(
       })
     ),
     normed = orders.map((o) => maxOrder - o + 1e-10)
+
+  // console.log(
+  //   elements[id].name,
+  //   descendents.map((o, i) => [elements[o].name, order?.(o) ?? 1])
+  // )
 
   while (normed.length) {
     const sum = _.sumBy(normed),
