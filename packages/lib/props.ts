@@ -183,11 +183,9 @@ export function findAliases(
     exactInstances: { [iid: string]: t.ElementInstance } = {},
     targetMode = computeElementMode(instance, elements, cache)
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     for (const elId in elements) {
-      const element = elements[elId]
-
-      if (element.virtual) continue
+      if (elements[elId].virtual) continue
 
       const {
           props,
@@ -209,10 +207,7 @@ export function findAliases(
 
       const paramNames = Object.keys(params),
         paramValues = paramNames.map((p) =>
-          _.take(
-            _.sortBy(matchingParams[p], (v) => -v.s),
-            5
-          )
+          _.take(_.orderBy(matchingParams[p], [(v) => -v.s, (v) => v.v.length]), 4)
         ),
         instances: t.ElementInstance[] = paramNames.length
           ? _.compact(
@@ -236,11 +231,13 @@ export function findAliases(
           }
         }
         const { iv, fvalue, omode } = instanceCache[key],
-          sim = getSimilarity(fvalue, target)
+          split = fvalue.split('.').filter((a) => !!a),
+          sim =
+            split.reduce((memo, fv) => memo + getSimilarity(fv, target) / fv.length, 0) /
+            split.length
 
-        if (matchingInstances[key]) continue
-        if (sim >= Math.ceil(fvalue.length / 2))
-          matchingInstances[key] = { ...oinstance, s: sim, v: fvalue }
+        if (matchingInstances[key] || !fvalue.length) continue
+        if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: fvalue }
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
