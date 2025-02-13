@@ -32,7 +32,7 @@ interface StatsEditorProps {
 export function Stats(props: StatsEditorProps) {
   const deck = r.useSelector((state) => state.deck),
     dispatch = r.useDispatch(),
-    [options, setOptions] = useState<StatsOptions>({ maxGroups: 50, period: 'year' })
+    [options, setOptions] = useState<StatsOptions>({ maxGroups: 50, period: 'month' })
 
   const countGroupedByDayAndScore = useCountGroupedByDayAndScore(options),
     avgTimeSpent = useAvgTimeSpent(),

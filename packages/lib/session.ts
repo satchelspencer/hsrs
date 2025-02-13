@@ -378,7 +378,8 @@ function getDue(
       hasProps = !!props[card.property]
 
     if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable, filter)
+      if (state.due < now + 3600 * 6)
+        sampleAndAdd(dueCards, cardId, deck, learnable, filter)
       else sampleAndAdd(nextCards, cardId, deck, learnable, filter)
     }
   }
