@@ -17,6 +17,9 @@ import {
   useCountGroupedByDayAndScore,
   useStabilityDist,
   useSeenPercentage,
+  useDifficultyDist,
+  useTotalCardsSeenOverTime,
+  useAccuracyOverTime,
 } from './stats'
 import { css, cx } from '@emotion/css'
 
@@ -35,11 +38,17 @@ export function Stats(props: StatsEditorProps) {
     avgTimeSpent = useAvgTimeSpent(),
     stabilityDist = useStabilityDist(options),
     seenPercentage = useSeenPercentage(),
+    difficultyDist = useDifficultyDist(options),
+    useNewCards = useTotalCardsSeenOverTime(options),
+    useAccuracy = useAccuracyOverTime(options),
     statsDefs = [
       avgTimeSpent,
       countGroupedByDayAndScore,
       seenPercentage,
       stabilityDist,
+      difficultyDist,
+      useNewCards,
+      useAccuracy,
     ],
     [stats, setStats] = useState<StatResult[]>([])
 
@@ -57,7 +66,7 @@ export function Stats(props: StatsEditorProps) {
 
   return (
     <div className={editorWrapperOuter} style={{ background: 'white' }}>
-      <div className={editorWrapper}>
+      <div className={editorWrapper} style={{ overflowY: 'scroll' }}>
         <div className={editorHeader}>
           <Button
             className={backButton}

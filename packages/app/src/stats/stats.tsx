@@ -38,7 +38,7 @@ export const useCountGroupedByDayAndScore = createStatHook((options: StatsOption
     }
   },
   render: (data) => {
-    const scoreColors = ['', '#c05c5c', '#c49652', '#7ec38d', '#29c34b']
+    const scoreColors = ['', '#c24141', '#cd9138', '#50bf68', '#29c34b']
     return (
       <Bar
         data={{
@@ -150,5 +150,161 @@ export const useSeenPercentage = createStatHook(() => ({
       <i>{data.seenCount}</i> seen of <i>{data.totalCards}</i> cards available (
       <i>{data.percentage}%</i>)
     </div>
+  ),
+}))
+
+export const useDifficultyDist = createStatHook((options: StatsOptions) => ({
+  name: 'Difficulty distribution',
+  initAcc: () => ({}),
+  accumulator: () => {},
+  finalize: (acc, deck) => {
+    const difficultyValues = Object.values(deck.cards).map(
+        (card) => card.difficulty ?? 0
+      ),
+      minDiff = 1,
+      maxDiff = 9,
+      groups =
+        options.maxGroups !== undefined
+          ? Math.max(9, Math.ceil(options.maxGroups / 9) * 9)
+          : 9,
+      range = maxDiff - minDiff,
+      binSize = range / groups,
+      bins = Array(groups).fill(0)
+
+    for (const diff of difficultyValues) {
+      const binIndex = Math.min(Math.floor((diff - minDiff) / binSize), groups - 1)
+      bins[binIndex]++
+    }
+
+    const labels = bins.map((_, i) => (minDiff + i * binSize).toFixed(1))
+
+    return { labels, data: bins }
+  },
+  render: (data) => {
+    function getGradientColor(i: number, total: number) {
+      const t = total > 1 ? i / (total - 1) : 0,
+        r = Math.round(230 * t),
+        g = Math.round(230 * (1 - t))
+      return {
+        background: `rgba(${r}, ${g}, 0, 0.3)`,
+        border: `rgb(${r}, ${g}, 0,0.7)`,
+      }
+    }
+
+    const total = data.data.length,
+      backgroundColors = data.data.map((_, i) => getGradientColor(i, total).background),
+      borderColors = data.data.map((_, i) => getGradientColor(i, total).border)
+
+    return (
+      <Bar
+        data={{
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Card Count',
+              data: data.data,
+              backgroundColor: backgroundColors,
+              borderColor: borderColors,
+              borderWidth: 1,
+            },
+          ],
+        }}
+        options={{
+          ...commonChartOptions,
+          scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+        }}
+      />
+    )
+  },
+}))
+
+import { Line } from 'react-chartjs-2'
+
+export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) => ({
+  name: 'Total New Cards Seen',
+  initAcc: () => [] as t.CardLearning[],
+  accumulator: (acc, item) => acc.push(item),
+  finalize: (items, deck) => {
+    const seen = new Set<string>(),
+      newCardEvents: t.CardLearning[] = []
+    for (const item of items) {
+      if (deck.cards[item.cardId] && !seen.has(item.cardId)) {
+        seen.add(item.cardId)
+        newCardEvents.push(item)
+      }
+    }
+
+    const grouped = groupByTimescale(newCardEvents, (it) => it.time, options.maxGroups),
+      sortedKeys = _.sortBy(Object.keys(grouped).map(Number)),
+      labels = sortedKeys.map(formatDate),
+      newCounts = sortedKeys.map((key) => grouped[key].length),
+      cumulativeCounts = newCounts.reduce((acc: number[], count, i) => {
+        if (i === 0) acc.push(count)
+        else acc.push(acc[i - 1] + count)
+        return acc
+      }, [])
+
+    return {
+      labels,
+      datasets: [{ label: 'Total Cards Seen', data: cumulativeCounts }],
+    }
+  },
+  render: (data) => (
+    <Line
+      data={{
+        labels: data.labels,
+        datasets: data.datasets.map((ds) => ({
+          ...ds,
+          fill: false,
+          borderColor: '#29c34aa0',
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0.1,
+        })),
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+      }}
+    />
+  ),
+}))
+
+export const useAccuracyOverTime = createStatHook((options: StatsOptions) => ({
+  name: 'Accuracy',
+  initAcc: () => [] as t.CardLearning[],
+  accumulator: (acc, item) => acc.push(item),
+  finalize: (items) => {
+    const grouped = groupByTimescale(items, (it) => it.time, options.maxGroups),
+      sortedKeys = _.sortBy(Object.keys(grouped).map(Number)),
+      labels = sortedKeys.map(formatDate),
+      accuracyValues = sortedKeys.map((key) => {
+        const events = grouped[key],
+          total = events.length,
+          passed = events.filter((it) => (it.score ?? 0) >= 3).length,
+          accuracy = total ? (passed / total) * 100 : 0
+        return parseFloat(accuracy.toFixed(2))
+      })
+
+    return { labels, datasets: [{ label: 'Accuracy (%)', data: accuracyValues }] }
+  },
+  render: (data) => (
+    <Line
+      data={{
+        labels: data.labels,
+        datasets: data.datasets.map((ds) => ({
+          ...ds,
+          fill: false,
+          borderColor: '#2967c39f',
+          tension: 0.1,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        })),
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: { x: { stacked: false }, y: { stacked: false } },
+      }}
+    />
   ),
 }))
