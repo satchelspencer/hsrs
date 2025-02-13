@@ -299,6 +299,7 @@ export const useAccuracyOverTime = createStatHook((options: StatsOptions) => ({
           tension: 0.1,
           pointRadius: 0,
           pointHoverRadius: 0,
+          borderWidth: data.datasets[0].data.length > 100 ? 1 : 2,
         })),
       }}
       options={{
