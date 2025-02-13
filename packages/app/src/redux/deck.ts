@@ -140,6 +140,10 @@ export const deckThunks = {
         .each((learning) => {
           if (learning.score === 0) return
           if (currentId && learning.cardId !== currentId) {
+            /* ignpre reviews within 1h to avoid excessively low w17,w18 */
+            learnSet = learnSet.filter(
+              (d, i) => !i || d.time - learnSet[i - 1].time > 3600
+            )
             if (
               learnSet.length > 1 &&
               learnSet.find((d, i) => i && d.time - learnSet[i - 1].time > 3600 * 24)
