@@ -349,8 +349,11 @@ function getDue(
     cardsIds = _.sortBy(Object.keys(deck.cards), (cardId) => {
       const state = deck.cards[cardId],
         dueIn = (state.due ?? Infinity) - now,
-        lastOpenMissAgo = now - (state.lastMiss ?? -Infinity)
-      return Math.min(dueIn, lastOpenMissAgo * 8)
+        lastOpenMissAgo =
+          state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
+            ? now - state.lastMiss
+            : Infinity
+      return Math.min(dueIn, lastOpenMissAgo)
     })
 
   // console.log(
@@ -358,10 +361,14 @@ function getDue(
   //     .map((c) => {
   //       const state = deck.cards[c],
   //         due = ((state.due ?? Infinity) - now) / 3600 / 24,
-  //         mago = (now - (state.lastMiss ?? -Infinity)) / 3600 / 24
+  //         mago =
+  //           state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
+  //             ? (now - state.lastMiss) / 3600 / 24
+  //             : Infinity
   //       return [
   //         mago < due ? '***' : '   ',
   //         deck.elements[id2Card(c).element].name,
+  //         id2Card(c).property,
   //         // due,
   //         // mago,
   //         state.due && new Date(state.due * 1000),

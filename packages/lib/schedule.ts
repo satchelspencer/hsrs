@@ -47,7 +47,8 @@ export function nextCardState(
   grade: number,
   probability: number,
   now: number,
-  retention = defaultretention
+  retention = defaultretention,
+  root?: boolean
 ): t.CardState {
   const memoryState = nextState(
       cardState,
@@ -61,7 +62,7 @@ export function nextCardState(
     lastBase: base,
     lastSeen: now,
     lastScore: grade,
-    lastMiss: grade > 2 ? cardState?.lastMiss : now,
+    lastMiss: grade > 2 || !root ? cardState?.lastMiss : now,
     due: base + nextInterval(memoryState.stability, retention),
   }
 }
@@ -171,7 +172,8 @@ export function getLearningCardDiff(
       flearning.score,
       probability,
       learning.time,
-      rets[i]
+      rets[i],
+      flearning.cardId === learning.cardId
     )
   }
 
