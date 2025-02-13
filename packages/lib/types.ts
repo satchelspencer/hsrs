@@ -60,6 +60,7 @@ export interface CardState extends MemoryState {
   lastBase?: number
   lastScore?: number
   lastMiss?: number
+  firstSeen?: number
 }
 
 export type CardStates = IdMap<CardState>

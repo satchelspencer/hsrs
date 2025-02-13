@@ -1,6 +1,6 @@
 import React from 'react'
 import _ from 'lodash'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Chart, Line } from 'react-chartjs-2'
 
 import * as t from '@hsrs/lib/types'
 
@@ -218,22 +218,15 @@ export const useDifficultyDist = createStatHook((options: StatsOptions) => ({
   },
 }))
 
-import { Line } from 'react-chartjs-2'
-
 export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) => ({
   name: 'Total New Cards Seen',
   initAcc: () => [] as t.CardLearning[],
   accumulator: (acc, item) => acc.push(item),
   finalize: (items, deck) => {
-    const seen = new Set<string>(),
-      newCardEvents: t.CardLearning[] = []
+    const newCardEvents: t.CardLearning[] = []
     for (const item of items) {
-      if (deck.cards[item.cardId] && !seen.has(item.cardId)) {
-        seen.add(item.cardId)
-        newCardEvents.push(item)
-      }
+      if (deck.cards[item.cardId]?.firstSeen === item.time) newCardEvents.push(item)
     }
-
     const grouped = groupByTimescale(newCardEvents, (it) => it.time, options.maxGroups),
       sortedKeys = _.sortBy(Object.keys(grouped).map(Number)),
       labels = sortedKeys.map(formatDate),
@@ -243,28 +236,59 @@ export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) 
         else acc.push(acc[i - 1] + count)
         return acc
       }, [])
-
     return {
       labels,
-      datasets: [{ label: 'Total Cards Seen', data: cumulativeCounts }],
+      datasets: [
+        {
+          label: 'Total Cards Seen',
+          data: cumulativeCounts,
+          type: 'line',
+          yAxisID: 'y1',
+        },
+        { label: 'New Cards Seen', data: newCounts, type: 'bar', yAxisID: 'y2' },
+      ],
     }
   },
   render: (data) => (
-    <Line
+    <Chart
+      type="line"
       data={{
         labels: data.labels,
-        datasets: data.datasets.map((ds) => ({
-          ...ds,
-          fill: false,
-          borderColor: '#29c34aa0',
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          tension: 0.1,
-        })),
+        datasets: data.datasets.map((ds) =>
+          ds.type === 'bar'
+            ? {
+                ...ds,
+                borderColor: '#50bf68',
+                backgroundColor: '#50bf6850',
+                borderWidth: 1,
+                type: 'bar',
+                yAxisID: 'y1',
+              }
+            : {
+                ...ds,
+                fill: false,
+                borderColor: '#9696969f',
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                tension: 0.1,
+                borderWidth: 2,
+                type: 'line',
+                yAxisID: 'y2',
+              }
+        ),
       }}
       options={{
         ...commonChartOptions,
-        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+        scales: {
+          x: { stacked: false },
+          y1: { stacked: false, beginAtZero: true },
+          y2: {
+            stacked: false,
+            beginAtZero: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+          },
+        },
       }}
     />
   ),
