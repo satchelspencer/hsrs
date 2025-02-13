@@ -38,7 +38,9 @@ export interface Deck {
   cards: CardStates
   session: LearningSession | null
   settings: DeckSettings
+  working?: boolean
 }
+export type DeckJob = { type: 'optimize' } | { type: 'schedule' }
 
 export type FSRSParams = number[] | undefined
 export interface DeckSettings {

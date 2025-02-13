@@ -26,9 +26,8 @@ const downloadJSON = (data: object, filename: string) => {
 }
 
 export function ImportExport() {
-  const elements = r.useSelector((s) => s.deck.elements),
-    dispatch = r.useDispatch(),
-    deckSettings = r.useSelector((s) => s.deck.settings)
+  const { elements, settings: deckSettings, working } = r.useSelector((s) => s.deck),
+    dispatch = r.useDispatch()
 
   const [loading, setLoading] = useState(false)
 
@@ -101,14 +100,19 @@ export function ImportExport() {
         ],
         [
           'Schedule',
-          <Button onClick={() => dispatch(r.actions.recomputeCards())}>
+          <Button disabled={working} onClick={() => dispatch(r.actions.recomputeCards())}>
             Re-schedule
           </Button>,
         ],
         [
           'Parameters',
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Button onClick={() => dispatch(r.actions.computeParams())}>Optimize</Button>
+            <Button
+              disabled={working}
+              onClick={() => dispatch(r.actions.computeParams())}
+            >
+              Optimize
+            </Button>
             <WarnButton
               onClick={() =>
                 dispatch(r.actions.setDeckSettings({ fsrsParams: undefined }))
