@@ -346,15 +346,20 @@ function getDue(
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     now = getTime(),
-    cardsIds = _.sortBy(Object.keys(deck.cards), (cardId) => {
-      const state = deck.cards[cardId],
-        dueIn = (state.due ?? Infinity) - now,
-        lastOpenMissAgo =
-          state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-            ? now - state.lastMiss
-            : Infinity
-      return Math.min(dueIn, lastOpenMissAgo)
-    })
+    cardsIds = _.orderBy(Object.keys(deck.cards), [
+      (cardId) => {
+        return (deck.cards[cardId].due ?? Infinity) < now ? 0 : 1
+      },
+      (cardId) => {
+        const state = deck.cards[cardId],
+          dueIn = (state.due ?? Infinity) - now,
+          lastOpenMissAgo =
+            state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
+              ? now - state.lastMiss
+              : Infinity
+        return Math.min(dueIn, lastOpenMissAgo)
+      },
+    ])
 
   // console.log(
   //   cardsIds
@@ -385,8 +390,7 @@ function getDue(
       hasProps = !!props[card.property]
 
     if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (state.due < now + 3600 * 6)
-        sampleAndAdd(dueCards, cardId, deck, learnable, filter)
+      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable, filter)
       else sampleAndAdd(nextCards, cardId, deck, learnable, filter)
     }
   }
@@ -395,7 +399,7 @@ function getDue(
 }
 
 const SAMPLE_TRIES = 20,
-  jitterScale = 1
+  jitterScale = 3600 * 24 * 30
 
 function sampleAndAdd(
   res: t.CardInstance[],
@@ -418,16 +422,6 @@ function sampleAndAdd(
   const elElements: t.IdMap<t.Element> = { ...learnable[property] }
   for (const eid of cache.ancestors[element]) elElements[eid] = deck.elements[eid]
 
-  const inhel = getInheritedElement(element, deck.elements),
-    retr = deck.cards[cardId]
-      ? getRetr(deck.cards[cardId], now - (deck.cards[cardId]?.lastSeen ?? 0))
-      : 0.5,
-    target = deck.settings.retention ?? defaultretention,
-    childTarget = getRetention(target - (retr - target), inhel.retention),
-    stabAvoid = deck.cards[cardId]?.stability ?? 0
-
-  //console.log(inhel.name, target, retr, childTarget)
-
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
@@ -440,17 +434,7 @@ function sampleAndAdd(
               (Math.random() > 0.5 ? 1 : -1)
           if (!card) return jitter
 
-          const cr = getRetr(card, now - (card.lastSeen ?? 0)),
-            seenAgo = now - (card.lastSeen ?? now),
-            stabDiff = Math.abs(card.stability - stabAvoid),
-            retrDiff = Math.abs(cr - childTarget)
-
-          return (
-            logistic(stabDiff / 30) -
-            0.5 +
-            (1 - logistic(seenAgo / 3600 / 24)) +
-            retrDiff * 2
-          )
+          return (card.due ?? Infinity) - now + jitter
         }),
         property,
       })
