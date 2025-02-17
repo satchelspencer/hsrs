@@ -274,12 +274,9 @@ export function Learn() {
                   src={pluginUrl}
                 />
               ) : (
-                <LabelGroup
-                  items={Object.keys(shownValue ?? {}).map((id) => [
-                    <div className={propName}>{id}</div>,
-                    <div>{shownValue?.[id] + ''}</div>,
-                  ])}
-                />
+                Object.keys(shownValue ?? {}).map((id) => (
+                  <div>{shownValue?.[id] + ''}</div>
+                ))
               )}
               <div className={sessionActions}>
                 <Button onClick={() => dispatch(r.actions.endSession())}>
@@ -549,6 +546,8 @@ const cardBody = cx(css`
   flex-direction: column;
   font-size: 2em;
   flex: 1;
+  align-items: center;
+  justify-content: center;
 `)
 
 const cardActions = cx(css`
