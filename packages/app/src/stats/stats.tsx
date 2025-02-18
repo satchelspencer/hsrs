@@ -6,7 +6,7 @@ import * as t from '@hsrs/lib/types'
 
 import { formatDate, groupByTimescale } from './time'
 import { commonChartOptions, createStatHook, StatsOptions } from './util'
-import { getAllCards } from '@hsrs/lib/props'
+import { getAllCards, getInheritedElement } from '@hsrs/lib/props'
 import { card2Id } from '@hsrs/lib/session'
 
 export const useCountGroupedByDayAndScore = createStatHook((options: StatsOptions) => ({
@@ -151,6 +151,59 @@ export const useSeenPercentage = createStatHook(() => ({
       <i>{data.percentage}%</i>)
     </div>
   ),
+}))
+
+export const useProgressDist = createStatHook(() => ({
+  name: 'Progress distribution',
+  initAcc: () => ({}),
+  accumulator: () => {},
+  finalize: (acc, deck) => {
+    const allCards = getAllCards(deck.elements),
+      seenMap: { [order: string]: number } = {},
+      totalMap: { [order: string]: number } = {}
+
+    for (const c of allCards) {
+      const order = (
+        getInheritedElement(c.element, deck.elements).order ?? '0'
+      ).substring(0, 3)
+      if (!!deck.cards[card2Id(c)]) seenMap[order] = (seenMap[order] ?? 0) + 1
+      totalMap[order] = (totalMap[order] ?? 0) + 1
+    }
+
+    const labels = _.sortBy(Object.keys(totalMap))
+
+
+    return {
+      labels,
+      datasets: [
+        { label: 'Completed', data: labels.map((l) => seenMap[l] ?? 0) },
+        { label: 'Remaining', data: labels.map((l) => totalMap[l] - (seenMap[l] ?? 0)) },
+      ],
+    }
+  },
+  render: (data) => {
+    const colors = ['#50bf68', '#cdcdcd']
+    return (
+      <Bar
+        data={{
+          labels: data.labels,
+          datasets: data.datasets.map((ds, i) => ({
+            ...ds,
+            backgroundColor: colors[i] + '50',
+            borderColor: colors[i],
+            borderWidth: 1,
+          })),
+        }}
+        options={{
+          ...commonChartOptions,
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true },
+          },
+        }}
+      />
+    )
+  },
 }))
 
 export const useDifficultyDist = createStatHook((options: StatsOptions) => ({

@@ -20,6 +20,7 @@ import {
   useDifficultyDist,
   useTotalCardsSeenOverTime,
   useAccuracyOverTime,
+  useProgressDist,
 } from './stats'
 import { css, cx } from '@emotion/css'
 
@@ -41,6 +42,7 @@ export function Stats(props: StatsEditorProps) {
     difficultyDist = useDifficultyDist(options),
     useNewCards = useTotalCardsSeenOverTime(options),
     useAccuracy = useAccuracyOverTime(options),
+    progressDist = useProgressDist(),
     statsDefs = [
       avgTimeSpent,
       countGroupedByDayAndScore,
@@ -49,6 +51,7 @@ export function Stats(props: StatsEditorProps) {
       difficultyDist,
       useNewCards,
       useAccuracy,
+      progressDist
     ],
     [stats, setStats] = useState<StatResult[]>([])
 
