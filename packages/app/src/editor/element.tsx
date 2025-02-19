@@ -13,6 +13,7 @@ import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { findAliases } from '@hsrs/lib/props'
+import { getCache } from '@hsrs/lib/cache'
 
 interface ElementEditorProps {
   id: string
@@ -58,7 +59,8 @@ export function ElementEditor(props: ElementEditorProps) {
         mode: next && computeElementMode(next, elements),
         exampleInstance: next,
       }
-    }, [element.params, exampleSeed, element.virtual])
+    }, [element.params, exampleSeed, element.virtual]),
+    cache = r.useSelector((state) => getCache(state.deck.elements))
 
   const [searching, setSearching] = useState(false)
 
@@ -209,6 +211,9 @@ export function ElementEditor(props: ElementEditorProps) {
             [
               <div className={exampleHead}>
                 <span>Params</span>
+                <span style={{ opacity: 0.5 }}>
+                  &nbsp;{Math.floor((cache.depths[props.id] ?? 0) * 10) / 10}
+                </span>
                 <MapAdder
                   onAdd={(newName) =>
                     handleChange({

@@ -97,7 +97,7 @@ export function getInheritedElement(
     inheritedMode: string = '',
     inheritedRetention: string = ''
 
-  const ancestors = cache.ancestors[elementId] ?? []
+  const ancestors = cache.tree.ancestors[elementId] ?? []
   for (let i = ancestors.length - 1; i >= 0; i--) {
     const id = ancestors[i],
       element = elements[id]
@@ -137,8 +137,8 @@ export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>)
 }
 
 export function satisfies(a: string, b: string, cache: t.DeckCache) {
-  const ap = cache.ancestors[a],
-    bp = cache.ancestors[b]
+  const ap = cache.tree.ancestors[a],
+    bp = cache.tree.ancestors[b]
 
   return ap.includes(b) ? a : bp.includes(a) ? b : undefined
 }
@@ -200,7 +200,7 @@ export function findAliases(
         const param = params[paramName]
         for (const iid in matchingInstances) {
           const inst = matchingInstances[iid]
-          if (cache.ancestors[inst.element].includes(param))
+          if (cache.tree.ancestors[inst.element].includes(param))
             matchingParams[paramName].push(inst)
         }
       }
@@ -463,7 +463,7 @@ export function getNonVirtualDescendents(
 
   while (parents.length) {
     const parent = parents.pop()!
-    for (const elId of cache.children[parent]) {
+    for (const elId of cache.tree.children[parent]) {
       const el = elements[elId]
       if (!el) continue
       else if (el.virtual) parents.push(elId)
@@ -520,7 +520,7 @@ function findMissingElements(
 ): string[] {
   const element = elements[id],
     cache = getCache(elements),
-    parents = cache.ancestors[id]
+    parents = cache.tree.ancestors[id]
   if (!element.virtual) return _.intersection(resolved, parents).length ? [] : [id]
   const res: string[] = []
   let whollyMissing = true
@@ -552,7 +552,7 @@ export function findCommonAncestors(
   elements: t.IdMap<t.Element>
 ) {
   const cache = getCache(elements),
-    ancestors = ids.map((id) => cache.ancestors[id])
+    ancestors = ids.map((id) => cache.tree.ancestors[id])
 
   const stack: string[] = [parentId]
   let common: string | null = null,

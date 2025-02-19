@@ -94,7 +94,7 @@ function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
   for (const elid in deck.elements) {
     const el = getInheritedElement(elid, deck.elements),
       props = Object.keys(el.props),
-      elAndParents = cache.ancestors[elid]
+      elAndParents = cache.tree.ancestors[elid]
 
     if (!props.length) {
       for (const eid of elAndParents) all[eid] = deck.elements[eid]
@@ -399,7 +399,7 @@ function getDue(
 }
 
 const SAMPLE_TRIES = 20,
-  jitterScale = 3600 * 24 * 30
+  jitterScale = 1
 
 function sampleAndAdd(
   res: t.CardInstance[],
@@ -420,7 +420,10 @@ function sampleAndAdd(
     return
 
   const elElements: t.IdMap<t.Element> = { ...learnable[property] }
-  for (const eid of cache.ancestors[element]) elElements[eid] = deck.elements[eid]
+  for (const eid of cache.tree.ancestors[element]) elElements[eid] = deck.elements[eid]
+
+  const target = deck.settings.retention ?? defaultretention,
+    childTarget = Math.pow(target, 1 / Math.max(cache.depths[element], 1))
 
   let i = 0
   while (i < SAMPLE_TRIES) {
@@ -434,7 +437,10 @@ function sampleAndAdd(
               (Math.random() > 0.5 ? 1 : -1)
           if (!card) return jitter
 
-          return (card.due ?? Infinity) - now + jitter
+          const cr = getRetr(card, now - (card.lastSeen ?? 0)),
+            retrDiff = Math.abs(cr - childTarget)
+
+          return retrDiff + jitter
         }),
         property,
       })

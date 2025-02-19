@@ -94,8 +94,16 @@ export interface DeckExport {
   elements: IdMap<Element>
 }
 
+export type ListMap = { [id: string]: string[] }
+
+export type TreeCache = {
+  parents: ListMap
+  children: ListMap
+  ancestors: ListMap
+}
+
 export type DeckCache = {
-  parents: { [elId: string]: string[] }
-  children: { [elId: string]: string[] }
-  ancestors: { [elId: string]: string[] }
+  tree: TreeCache
+  paramTree: TreeCache
+  depths: { [elId: string]: number }
 }
