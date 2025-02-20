@@ -431,11 +431,12 @@ function sampleAndAdd(
       res.push({
         ...sampleElementIstance(element, elElements, cache, undefined, (elId) => {
           const card = deck.cards[card2Id({ element: elId, property })],
+            el = deck.elements[elId],
             jitter =
               Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
               jitterScale *
               (Math.random() > 0.5 ? 1 : -1)
-          if (!card) return jitter
+          if (!card || !Object.keys(el.props).length) return jitter
 
           const cr = getRetr(card, now - (card.lastSeen ?? 0)),
             retrDiff = Math.abs(cr - childTarget)
