@@ -43,7 +43,7 @@ type CardStat =
   | {
       cardId: string
       s: number
-      sdiff: number
+      intdiff: number
       duediff: number
       seendiff: number
       retr: number
@@ -145,7 +145,7 @@ export function Learn() {
         nextStats.push({
           cardId: key,
           s: nextVal,
-          sdiff: current ? ((nextVal - currentVal) / currentVal) * 100 : 0,
+          intdiff: current ? ((nextVal - currentVal) / currentVal) * 100 : 0,
           duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
           seendiff: current?.lastSeen ? (now - current.lastSeen) / 24 / 3600 : 0,
           retr: current?.lastSeen ? getRetr(current, now - current.lastSeen) : 0,
@@ -161,7 +161,7 @@ export function Learn() {
         duediff: 0,
       })
     }
-    return _.sortBy(nextStats, (s) => ('sdiff' in s ? -Math.abs(s.sdiff) : Infinity))
+    return _.sortBy(nextStats, (s) => ('intdiff' in s ? -Math.abs(s.intdiff) : Infinity))
   }, [session?.history])
 
   const setGrade = (grade: number) => {
@@ -324,19 +324,19 @@ export function Learn() {
                             </span>
                           )}
                           <span>now {round(stat.s)}d&nbsp;</span>
-                          {stat.sdiff === 0 ? null : (
+                          {stat.intdiff === 0 ? null : (
                             <span
                               style={{
                                 color:
-                                  Math.round(stat.sdiff) === 0
+                                  Math.round(stat.intdiff) === 0
                                     ? 'gray'
-                                    : stat.sdiff >= 0
+                                    : stat.intdiff >= 0
                                     ? 'green'
                                     : 'red',
                               }}
                             >
-                              {stat.sdiff > 0 ? '+' : ''}
-                              {Math.round(stat.sdiff)}%
+                              {stat.intdiff > 0 ? '+' : ''}
+                              {Math.round(stat.intdiff)}%
                             </span>
                           )}
                           {stat.nextDueDiff === 0 ? null : (

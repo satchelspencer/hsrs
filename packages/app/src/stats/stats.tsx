@@ -87,7 +87,7 @@ export const useStabilityDist = createStatHook((options: StatsOptions) => ({
     const stabilityValues = Object.values(deck.cards).map((card) => card.stability),
       sortedStabilities = _.sortBy(stabilityValues),
       ninetyPercentileValue =
-        sortedStabilities[Math.floor(0.95 * sortedStabilities.length)] || 0,
+        sortedStabilities[Math.floor(0.99 * sortedStabilities.length)] || 0,
       filteredStabilities = stabilityValues.filter(
         (stability) => stability <= ninetyPercentileValue
       ),

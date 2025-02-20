@@ -72,6 +72,12 @@ export function nextInterval(stability: number, retention: number) {
   return Math.floor(fsrs!.nextInterval(stability, retention, 3) * 24 * 3600)
 }
 
+function invertRetr(retention: number, secondsElapsed: number): number {
+  if (retention >= 1) return 1e6
+  if (retention <= 0) return 0.01
+  return ((19 / 81) * secondsElapsed) / (3600 * 24 * (Math.pow(retention, -2) - 1))
+}
+
 export function nextState(
   memoryState: t.MemoryState | undefined,
   secondsElapsed: number,
@@ -89,20 +95,34 @@ export function nextState(
     }
   } else {
     const nextMemoryState = fsrs!.nextStates(
-        memoryState.stability,
-        memoryState.difficulty,
-        0.9, //this value is unused because we're ignoring the scheduling from this output
-        secondsElapsed / (3600 * 24)
-      )[grades[grade - 1]].memory,
-      nextDifficulty = nextMemoryState.difficulty,
-      nextStability = nextMemoryState.stability
+      memoryState.stability,
+      memoryState.difficulty,
+      0.9, //this value is unused because we're ignoring the scheduling from this output
+      secondsElapsed / (3600 * 24)
+    )[grades[grade - 1]].memory
 
-    const r = (1 - probability) * memoryState.stability + probability * nextStability,
-      intd = (1 - probability) * memoryState.difficulty + probability * nextDifficulty
+    const retr = getRetr(memoryState, secondsElapsed),
+      nextRetr = getRetr(nextMemoryState, secondsElapsed),
+      retrInterp = (1 - probability) * retr + probability * nextRetr,
+      stabilityInterp = invertRetr(retrInterp, secondsElapsed),
+      difficultyInterp =
+        (1 - probability) * memoryState.difficulty +
+        probability * nextMemoryState.difficulty
 
+    const maxStability = 365 * 4,
+      maxLinear = 365,
+      asymStability =
+        stabilityInterp < maxLinear
+          ? stabilityInterp
+          : maxLinear +
+            (maxStability - maxLinear) *
+              (1 -
+                Math.exp(
+                  -(1 / (maxStability - maxLinear)) * (stabilityInterp - maxLinear)
+                ))
     return {
-      stability: Math.max(r, getLearnTargetStability() / 4),
-      difficulty: intd,
+      stability: Math.max(asymStability, getLearnTargetStability() / 4),
+      difficulty: difficultyInterp,
     }
   }
 }
@@ -158,15 +178,10 @@ export function getLearningCardDiff(
       state = cards[flearning.cardId]
 
     const successProb = successProbs[i],
-      probability = state ? (1 - successProb) / (1 - totalSuccessProb) : 1
+      probability =
+        flearning.score > 1 ? 1 : state ? (1 - successProb) / (1 - totalSuccessProb) : 1
 
-    // console.log(
-    //   deck.elements[id2Card(flearning.cardId).element].name,
-    //   recencyFactor,
-    //   probability,
-    //   // probability * recencyFactor,
-    //   // state?.difficulty
-    // )
+    //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability, state)
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
