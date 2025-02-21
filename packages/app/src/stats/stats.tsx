@@ -7,7 +7,14 @@ import * as t from '@hsrs/lib/types'
 import { formatDate, groupByTimescale } from './time'
 import { commonChartOptions, createStatHook, StatsOptions } from './util'
 import { getAllCards, getInheritedElement } from '@hsrs/lib/props'
-import { card2Id } from '@hsrs/lib/session'
+import { card2Id, id2Card } from '@hsrs/lib/session'
+import { getCache } from '@hsrs/lib/cache'
+import {
+  defaultretention,
+  getELRetrOffset,
+  nextInterval,
+  offsetRetention,
+} from '@hsrs/lib/schedule'
 
 export const useCountGroupedByDayAndScore = createStatHook((options: StatsOptions) => ({
   name: 'Hours spent',
@@ -80,11 +87,18 @@ export const useAvgTimeSpent = createStatHook(() => ({
 }))
 
 export const useStabilityDist = createStatHook((options: StatsOptions) => ({
-  name: 'Stability distribution',
+  name: 'Interval distribution',
   initAcc: () => ({}),
   accumulator: () => {},
   finalize: (x, deck) => {
-    const stabilityValues = Object.values(deck.cards).map((card) => card.stability),
+    const cache = getCache(deck.elements),
+      baseRetr = deck.settings.retention ?? defaultretention,
+      stabilityValues = Object.keys(deck.cards).map((cardId) => {
+        const { element } = id2Card(cardId),
+          ret = offsetRetention(baseRetr, getELRetrOffset(element, deck.elements, cache)),
+          state = deck.cards[cardId]
+        return nextInterval(state.stability, ret) / 3600 / 24 //invertRetr(ret, state.stability * 3600 * 24)
+      }),
       sortedStabilities = _.sortBy(stabilityValues),
       ninetyPercentileValue =
         sortedStabilities[Math.floor(0.99 * sortedStabilities.length)] || 0,
@@ -171,7 +185,6 @@ export const useProgressDist = createStatHook(() => ({
     }
 
     const labels = _.sortBy(Object.keys(totalMap))
-
 
     return {
       labels,

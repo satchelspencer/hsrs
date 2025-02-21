@@ -6,14 +6,7 @@ import {
   isParent,
   sampleElementIstance,
 } from './props'
-import {
-  defaultretention,
-  getLearnTargetStability,
-  getRetention,
-  getRetr,
-  getTime,
-  logistic,
-} from './schedule'
+import { defaultretention, getLearnTargetStability, getRetr, getTime } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 
