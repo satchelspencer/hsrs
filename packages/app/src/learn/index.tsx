@@ -6,8 +6,6 @@ import * as styles from '../styles'
 import * as r from '../redux'
 import { Button, RadioGroup } from '../components/button'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
-import { LabelGroup } from '../components/labels'
-import { propName } from '../components/map'
 import {
   applySessionHistoryToCards,
   card2Id,
@@ -16,11 +14,12 @@ import {
   id2Card,
   nextSessionState,
 } from '@hsrs/lib/session'
-import { getElementAndParents, getInheritedElement } from '@hsrs/lib/props'
+import { getElementAndParents } from '@hsrs/lib/props'
 import {
   defaultretention,
+  getELRetrOffset,
   getLearningCardDiff,
-  getRetention,
+  offsetRetention,
   getRetr,
   getTime,
   grades,
@@ -126,15 +125,18 @@ export function Learn() {
       { cardId, score } = learning,
       lastHistory = _.dropRight(session.history, 1),
       lastCards = {},
-      now = getTime()
+      now = getTime(),
+      cache = getCache(deck.elements)
 
     applySessionHistoryToCards(lastCards, lastHistory)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
       const diff = getLearningCardDiff(deck.cards, learning, deck)
       for (const key in diff) {
-        const element = getInheritedElement(id2Card(key).element, deck.elements),
-          eretention = getRetention(retention, element.retention),
+        const eretention = offsetRetention(
+            retention,
+            getELRetrOffset(id2Card(key).element, elements, cache)
+          ),
           v = diff[key],
           current = deck.cards[key],
           currentInt = nextInterval(current?.stability, eretention),

@@ -1,3 +1,4 @@
+import { getCache } from './cache'
 import { fsrs as init, Fsrs, defaultParams } from './fsrs'
 import { getInheritedElement } from './props'
 import { card2Id, id2Card } from './session'
@@ -109,8 +110,8 @@ export function nextState(
         (1 - probability) * memoryState.difficulty +
         probability * nextMemoryState.difficulty
 
-    const maxStability = 365 * 4,
-      maxLinear = 365,
+    const maxStability = 365,
+      maxLinear = 365 / 2,
       asymStability =
         stabilityInterp < maxLinear
           ? stabilityInterp
@@ -156,20 +157,19 @@ export function getLearningCardDiff(
 ): t.CardStates {
   const stateChanges: t.CardStates = {},
     flearnings = flattenCard(learning),
-    offsets = flearnings.map(
-      (flearning) =>
-        getInheritedElement(id2Card(flearning.cardId).element, deck.elements).retention
-    ),
-    rets = flearnings.map((flearning, i) =>
-      getRetention(deck.settings.retention ?? defaultretention, offsets[i])
+    cache = getCache(deck.elements),
+    offsets = flearnings.map((flearning) =>
+      getELRetrOffset(id2Card(flearning.cardId).element, deck.elements, cache)
     ),
     successProbs = flearnings.map((l, i) => {
-      const state = cards[l.cardId]
-      return state?.lastSeen
-        ? getRetention(getRetr(state, l.time - state.lastSeen), offsets[i], -1)
+      const state = cards[l.cardId],
+        el = getInheritedElement(id2Card(l.cardId).element, deck.elements)
+      return state?.lastSeen && Object.keys(el.props).length
+        ? offsetRetention(getRetr(state, l.time - state.lastSeen), -offsets[i])
         : 1 //if new and in mixed then must be rel
     }),
-    totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1)
+    totalSuccessProb = successProbs.reduce((memo, p) => memo * p, 1),
+    baseRet = deck.settings.retention ?? defaultretention
 
   // console.log('??', totalSuccessProb, successProbs)
 
@@ -178,17 +178,17 @@ export function getLearningCardDiff(
       state = cards[flearning.cardId]
 
     const successProb = successProbs[i],
-      probability =
-        flearning.score > 1 ? 1 : state ? (1 - successProb) / (1 - totalSuccessProb) : 1
+      probability = state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
+      ret = offsetRetention(baseRet, offsets[i])
 
-    //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability, state)
+    //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability)
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
       flearning.score,
       probability,
       learning.time,
-      rets[i],
+      ret,
       flearning.cardId === learning.cardId
     )
   }
@@ -222,9 +222,19 @@ function logit(p: number) {
   return Math.log(p / (1 - p))
 }
 
-export function getRetention(baseRetention: number, bonus?: string, fac = 1) {
+export function offsetRetention(baseRetention: number, offset?: number) {
   baseRetention = Math.min(Math.max(baseRetention, 0), 1)
-  if (bonus === undefined || baseRetention === 1) return baseRetention
-  const float = parseFloat(bonus)
-  return logistic(logit(baseRetention) + (_.isNaN(float) ? 0 : float * fac))
+  if (!_.isNumber(offset) || baseRetention === 1) return baseRetention
+  return logistic(logit(baseRetention) + offset)
+}
+
+export function getELRetrOffset(
+  element: string,
+  elements: t.IdMap<t.Element>,
+  cache?: t.DeckCache
+) {
+  cache ??= getCache(elements)
+  const el = getInheritedElement(element, elements, cache),
+    offset = Math.pow(cache.depths[element], 1 / 3) + parseFloat(el.retention ?? '0') || 0
+  return offset
 }
