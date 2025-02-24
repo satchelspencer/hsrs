@@ -60,6 +60,9 @@ export function nextCardState(
     base = (1 - probability) * (cardState?.lastBase ?? now) + probability * now
   return {
     ...memoryState,
+    difficulty: root
+      ? memoryState.difficulty
+      : cardState?.difficulty ?? memoryState.difficulty,
     lastBase: base,
     lastSeen: now,
     lastScore: grade,
