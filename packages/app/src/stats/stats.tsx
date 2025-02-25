@@ -371,7 +371,7 @@ export const useAccuracyOverTime = createStatHook((options: StatsOptions) => ({
       accuracyValues = sortedKeys.map((key) => {
         const events = grouped[key],
           total = events.length,
-          passed = events.filter((it) => (it.score ?? 0) >= 3).length,
+          passed = events.filter((it) => (it.score ?? 0) >= 2).length,
           accuracy = total ? (passed / total) * 100 : 0
         return parseFloat(accuracy.toFixed(2))
       })
