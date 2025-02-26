@@ -100,10 +100,13 @@ export type TreeCache = {
   parents: ListMap
   children: ListMap
   ancestors: ListMap
+  topo: string[]
+  leaves: { [elId: string]: number }
 }
 
 export type DeckCache = {
   tree: TreeCache
   paramTree: TreeCache
   depths: { [elId: string]: number }
+  hasProps: { [elId: string]: boolean }
 }

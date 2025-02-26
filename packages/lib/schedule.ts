@@ -228,7 +228,7 @@ function logit(p: number) {
 export function offsetRetention(baseRetention: number, offset?: number) {
   baseRetention = Math.min(Math.max(baseRetention, 0), 1)
   if (!_.isNumber(offset) || baseRetention === 1) return baseRetention
-  return logistic(logit(baseRetention) + offset)
+  return logistic(logit(baseRetention) + offset * 0.5)
 }
 
 export function getELRetrOffset(
@@ -238,6 +238,8 @@ export function getELRetrOffset(
 ) {
   cache ??= getCache(elements)
   const el = getInheritedElement(element, elements, cache),
-    offset = Math.pow(cache.depths[element], 1 / 3) + parseFloat(el.retention ?? '0') || 0
+    offset =
+      // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
+      2 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
   return offset
 }

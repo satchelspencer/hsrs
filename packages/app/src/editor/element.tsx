@@ -212,7 +212,7 @@ export function ElementEditor(props: ElementEditorProps) {
               <div className={exampleHead}>
                 <span>Params</span>
                 <span style={{ opacity: 0.5 }}>
-                  &nbsp;{Math.floor((cache.depths[props.id] ?? 0) * 10) / 10}
+                  &nbsp;{Math.floor((cache.depths[props.id] ?? 0) * 100) / 100}
                 </span>
                 <MapAdder
                   onAdd={(newName) =>

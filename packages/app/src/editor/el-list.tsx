@@ -11,6 +11,7 @@ import { Selection } from '../redux/ui'
 import { Element } from '@hsrs/lib/types'
 import CodeInput from '../components/code'
 import { getElementOrder } from '@hsrs/lib/props'
+import { getCache } from '@hsrs/lib/cache'
 
 interface ElementsListProps {
   parentId?: string
@@ -34,13 +35,21 @@ export function ElementsList(props: ElementsListProps) {
     nextSelection = r.useSelector((s) =>
       r.selectors.selectSelectionByIndex(s, props.index + 1)
     ),
+    cache = r.useSelector((state) => getCache(state.deck.elements)),
     dispatch = r.useDispatch()
 
   return (
     <div className={elementsListWrapper}>
       <div className={sidebarListHeader}>
         <div className={sideBarListInner}>
-          <div>{props.parentId ? 'Children' : 'Base'}</div>
+          <div>
+            {props.parentId ? 'Children' : 'Base'}
+            {props.parentId && (
+              <span style={{ opacity: 0.5 }}>
+                &nbsp;{cache.tree.leaves[props.parentId]}
+              </span>
+            )}
+          </div>
           <Button onClick={() => setShowVirtual((v) => !v)}>
             <Icon name={showVirtual ? 'folder-eye' : 'folder-off'} />
           </Button>
