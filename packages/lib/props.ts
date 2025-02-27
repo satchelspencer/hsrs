@@ -181,6 +181,7 @@ export function findAliases(
     target = tv[propName] as string,
     matchingInstances: { [iid: string]: MetaInstance } = {},
     exactInstances: { [iid: string]: t.ElementInstance } = {},
+    sampleTestedInstances: { [iid: string]: boolean } = {},
     targetMode = computeElementMode(instance, elements, cache)
 
   for (let i = 0; i < 4; i++) {
@@ -242,14 +243,41 @@ export function findAliases(
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
           !!cards[card2Id({ element: oinstance.element, property: propName })] &&
-          targetMode === omode
+          satisfiesMode(targetMode, omode) !== undefined
         ) {
-          exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
+          const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
+          if (!sampleTestedInstances[matchId]) {
+            sampleTestedInstances[matchId] = true
+            const instanceEls = getInstanceEls(oinstance)
+            try {
+              const inst = sampleElementIstance(
+                  oinstance.element,
+                  elements,
+                  cache,
+                  undefined,
+                  undefined,
+                  undefined,
+                  (id) => instanceEls.includes(id)
+                ),
+                computed = computeElementInstance(inst, elements, cache)
+              if (_.isEqual(computed, iv))
+                exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
+            } catch {}
+          }
         }
       }
     }
   }
   return Object.values(exactInstances)
+}
+
+function getInstanceEls(instance: t.ElementInstance): string[] {
+  return [
+    instance.element,
+    ...Object.values(instance.params ?? {})
+      .filter((c) => !!c)
+      .flatMap((c) => getInstanceEls(c)),
+  ]
 }
 
 function failsConstraint(insts: MetaInstance[], constraint?: string): boolean {
@@ -347,9 +375,11 @@ export function sampleElementIstance(
   cache: t.DeckCache,
   fixedParams?: t.Params,
   order?: (elId: string) => number,
-  commonMode = { mode: '' }
+  commonMode = { mode: '' },
+  filter?: (elId: string) => boolean
 ): t.ElementInstance {
-  const nonV = getNonVirtualDescendents(id, elements, cache),
+  const nonVR = getNonVirtualDescendents(id, elements, cache),
+    nonV = filter ? nonVR.filter(filter) : nonVR,
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
 
   let maxOrder = -Infinity
@@ -421,7 +451,8 @@ export function sampleElementIstance(
         cache,
         constraints,
         order,
-        commonMode
+        commonMode,
+        filter
       )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
