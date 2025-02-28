@@ -17,11 +17,8 @@ export function createLearningSession(
   filter: string[]
 ): { session: t.LearningSession; new: number; due: number; next: number; maxp: number } {
   //const t = new Date().getTime()
-  const learned = getLearnedElements(deck),
-    { dueCards, nextCards } = getDue(deck, size, learned, filter),
-    newCards = allowNew
-      ? _.shuffle(getNew(deck, size - dueCards.length, learned, filter))
-      : [],
+  const { dueCards, nextCards } = getDue(deck, size, filter),
+    newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, filter)) : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
       stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
@@ -76,33 +73,6 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
     stack.splice(Math.min(Math.max(Math.floor(d)), stack.length - 1), 0, nc)
   }
   return stack
-}
-
-function getLearnedElements(deck: t.Deck): t.IdMap<t.IdMap<t.Element>> {
-  const res: t.IdMap<t.IdMap<t.Element>> = {},
-    all: t.IdMap<t.Element> = {},
-    targetStability = getLearnTargetStability(),
-    cache = getCache(deck.elements)
-
-  for (const elid in deck.elements) {
-    const el = getInheritedElement(elid, deck.elements),
-      props = Object.keys(el.props),
-      elAndParents = cache.tree.ancestors[elid]
-
-    if (!props.length) {
-      for (const eid of elAndParents) all[eid] = deck.elements[eid]
-    } else {
-      for (const propName of props) {
-        res[propName] ??= {}
-        const state = deck.cards[card2Id({ element: elid, property: propName })]
-        if (state && state.stability >= targetStability * 2) {
-          for (const eid of elAndParents) res[propName][eid] = deck.elements[eid]
-        }
-      }
-    }
-  }
-
-  return _.mapValues(res, (v) => ({ ...v, ...all }))
 }
 
 const initSessionStabs = [0.25, 0.5, 1, 2],
@@ -208,21 +178,19 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
       redist = true
     }
   } else if (delta < -5 && session.allowNew) {
-    const learned = getLearnedElements(deck),
-      newCards = getNew(
-        {
-          ...deck,
-          cards: {
-            ..._.fromPairs(
-              session.stack.map((s) => [card2Id(s), { stability: 1, difficulty: 5 }])
-            ), //exclude ones already in session
-            ...deck.cards,
-          },
+    const newCards = getNew(
+      {
+        ...deck,
+        cards: {
+          ..._.fromPairs(
+            session.stack.map((s) => [card2Id(s), { stability: 1, difficulty: 5 }])
+          ), //exclude ones already in session
+          ...deck.cards,
         },
-        -delta,
-        learned,
-        session.filter
-      )
+      },
+      -delta,
+      session.filter
+    )
 
     if (newCards.length <= -delta) {
       //console.log('add?', deck.elements[newCards[0].element].name)
@@ -298,12 +266,7 @@ function getNewCardFactor() {
   return 4 //TODO
 }
 
-function getNew(
-  deck: t.Deck,
-  limit: number,
-  learnable: t.IdMap<t.IdMap<t.Element>>,
-  filter: string[]
-): t.CardInstance[] {
+function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[] {
   const res: t.CardInstance[] = [],
     cards = _.sortBy(
       getAllCards(deck.elements),
@@ -321,7 +284,7 @@ function getNew(
     for (const property in props) {
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
-        sampleAndAdd(res, id, deck, learnable, filter)
+        sampleAndAdd(res, id, deck, filter)
         usedEls[card.element] = true
       }
     }
@@ -330,12 +293,7 @@ function getNew(
   return res.map((c) => ({ ...c, new: true }))
 }
 
-function getDue(
-  deck: t.Deck,
-  limit: number,
-  learnable: t.IdMap<t.IdMap<t.Element>>,
-  filter: string[]
-) {
+function getDue(deck: t.Deck, limit: number, filter: string[]) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     now = getTime(),
@@ -383,8 +341,8 @@ function getDue(
       hasProps = !!props[card.property]
 
     if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, learnable, filter)
-      else sampleAndAdd(nextCards, cardId, deck, learnable, filter)
+      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, filter)
+      else sampleAndAdd(nextCards, cardId, deck, filter)
     }
   }
 
@@ -398,7 +356,6 @@ function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
   deck: t.Deck,
-  learnable: t.IdMap<t.IdMap<t.Element>>,
   filter: string[]
 ) {
   const { element, property } = id2Card(cardId),
@@ -412,28 +369,38 @@ function sampleAndAdd(
   )
     return
 
-  const elElements: t.IdMap<t.Element> = { ...learnable[property] }
-  for (const eid of cache.tree.ancestors[element]) elElements[eid] = deck.elements[eid]
-
   const target = deck.settings.retention ?? defaultretention,
-    childTarget = Math.pow(target, 1 / Math.max(cache.depths[element], 1))
+    childTarget = Math.pow(target, 1 / Math.max(cache.depths[element], 1)),
+    targetStability = getLearnTargetStability() * (cache.depths[element] + 1)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
       res.push({
-        ...sampleElementIstance(element, elElements, cache, undefined, (elId) => {
-          const card = deck.cards[card2Id({ element: elId, property })],
-            el = deck.elements[elId],
-            jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
-          if (!card || !Object.keys(el.props).length) return jitter
+        ...sampleElementIstance(
+          element,
+          deck.elements,
+          cache,
+          undefined,
+          (elId) => {
+            const card = deck.cards[card2Id({ element: elId, property })],
+              el = deck.elements[elId],
+              jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
+            if (!card || !Object.keys(el.props).length) return jitter
 
-          const cr = getRetr(card, now - (card.lastSeen ?? 0)),
-            retrDiff = Math.abs(cr - childTarget),
-            depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4)
+            const cr = getRetr(card, now - (card.lastSeen ?? 0)),
+              retrDiff = Math.abs(cr - childTarget),
+              depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4)
 
-          return retrDiff / depthFactor + jitter
-        }),
+            return retrDiff / depthFactor + jitter
+          },
+          undefined,
+          (elId) => {
+            const card = deck.cards[card2Id({ element: elId, property })]
+            if (!cache.hasProps[elId] || elId === element) return true
+            else return card && card.stability > targetStability
+          }
+        ),
         property,
       })
       break
