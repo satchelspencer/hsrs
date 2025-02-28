@@ -382,19 +382,14 @@ export function sampleElementIstance(
     nonV = filter ? nonVR.filter(filter) : nonVR,
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
 
-  let maxOrder = -Infinity
-  const orders = _.sortBy(
-      nonV.map((v) => {
-        const o = order?.(v) ?? 1
-        if (o > maxOrder) maxOrder = o
-        return o
-      })
-    ),
-    normed = orders.map((o) => maxOrder - o + 1e-10)
+  const orders = _.sortBy(nonV.map((v) => order?.(v) ?? 1)),
+    minOrder = orders[0] ?? Infinity,
+    maxOrder = orders[orders.length - 1] ?? -Infinity,
+    normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
   // console.log(
   //   elements[id].name,
-  //   descendents.map((o, i) => [elements[o].name, order?.(o) ?? 1])
+  //   descendents.map((o, i) => [elements[o].name, normed[i]])
   // )
 
   while (normed.length) {

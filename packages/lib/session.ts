@@ -27,7 +27,7 @@ export function createLearningSession(
       stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
     })
 
-  //console.log('sess', new Date().getTime() - t)
+  //console.log('sess', new Date().getTime() - t, stack.map((s) => computeElementInstance(s, deck.elements).jp))
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
@@ -172,7 +172,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
             midPoint
           ),
     learningIndex = Math.min(
-      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * 20) + jitter
+      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * 25) + jitter
     ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
@@ -425,16 +425,14 @@ function sampleAndAdd(
         ...sampleElementIstance(element, elElements, cache, undefined, (elId) => {
           const card = deck.cards[card2Id({ element: elId, property })],
             el = deck.elements[elId],
-            jitter =
-              Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) *
-              jitterScale *
-              (Math.random() > 0.5 ? 1 : -1)
+            jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
           if (!card || !Object.keys(el.props).length) return jitter
 
           const cr = getRetr(card, now - (card.lastSeen ?? 0)),
-            retrDiff = Math.abs(cr - childTarget)
+            retrDiff = Math.abs(cr - childTarget),
+            depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4)
 
-          return retrDiff + jitter
+          return retrDiff / depthFactor + jitter
         }),
         property,
       })
