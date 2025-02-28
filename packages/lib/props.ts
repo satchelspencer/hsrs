@@ -235,14 +235,19 @@ export function findAliases(
           split = fvalue.split('.').filter((a) => !!a),
           sim =
             split.reduce((memo, fv) => memo + getSimilarity(fv, target) / fv.length, 0) /
-            split.length
+            split.length,
+          oinstanceCardId = card2Id({ element: oinstance.element, property: propName })
 
-        if (matchingInstances[key] || !fvalue.length) continue
+        if (
+          matchingInstances[key] ||
+          !fvalue.length ||
+          (!cards[oinstanceCardId] && cache.hasProps[oinstance.element])
+        )
+          continue
         if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: fvalue }
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          !!cards[card2Id({ element: oinstance.element, property: propName })] &&
           satisfiesMode(targetMode, omode) !== undefined
         ) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
