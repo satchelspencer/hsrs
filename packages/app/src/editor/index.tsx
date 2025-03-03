@@ -91,7 +91,7 @@ const editorWrapper = cx(
   styles.surfaceTone,
   css`
     display: block;
-    overflow: scroll;
+    overflow-x: scroll;
   `
 )
 

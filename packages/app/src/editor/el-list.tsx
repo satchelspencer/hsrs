@@ -139,7 +139,7 @@ const sidebarListHeader = cx(
 const elementsListWrapper = cx(css`
   min-width: 250px;
   flex: 1;
-  overflow: scroll;
+  overflow-y: scroll;
   background: ${styles.color(1)};
 `)
 
