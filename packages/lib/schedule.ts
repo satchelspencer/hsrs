@@ -166,8 +166,8 @@ export function getLearningCardDiff(
     ),
     successProbs = flearnings.map((l, i) => {
       const state = cards[l.cardId],
-        el = getInheritedElement(id2Card(l.cardId).element, deck.elements)
-      return state?.lastSeen && Object.keys(el.props).length
+        elId = id2Card(l.cardId).element
+      return state?.lastSeen && cache.hasProps[elId]
         ? offsetRetention(getRetr(state, l.time - state.lastSeen), -offsets[i])
         : 1 //if new and in mixed then must be rel
     }),
