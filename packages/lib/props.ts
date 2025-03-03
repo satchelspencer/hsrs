@@ -248,7 +248,7 @@ export function findAliases(
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          satisfiesMode(targetMode, omode) !== undefined
+          targetMode === omode
         ) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {

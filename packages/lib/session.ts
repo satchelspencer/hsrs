@@ -6,7 +6,13 @@ import {
   isParent,
   sampleElementIstance,
 } from './props'
-import { defaultretention, getLearnTargetStability, getRetr, getTime } from './schedule'
+import {
+  defaultretention,
+  getLearnTargetStability,
+  getRetr,
+  getTime,
+  logistic,
+} from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 
@@ -141,8 +147,9 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
               Math.floor(Math.random() * (session.stack.length - minGraduatedIndex)),
             midPoint
           ),
+    gradDistance = deck.cards[cardId] ? 20 : 30,
     learningIndex = Math.min(
-      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * 25) + jitter
+      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) + jitter
     ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
@@ -388,11 +395,13 @@ function sampleAndAdd(
               jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
             if (!card || !Object.keys(el.props).length) return jitter
 
-            const cr = getRetr(card, now - (card.lastSeen ?? 0)),
+            const seenAgo = now - (card.lastSeen ?? 0),
+              cr = getRetr(card, seenAgo),
               retrDiff = Math.abs(cr - childTarget),
-              depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4)
+              depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4),
+              seenFactor = 1 / logistic(seenAgo / 3600 / 24)
 
-            return retrDiff / depthFactor + jitter
+            return (retrDiff / depthFactor) * seenFactor + jitter
           },
           undefined,
           (elId) => {

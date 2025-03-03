@@ -240,6 +240,6 @@ export function getELRetrOffset(
   const el = getInheritedElement(element, elements, cache),
     offset =
       // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
-      2 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
+      3 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
   return offset
 }
