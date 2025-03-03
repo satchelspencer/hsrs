@@ -520,6 +520,7 @@ export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Car
     { props } = getInheritedElement(id, elements)
 
   for (const propId in props) {
+    if (propId[0] === '_') continue //skip meta props
     const prop = props[propId]
     if (prop) cards.push({ element: id, property: propId })
   }
