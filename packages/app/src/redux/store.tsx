@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import _ from 'lodash'
 import { useDispatch as ud, useSelector as us } from 'react-redux'
 import { combineReducers, configureStore, createSelector as cs } from '@reduxjs/toolkit'
-import { persistStore, persistReducer } from 'redux-persist'
+import { persistStore, persistReducer, createTransform } from 'redux-persist'
 import { PersistGate } from 'redux-persist/integration/react'
 import storage from 'redux-persist/lib/storage'
 import { Provider } from 'react-redux'
@@ -17,8 +18,14 @@ export const actions = {
   ...settings.actions,
 }
 
+const FilterTransform = createTransform<any, any>(
+  null,
+  (deck) => _.omit(deck, 'working'),
+  { whitelist: ['deck'] }
+)
+
 const reducer = persistReducer(
-  { storage, key: 'root' },
+  { storage, key: 'root', transforms: [FilterTransform as any] },
   combineReducers({
     deck: deck.reducer,
     ui: ui.reducer,
