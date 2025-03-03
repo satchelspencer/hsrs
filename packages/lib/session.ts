@@ -289,6 +289,7 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
     if (usedEls[card.element]) continue
 
     for (const property in props) {
+      if (property[0] === '_') continue
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
         sampleAndAdd(res, id, deck, filter)
