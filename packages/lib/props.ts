@@ -234,8 +234,10 @@ export function findAliases(
         const { iv, fvalue, omode } = instanceCache[key],
           split = fvalue.split('.').filter((a) => !!a),
           sim =
-            split.reduce((memo, fv) => memo + getSimilarity(fv, target) / fv.length, 0) /
-            split.length,
+            split.reduce((memo, fv) => {
+              const sim = getSimilarity(fv, target)
+              return memo + sim.length / fv.length - fv.indexOf(sim) / fv.length
+            }, 0) / split.length,
           oinstanceCardId = card2Id({ element: oinstance.element, property: propName })
 
         if (
@@ -248,7 +250,7 @@ export function findAliases(
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          targetMode === omode
+          satisfiesMode(targetMode, omode) !== undefined
         ) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {
@@ -340,8 +342,8 @@ function getFlatPropValue(pi: t.PropsInstance, propName: string) {
   return res
 }
 
-function getSimilarity(a: string, b: string): number {
-  return lcs(a, b)['sequence'].length
+function getSimilarity(a: string, b: string): string {
+  return lcs(a, b)['sequence']
 }
 
 function permute<T>(lists: T[][]) {
