@@ -392,9 +392,8 @@ function sampleAndAdd(
           undefined,
           (elId) => {
             const card = deck.cards[card2Id({ element: elId, property })],
-              el = deck.elements[elId],
               jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
-            if (!card || !Object.keys(el.props).length) return jitter
+            if (!card || !cache.hasProps[elId]) return jitter
 
             const seenAgo = now - (card.lastSeen ?? 0),
               cr = getRetr(card, seenAgo),
