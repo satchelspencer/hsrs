@@ -167,7 +167,7 @@ type MetaInstance = t.ElementInstance & {
 }
 
 const instanceCache: {
-  [key: string]: { iv: t.PropsInstance; fvalue: string; omode: string | undefined }
+  [key: string]: { iv: t.PropsInstance; value: string; omode: string | undefined }
 } = {}
 
 export function findAliases(
@@ -207,7 +207,7 @@ export function findAliases(
 
       const paramNames = Object.keys(params),
         paramValues = paramNames.map((p) =>
-          _.take(_.orderBy(matchingParams[p], [(v) => -v.s, (v) => v.v.length]), 4)
+          _.take(_.orderBy(matchingParams[p], [(v) => -v.s, (v) => v.v.length]), 8)
         ),
         instances: t.ElementInstance[] = paramNames.length
           ? _.compact(
@@ -226,12 +226,12 @@ export function findAliases(
           const iv = computeElementInstance(oinstance, elements, cache)
           instanceCache[key] = {
             iv,
-            fvalue: getFlatPropValue(iv, propName),
+            value: getPropValue(iv, propName),
             omode: computeElementMode(oinstance, elements, cache),
           }
         }
-        const { iv, fvalue, omode } = instanceCache[key],
-          split = fvalue.split('.').filter((a) => !!a),
+        const { iv, value, omode } = instanceCache[key],
+          split = value.split('.').filter((a) => !!a),
           sim =
             split.reduce((memo, fv) => {
               const sim = getSimilarity(fv, target)
@@ -241,11 +241,11 @@ export function findAliases(
 
         if (
           matchingInstances[key] ||
-          !fvalue.length ||
+          !value.length ||
           (!cards[oinstanceCardId] && cache.hasProps[oinstance.element])
         )
           continue
-        if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: fvalue }
+        if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: value }
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
@@ -332,14 +332,14 @@ export function getInstanceId(instance: t.ElementInstance): string {
   return res.join('')
 }
 
-function getFlatPropValue(pi: t.PropsInstance, propName: string) {
-  let res = ''
+function getPropValue(pi: t.PropsInstance, propName: string) {
+  if (pi[propName] && typeof pi[propName] === 'string') return pi[propName]
+  let res: string[] = []
   for (const j in pi) {
     const v = pi[j]
-    if (j === propName) res += v
-    if (v && typeof v !== 'string') res += '.' + getFlatPropValue(v, propName)
+    if (v && typeof v !== 'string') res.push(getPropValue(v, propName))
   }
-  return res
+  return res.join('.')
 }
 
 function getSimilarity(a: string, b: string): string {
