@@ -182,12 +182,11 @@ export function findAliases(
     matchingInstances: { [iid: string]: MetaInstance } = {},
     exactInstances: { [iid: string]: t.ElementInstance } = {},
     sampleTestedInstances: { [iid: string]: boolean } = {},
-    targetMode = computeElementMode(instance, elements, cache)
+    targetMode = computeElementMode(instance, elements, cache) ?? ''
 
   for (let i = 0; i < 4; i++) {
     for (const elId in elements) {
       if (elements[elId].virtual) continue
-
       const {
           props,
           params = {},
@@ -255,19 +254,20 @@ export function findAliases(
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {
             sampleTestedInstances[matchId] = true
-            const instanceEls = getInstanceEls(oinstance)
+            const instanceEls = _.uniq(_.reverse(getInstanceEls(oinstance)))
             try {
               const inst = sampleElementIstance(
                   oinstance.element,
                   elements,
                   cache,
                   undefined,
+                  (id) => -instanceEls.indexOf(id),
                   undefined,
-                  undefined,
-                  (id) => instanceEls.includes(id)
+                  (id) => instanceEls.includes(id),
+                  true
                 ),
                 computed = computeElementInstance(inst, elements, cache)
-              if (_.isEqual(computed, iv))
+              if (computed[propName] === iv[propName])
                 exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
             } catch {}
           }
@@ -383,7 +383,8 @@ export function sampleElementIstance(
   fixedParams?: t.Params,
   order?: (elId: string) => number,
   commonMode = { mode: '' },
-  filter?: (elId: string) => boolean
+  filter?: (elId: string) => boolean,
+  hardSample?: boolean
 ): t.ElementInstance {
   const nonVR = getNonVirtualDescendents(id, elements, cache),
     nonV = filter ? nonVR.filter(filter) : nonVR,
@@ -410,6 +411,7 @@ export function sampleElementIstance(
       if (accum >= sample) break
       index++
     }
+    if (hardSample) index = 0
     normed.splice(index, 1)
     const [descendent] = descendents.splice(index, 1)
 
@@ -454,7 +456,8 @@ export function sampleElementIstance(
         constraints,
         order,
         commonMode,
-        filter
+        filter,
+        hardSample
       )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
