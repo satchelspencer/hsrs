@@ -249,8 +249,7 @@ export function Learn() {
       return session ? estimateReviewsRemaining(session) : 0
     }, [session?.stack]),
     progress = session
-      ? session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1).length /
-        estReviews
+      ? session.history.length / (estReviews + session.history.length)
       : 0
 
   return (
