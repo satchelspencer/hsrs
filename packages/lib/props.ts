@@ -227,7 +227,7 @@ export function findAliases(
           instanceCache[key] = {
             iv,
             value: getPropValue(iv, propName),
-            omode: computeElementMode(oinstance, elements, cache),
+            omode: computeElementMode(oinstance, elements, cache) ?? '',
           }
         }
         const { iv, value, omode } = instanceCache[key],
@@ -249,7 +249,7 @@ export function findAliases(
         if (
           iv[propName] === target &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          satisfiesMode(targetMode, omode) !== undefined
+          targetMode === omode
         ) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {
