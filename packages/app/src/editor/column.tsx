@@ -79,5 +79,6 @@ const columnWrapper = (first: boolean, jump: boolean) =>
         border-left: 1px solid ${styles.color.active()};
       `}
       overflow: hidden;
+      max-width: 100vw;
     `
   )

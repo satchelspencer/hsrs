@@ -8,6 +8,9 @@ injectGlobal`
     font-weight:400;
     background:white;
   }
+  * {
+    box-sizing:border-box;
+  }
   @media (prefers-color-scheme: dark) {
     html {
       filter: hue-rotate(180deg) invert(1) contrast(0.8);

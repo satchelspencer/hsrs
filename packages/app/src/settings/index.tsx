@@ -91,5 +91,6 @@ const settingsWrapper = cx(
     padding: 20px;
     gap: 10px;
     width: 400px;
+    max-width: 100%;
   `
 )

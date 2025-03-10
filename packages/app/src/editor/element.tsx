@@ -71,7 +71,7 @@ export function ElementEditor(props: ElementEditorProps) {
 
   return (
     <div className={editorWrapperOuter}>
-      <div className={editorWrapper}>
+      <div className={editorWrapper(!!element.virtual)}>
         <div className={editorHeader}>
           <Button
             className={backButton}
@@ -371,17 +371,24 @@ export const backButton = cx(css`
   font-size: 16px;
 `)
 
-export const editorWrapper = cx(css`
-  display: flex;
-  width: 450px;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  align-items: stretch;
-  &:not(:last-child) {
-    border-bottom: 1px solid ${styles.color(0.93)};
-  }
-`)
+export const editorWrapper = (virtual: boolean) =>
+  cx(css`
+    display: flex;
+    width: 450px;
+    max-width: 100vw;
+    ${virtual &&
+    css`
+      max-height: 50vh;
+      overflow-y: scroll;
+    `}
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    align-items: stretch;
+    &:not(:last-child) {
+      border-bottom: 1px solid ${styles.color(0.93)};
+    }
+  `)
 
 export const editorHeader = cx(css`
   display: flex;

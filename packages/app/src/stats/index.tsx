@@ -51,7 +51,7 @@ export function Stats(props: StatsEditorProps) {
       difficultyDist,
       useNewCards,
       useAccuracy,
-      progressDist
+      progressDist,
     ],
     [stats, setStats] = useState<StatResult[]>([])
 
@@ -69,7 +69,7 @@ export function Stats(props: StatsEditorProps) {
 
   return (
     <div className={editorWrapperOuter} style={{ background: 'white' }}>
-      <div className={editorWrapper} style={{ overflowY: 'scroll' }}>
+      <div className={editorWrapper(false)} style={{ overflowY: 'scroll' }}>
         <div className={editorHeader}>
           <Button
             className={backButton}

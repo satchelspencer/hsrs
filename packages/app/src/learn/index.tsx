@@ -10,6 +10,7 @@ import {
   applySessionHistoryToCards,
   card2Id,
   createLearningSession,
+  estimateReviewsRemaining,
   getSessionDone,
   id2Card,
   nextSessionState,
@@ -118,7 +119,7 @@ export function Learn() {
 
   const stats = useMemo<CardStat[]>(() => {
     const learning = _.last(session?.history)
-    if (!learning || !session) return []
+    if (!learning || !session || !settings.vars['debug']) return []
 
     const nextStats: CardStat[] = [],
       retention = deck.settings.retention ?? defaultretention,
@@ -164,12 +165,16 @@ export function Learn() {
       })
     }
     return _.sortBy(nextStats, (s) => ('intdiff' in s ? -Math.abs(s.intdiff) : Infinity))
-  }, [session?.history])
+  }, [session?.history, settings.vars])
 
   const setGrade = (grade: number) => {
-    setRevealed(false)
-    dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
-  }
+      setRevealed(false)
+      dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
+    },
+    undoGrade = () => {
+      dispatch(r.actions.undoGrade({}))
+      setRevealed(false)
+    }
 
   const handleKey = useRef<(key: string, meta: boolean, ctrl: boolean) => void>()
   handleKey.current = (key, meta, ctrl) => {
@@ -180,10 +185,7 @@ export function Learn() {
     else if (key === '2' && revealed) setGrade(2)
     else if (key === '3' && revealed) setGrade(3)
     else if (key === '4' && revealed) setGrade(4)
-    else if (key === 'z' && (meta || ctrl)) {
-      dispatch(r.actions.undoGrade({}))
-      setRevealed(false)
-    }
+    else if (key === 'z' && (meta || ctrl)) undoGrade()
   }
 
   const pluginRef = useRef<HTMLIFrameElement>(null),
@@ -243,8 +245,21 @@ export function Learn() {
       session &&
       session.history.filter((h) => h.score !== 1).length / session.history.length
 
+  const estReviews = useMemo(() => {
+      return session ? estimateReviewsRemaining(session) : 0
+    }, [session?.stack]),
+    progress = session
+      ? session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1).length /
+        estReviews
+      : 0
+
   return (
     <div className={learnWrapper}>
+      {session && (
+        <div className={progressWrapper}>
+          <div className={progressInner} style={{ width: progress * 100 + '%' }} />
+        </div>
+      )}
       {session ? (
         sessionDone ? (
           <>
@@ -281,9 +296,7 @@ export function Learn() {
                 ))
               )}
               <div className={sessionActions}>
-                <Button onClick={() => dispatch(r.actions.endSession())}>
-                  <Icon name="close" />
-                </Button>
+                <Icon onClick={() => dispatch(r.actions.endSession())} name="close" />
               </div>
               <div className={sessionStats}>
                 {stats.map((stat, i) => {
@@ -370,27 +383,26 @@ export function Learn() {
               </div>
             </div>
             <div className={cardActions}>
-              <div className={actionsInner} style={{ justifyContent: 'start' }}>
-                <div className={sessionProgress}>
-                  {
-                    session.stack.filter((s) => session.cards[card2Id(s)]?.stability >= 1)
-                      .length
-                  }
-                  /{session.stack.length}
-                </div>
+              <div
+                className={actionsInner}
+                style={{ justifyContent: 'start', flex: 'none' }}
+              >
+                {!revealed && (
+                  <Button onClick={() => undoGrade()} className={undoAction}>
+                    undo
+                  </Button>
+                )}
               </div>
               <div className={actionsInner}>
                 {revealed ? (
                   grades.map((grade, index) => (
                     <Button
                       key={grade}
-                      onClick={() => setGrade(index)}
+                      onClick={() => setGrade(index + 1)}
                       className={cardAction}
                     >
                       {grade}
-                      <span style={{ fontSize: '0.7em', opacity: 0.6 }}>
-                        &nbsp;[{index + 1}]
-                      </span>
+                      <span className={gradeHint}>&nbsp;[{index + 1}]</span>
                     </Button>
                   ))
                 ) : (
@@ -401,23 +413,38 @@ export function Learn() {
               </div>
               <div
                 className={actionsInner}
-                style={{ justifyContent: 'end', fontSize: '1.1em' }}
+                style={{
+                  justifyContent: 'end',
+                  fontSize: '1.1em',
+                  opacity: 0.7,
+                  flex: 'none',
+                }}
               >
-                <Button
-                  onClick={() => {
-                    dispatch(
-                      r.actions.setSelection({
-                        selection: [{ type: 'element', jump: true, id: card.element }],
-                        index: 0,
-                      })
-                    )
-                    dispatch(r.actions.setRoute({ route: 'lib' }))
-                  }}
-                >
-                  <Icon name="open" />
-                </Button>
+                {!revealed && (
+                  <Button
+                    onClick={() => {
+                      dispatch(
+                        r.actions.setSelection({
+                          selection: [{ type: 'element', jump: true, id: card.element }],
+                          index: 0,
+                        })
+                      )
+                      dispatch(r.actions.setRoute({ route: 'lib' }))
+                    }}
+                  >
+                    <Icon name="open" />
+                  </Button>
+                )}
               </div>
             </div>
+            <div
+              className={tapArea(false)}
+              onClick={() => (revealed ? setGrade(1) : undoGrade())}
+            />
+            <div
+              className={tapArea(true)}
+              onClick={() => (revealed ? setGrade(3) : setRevealed(true))}
+            />
           </div>
         ) : null
       ) : (
@@ -473,6 +500,46 @@ export function Learn() {
   )
 }
 
+const tapArea = (right: boolean) =>
+  cx(css`
+    position: absolute;
+    z-index: 1;
+    top: 48px;
+    bottom: 48px;
+    ${right ? 'right:0;' : 'left:0;'}
+    width:33%;
+    @media (min-width: 45em) {
+      display: none;
+    }
+  `)
+
+const gradeHint = cx(
+  css`
+    font-size: 0.7em;
+    opacity: 0.6;
+    @media (max-width: 45em) {
+      display: none;
+    }
+  `
+)
+
+const progressWrapper = cx(css`
+  height: 5px;
+  background: ${styles.color(0.9)};
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+`)
+
+const progressInner = cx(css`
+  position: absolute;
+  height: 100%;
+  left: 0;
+  background: ${styles.color.active(0.8)};
+  opacity: 0.7;
+  transition: 0.2s all;
+`)
+
 const sizeButton = cx(
   css`
     width: 25px;
@@ -491,21 +558,19 @@ const desc = cx(css`
 
 const mainAction = cx(css`
   font-size: 1.1em;
-  /* background: ${styles.color(0.95)};
-  border: 1px solid ${styles.color(0.93)};
-  color: ${styles.color(0.4)};
-  padding: 10px;
-  border-radius: 4px; */
 `)
 
 const sessionActions = cx(css`
   position: absolute;
   top: 0;
   right: 0;
-  padding: 8px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 0.8em;
+  opacity: 0.4;
+  cursor: pointer;
 `)
 
 const sessionStats = cx(css`
@@ -519,10 +584,6 @@ const sessionStats = cx(css`
   gap: 8px;
   font-size: 0.5em;
   opacity: 0.5;
-`)
-
-const sessionProgress = cx(css`
-  color: ${styles.color(0.7)};
 `)
 
 const frame = cx(
@@ -561,15 +622,22 @@ const cardActions = cx(css`
 
 const actionsInner = cx(css`
   display: flex;
-  gap: 20px;
   flex: 1;
-  justify-content: center;
+  justify-content: space-around;
+  max-width: 40em;
 `)
 
 const cardAction = cx(css`
   color: ${styles.color.active(0.7)};
   font-size: 1.15em;
 `)
+
+const undoAction = cx(
+  cardAction,
+  css`
+    color: ${styles.color(0.7)} !important;
+  `
+)
 
 const learnWrapper = cx(
   styles.fill,

@@ -58,9 +58,16 @@ const appNav = cx(
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
+    padding: 8px;
     font-size: 1.5em;
     gap: 15px;
+    @media (max-width: 45em) {
+      padding: 4px;
+      border-bottom: 1px solid ${styles.color(0.93)};
+      border-right: none;
+      flex-direction: row;
+      justify-content: space-around;
+    }
   `
 )
 
@@ -68,6 +75,9 @@ const appWrapper = cx(
   styles.fill,
   css`
     display: flex;
+    @media (max-width: 45em) {
+      flex-direction: column;
+    }
   `
 )
 

@@ -214,7 +214,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
   return session
 }
 
-function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
+export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   const ncFactor = getNewCardFactor(),
     cardReviewsRemaning = _.sumBy(session.stack ?? [], (card) => {
       const tcardId = card2Id(card),
