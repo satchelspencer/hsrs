@@ -40,6 +40,18 @@ jexl.addTransform('mts', (val: string, search) => {
   return search + val.slice(0, index) + val.slice(index + search.length)
 })
 
+jexl.addFunction('e', (val: string) => {
+  return `(${val}>)`
+})
+
+jexl.addFunction('s', (val: string) => {
+  return `(${val}<)`
+})
+
+jexl.addFunction('b', () => {
+  return `|`
+})
+
 export function isValid(expr: string) {
   try {
     jexl.evalSync(expr)
@@ -55,12 +67,12 @@ function cacheJexl(expr: string, context: any) {
   return compileCache[expr].evalSync(context)
 }
 
-export function run(expr: string, context: any) {
+export function run(expr: string, context: any, root?: boolean): any {
   if (expr === 'null') return undefined
   if (!expr.includes('.') && !expr.includes('|') && !expr.includes('+')) return expr
   try {
     const res = cacheJexl(expr, context) ?? expr
-    return _.isNaN(res) ? expr : res
+    return _.isNaN(res) ? expr : root ? moveit(res) : res
   } catch {
     return expr
   }
@@ -103,12 +115,13 @@ function getPropExecOrder(props: t.Props): string[] {
 export function computeElementInstance(
   instace: t.ElementInstance,
   elements: t.IdMap<t.Element>,
-  cache: t.DeckCache = getCache(elements)
+  cache: t.DeckCache = getCache(elements),
+  child?: boolean
 ): t.PropsInstance {
   const params: t.PropsInstance = _.pickBy(
     _.mapValues(instace.params, (paramElInstance) => {
       if (!paramElInstance) return paramElInstance
-      return computeElementInstance(paramElInstance, elements, cache)
+      return computeElementInstance(paramElInstance, elements, cache, true)
     }),
     (a) => !!a
   )
@@ -120,10 +133,11 @@ export function computeElementInstance(
   for (const prop of execOrder) {
     const mapped = _.mapValues(
       _.omit(elProps, prop),
-      (v, k) => v && run(v.replaceAll('.' + k, '.' + prop), { ...params, _: result })
+      (v, k) =>
+        v && run(v.replaceAll('.' + k, '.' + prop), { ...params, _: result }, !child)
     )
     result[prop] =
-      elProps[prop] && run(elProps[prop], { ...params, _: result, $: mapped })
+      elProps[prop] && run(elProps[prop], { ...params, _: result, $: mapped }, !child)
   }
 
   return { ...result, ...params }
@@ -144,3 +158,28 @@ export function computeElementMode(
 
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode
 }
+
+function moveit(string: string) {
+  const dests: { [index: number]: { index: number; content: string } } = {}
+  for (const match of string.matchAll(/\(([^)]+)([><])\)/g)) {
+    const [full, content, dir] = match,
+      target =
+        dir === '>'
+          ? string.indexOf('|', match.index)
+          : string.substring(0, match.index).lastIndexOf('|'),
+      index = target === -1 ? (dir === '>' ? string.length : 0) : target
+    dests[index] ??= { index, content: '' }
+    dests[index].content =
+      dir === '>' ? dests[index].content + content : content + dests[index].content
+  }
+
+  for (const dest of _.sortBy(Object.values(dests), (d) => -d.index)) {
+    string = string.substring(0, dest.index) + dest.content + string.substring(dest.index)
+  }
+
+  string = string.replace(/\(([^)]+)([><])\)/g, '').replace(/\|/g, '')
+
+  return string
+}
+
+//console.log(moveit('hello what( not aok>) the fuck|( is>) this( amsa<) shit'))
