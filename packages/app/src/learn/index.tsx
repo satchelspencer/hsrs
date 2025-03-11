@@ -119,7 +119,7 @@ export function Learn() {
 
   const stats = useMemo<CardStat[]>(() => {
     const learning = _.last(session?.history)
-    if (!learning || !session || !settings.vars['debug']) return []
+    if (!learning || !session || settings.vars['debug'] !== 'true') return []
 
     const nextStats: CardStat[] = [],
       retention = deck.settings.retention ?? defaultretention,
@@ -414,7 +414,7 @@ export function Learn() {
                 className={actionsInner}
                 style={{
                   justifyContent: 'end',
-                  fontSize: '1.1em',
+                  fontSize: '1.2em',
                   opacity: 0.7,
                   flex: 'none',
                 }}

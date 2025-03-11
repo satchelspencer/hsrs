@@ -305,20 +305,24 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     now = getTime(),
-    cardsIds = _.orderBy(Object.keys(deck.cards), [
-      (cardId) => {
-        return (deck.cards[cardId].due ?? Infinity) < now ? 0 : 1
-      },
-      (cardId) => {
-        const state = deck.cards[cardId],
-          dueIn = (state.due ?? Infinity) - now,
-          lastOpenMissAgo =
-            state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-              ? now - state.lastMiss
-              : Infinity
-        return Math.min(dueIn, lastOpenMissAgo)
-      },
-    ])
+    cache = getCache(deck.elements),
+    cardsIds = _.orderBy(
+      Object.keys(deck.cards).filter((cid) => cache.hasProps[id2Card(cid).element]),
+      [
+        (cardId) => {
+          return (deck.cards[cardId].due ?? Infinity) < now ? 0 : 1
+        },
+        (cardId) => {
+          const state = deck.cards[cardId],
+            dueIn = (state.due ?? Infinity) - now,
+            lastOpenMissAgo =
+              state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
+                ? (now - state.lastMiss) / 8
+                : Infinity
+          return Math.min(dueIn, lastOpenMissAgo)
+        },
+      ]
+    )
 
   // console.log(
   //   cardsIds
@@ -330,11 +334,12 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
   //             ? (now - state.lastMiss) / 3600 / 24
   //             : Infinity
   //       return [
+  //         due < 0 ? 'due' : '   ',
   //         mago < due ? '***' : '   ',
-  //         deck.elements[id2Card(c).element].name,
+  //         deck.elements[id2Card(c).element]?.name,
   //         id2Card(c).property,
   //         // due,
-  //         // mago,
+  //         mago,
   //         state.due && new Date(state.due * 1000),
   //       ] //.join(' ')
   //     })
