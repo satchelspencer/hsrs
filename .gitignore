@@ -4,3 +4,6 @@ dist
 .DS_Store
 *.log
 yarn-error.log
+packages/*
+!packages/app
+!packages/lib
