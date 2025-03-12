@@ -156,7 +156,7 @@ export function computeElementMode(
       mode = satisfiesMode(mode, computeElementMode(param, elements, cache)) ?? mode
   }
 
-  return mode?.match(/^([-*]+)?$/i) ? undefined : mode
+  return mode?.match(/^([-*]+)?$/i) ? undefined : mode?.toLowerCase()
 }
 
 function moveit(string: string) {

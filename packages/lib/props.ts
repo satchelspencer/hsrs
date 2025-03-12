@@ -154,7 +154,15 @@ export function satisfiesMode(a: string = '', b: string = '') {
     const av = a[i],
       bv = b[i]
 
-    if (av && bv && av !== '-' && av !== '*' && bv !== '-' && bv !== '*' && av !== bv)
+    if (
+      av &&
+      bv &&
+      av !== '-' &&
+      av !== '*' &&
+      bv !== '-' &&
+      bv !== '*' &&
+      av.toLowerCase() !== bv.toLowerCase()
+    )
       return undefined
     common = common + getCommon(av, bv)
   }
@@ -382,10 +390,16 @@ export function sampleElementIstance(
   cache: t.DeckCache,
   fixedParams?: t.Params,
   order?: (elId: string) => number,
-  commonMode = { mode: '' },
+  commonMode?: { mode: string }[],
   filter?: (elId: string) => boolean,
   hardSample?: boolean
 ): t.ElementInstance {
+  const rootElement = getInheritedElement(id, elements, cache)
+  commonMode ??= new Array(8).fill(0).map((_, i) => {
+    const rootm = rootElement.mode?.[i] ?? ''
+    return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
+  })
+
   const nonVR = getNonVirtualDescendents(id, elements, cache),
     nonV = filter ? nonVR.filter(filter) : nonVR,
     descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
@@ -395,10 +409,7 @@ export function sampleElementIstance(
     maxOrder = orders[orders.length - 1] ?? -Infinity,
     normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
-  // console.log(
-  //   elements[id].name,
-  //   descendents.map((o, i) => [elements[o].name, normed[i]])
-  // )
+  //console.log(elements[id].name, rootElement.mode, commonMode.map((s) => s.mode).join(''))
 
   while (normed.length) {
     const sum = _.sumBy(normed),
@@ -421,10 +432,19 @@ export function sampleElementIstance(
       mode,
     } = getInheritedElement(descendent, elements, cache)
 
-    if (fixedParams) {
-      const ncommon = satisfiesMode(commonMode.mode, mode)
-      if (ncommon === undefined) continue
-      if (ncommon) commonMode.mode = ncommon
+    if (fixedParams && mode) {
+      let failed = false
+      for (let i = 0; i < Math.max(commonMode.length, mode.length); i++) {
+        const common = commonMode[i],
+          ncommon = satisfiesMode(common.mode, mode[i])
+        if (ncommon === undefined) {
+          failed = true
+          break
+        }
+        if (ncommon) common.mode = ncommon
+      }
+
+      if (failed) continue
     }
 
     let failed = false
@@ -443,9 +463,14 @@ export function sampleElementIstance(
     }
 
     const constraints: t.Params = _.pickBy(
-      { ...params, ...(fixedParams ?? {}) },
-      (_, v) => constraint.includes(v)
-    )
+        { ...params, ...(fixedParams ?? {}) },
+        (_, v) => constraint.includes(v)
+      ),
+      childCommonMode = commonMode.map((c, i) =>
+        mode?.[i] && (mode[i] === '*' || mode[i].toUpperCase() === mode[i])
+          ? { mode: '*' }
+          : c
+      )
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
@@ -455,7 +480,7 @@ export function sampleElementIstance(
         cache,
         constraints,
         order,
-        commonMode,
+        childCommonMode,
         filter,
         hardSample
       )
