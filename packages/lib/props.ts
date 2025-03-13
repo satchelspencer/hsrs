@@ -392,13 +392,15 @@ export function sampleElementIstance(
   order?: (elId: string) => number,
   commonMode?: { mode: string }[],
   filter?: (elId: string) => boolean,
-  hardSample?: boolean
+  hardSample?: boolean,
+  leaves?: { [id: string]: boolean }
 ): t.ElementInstance {
   const rootElement = getInheritedElement(id, elements, cache)
   commonMode ??= new Array(8).fill(0).map((_, i) => {
     const rootm = rootElement.mode?.[i] ?? ''
     return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
   })
+  leaves ??= {}
 
   const nonVR = getNonVirtualDescendents(id, elements, cache),
     nonV = filter ? nonVR.filter(filter) : nonVR,
@@ -432,8 +434,8 @@ export function sampleElementIstance(
       mode,
     } = getInheritedElement(descendent, elements, cache)
 
+    let failed = false
     if (fixedParams && mode) {
-      let failed = false
       for (let i = 0; i < Math.max(commonMode.length, mode.length); i++) {
         const common = commonMode[i],
           ncommon = satisfiesMode(common.mode, mode[i])
@@ -443,18 +445,20 @@ export function sampleElementIstance(
         }
         if (ncommon) common.mode = ncommon
       }
-
-      if (failed) continue
     }
+    if (failed) continue
 
-    let failed = false
     for (const fparam in fixedParams) {
       if (!params[fparam]) continue
       const common = satisfies(fixedParams[fparam], params[fparam], cache)
       if (!common) failed = true
       else params[fparam] = common
     }
+    if (failed) continue
 
+    for (const param in params) {
+      if (!fixedParams?.[param] && leaves[params[param]]) failed = true
+    }
     if (failed) continue
 
     const inst: t.ElementInstance = {
@@ -482,10 +486,12 @@ export function sampleElementIstance(
         order,
         childCommonMode,
         filter,
-        hardSample
+        hardSample,
+        leaves
       )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
+        if (!_.keys(el.params).length) leaves[el.element] = true
       })
       inst.params![param] = pinst
     }
