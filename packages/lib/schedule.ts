@@ -69,6 +69,7 @@ export function nextCardState(
     lastMiss: grade > 2 || !root ? cardState?.lastMiss : now,
     due: base + nextInterval(memoryState.stability, retention),
     firstSeen: cardState?.firstSeen ?? now,
+    lastRoot: root ? now : cardState?.lastRoot,
   }
 }
 

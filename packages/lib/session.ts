@@ -1,4 +1,5 @@
 import { getCache } from './cache'
+import { DateTime } from 'luxon'
 import {
   getAllCards,
   getElementOrder,
@@ -307,7 +308,10 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
     now = getTime(),
     cache = getCache(deck.elements),
     cardsIds = _.orderBy(
-      Object.keys(deck.cards).filter((cid) => cache.hasProps[id2Card(cid).element]),
+      Object.keys(deck.cards).filter((cid) => {
+        const elid = id2Card(cid).element
+        return cache.hasProps[elid] && !deck.elements[elid].virtual
+      }),
       [
         (cardId) => {
           return (deck.cards[cardId].due ?? Infinity) < now ? 0 : 1
@@ -338,9 +342,9 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
   //         mago < due ? '***' : '   ',
   //         deck.elements[id2Card(c).element]?.name,
   //         id2Card(c).property,
-  //         // due,
+  //         due,
   //         mago,
-  //         state.due && new Date(state.due * 1000),
+  //         //state.due && new Date(state.due * 1000),
   //       ] //.join(' ')
   //     })
   //     .join('\n')
@@ -420,5 +424,44 @@ function sampleAndAdd(
       break
     } catch {}
     i++
+  }
+}
+
+export function getDayProgress(
+  cards: t.CardStates,
+  elements: t.IdMap<t.Element>,
+  offsetHour = 2
+) {
+  const cache = getCache(elements),
+    now = DateTime.fromJSDate(new Date()),
+    endOfDay = now.endOf('day').plus({ hours: offsetHour }).toSeconds(),
+    startOfDay = now.startOf('day').plus({ hours: offsetHour }).toSeconds()
+
+  let dueCount = 0,
+    fractionalCount = 0,
+    doneCount = 0,
+    newCount = 0
+
+  for (const cardId in cards) {
+    const state = cards[cardId],
+      elementId = id2Card(cardId).element
+
+    if (!cache.hasProps[elementId] || elements[elementId].virtual) continue
+
+    if (state.due && state.due < endOfDay) {
+      dueCount++
+      if (state.due >= startOfDay) fractionalCount++
+    }
+    if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
+    if (state.firstSeen && state.firstSeen > startOfDay) {
+      newCount++
+    }
+  }
+
+  return {
+    goal: dueCount + doneCount,
+    pgoal: fractionalCount + doneCount,
+    done: doneCount,
+    new: newCount,
   }
 }

@@ -252,6 +252,14 @@ export function Learn() {
       ? session.history.length / (estReviews + session.history.length)
       : 0
 
+  const dayProgress = r.useSelector(r.selectors.selectDailyProgress),
+    sessionCount = Math.max(
+      Math.ceil(Math.min(dayProgress.goal, dayProgress.pgoal * 2) / actualSessionSize),
+      1
+    ),
+    doneSessionCount = Math.round(dayProgress.done / actualSessionSize),
+    canNew = doneSessionCount >= sessionCount
+
   return (
     <div className={learnWrapper}>
       {session && (
@@ -448,6 +456,11 @@ export function Learn() {
         ) : null
       ) : (
         <>
+          <div className={dprogress}>
+            {new Array(Math.max(sessionCount, doneSessionCount)).fill(0).map((v, i) => (
+              <div key={i} className={dprogressItem(i < doneSessionCount)} />
+            ))}
+          </div>
           <div className={desc}>
             <RadioGroup
               value={newSessionSize}
@@ -477,14 +490,23 @@ export function Learn() {
           <div className={desc} style={{ opacity: 0.7 }}>
             <b>{cardsDue}</b>&nbsp;due,&nbsp;
             <b>{cardsAvailable}</b>&nbsp;new,&nbsp;<b>{nextDue}</b>&nbsp;review&nbsp;
-            <input
-              type="checkbox"
-              checked={!!allowNew}
-              onChange={() =>
-                dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
-              }
-            />
-            <span>Allow new</span>
+            <div
+              className={desc}
+              style={{
+                fontSize: 'inherit',
+                opacity: canNew ? 1 : 0.4,
+                pointerEvents: canNew ? 'all' : 'none',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={!!allowNew && canNew}
+                onChange={() =>
+                  dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
+                }
+              />
+              <span>Allow new</span>
+            </div>
           </div>
           <Button
             className={mainAction}
@@ -498,6 +520,24 @@ export function Learn() {
     </div>
   )
 }
+
+const dprogress = cx(
+  css`
+    display: flex;
+    width: 350px;
+    max-width: 100vw;
+    gap: 8px;
+    padding: 5px;
+  `
+)
+
+const dprogressItem = (done: boolean) =>
+  cx(css`
+    flex: 1;
+    height: 8px;
+    border-radius: 2px;
+    background: ${done ? styles.color.active(0.85) : styles.color(0.9)};
+  `)
 
 const tapArea = (right: boolean) =>
   cx(css`

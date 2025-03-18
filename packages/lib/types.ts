@@ -40,7 +40,14 @@ export interface Deck {
   settings: DeckSettings
   working?: boolean
 }
-export type DeckJob = { type: 'optimize' } | { type: 'schedule' }
+
+export interface Daily {
+  day: string
+  goal: number
+  pgoal: number
+  done: number
+  new: number
+}
 
 export type FSRSParams = number[] | undefined
 export interface DeckSettings {
@@ -63,6 +70,7 @@ export interface CardState extends MemoryState {
   lastScore?: number
   lastMiss?: number
   firstSeen?: number
+  lastRoot?: number
 }
 
 export type CardStates = IdMap<CardState>

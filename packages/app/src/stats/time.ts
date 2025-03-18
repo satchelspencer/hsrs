@@ -7,7 +7,7 @@ export function formatDate(time: number) {
 }
 
 function startOfDay(time: number) {
-  const date = new Date(time * 1000)
+  const date = new Date((time - 4 * 3600) * 1000)
   date.setHours(0, 0, 0, 0)
   return Math.floor(date.getTime() / 1000)
 }
