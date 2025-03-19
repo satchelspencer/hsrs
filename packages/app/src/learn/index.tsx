@@ -91,11 +91,10 @@ export function Learn() {
   }, [card])
 
   // useEffect(() => {
+  //   console.log(plugin, sessionDone)
   //   console.log(
-  //     plugin,
-  //     sessionDone,
-  //     JSON.stringify(
-  //       session?.stack.map((s) =>
+  //     session?.stack
+  //       .map((s) =>
   //         [
   //           s.new && !session.cards[card2Id(s)] ? '****' : '    ',
   //           elements[s.element].name,
@@ -104,10 +103,8 @@ export function Learn() {
   //           //s?.params
   //           session.cards[card2Id(s)]?.stability,
   //         ].join(' ')
-  //       ),
-  //       null,
-  //       2
-  //     )
+  //       )
+  //       .join('\n')
   //   )
   // }, [card])
 
@@ -232,13 +229,18 @@ export function Learn() {
 
   const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings),
     actualSessionSize = Math.pow(2, newSessionSize) * 30,
+    dayProgress = r.useSelector(r.selectors.selectDailyProgress),
+    sessionCount = Math.ceil(dayProgress.goal / actualSessionSize),
+    doneSessionCount = Math.ceil(dayProgress.done / actualSessionSize),
+    canNew = doneSessionCount >= sessionCount,
     {
       new: cardsAvailable,
       due: cardsDue,
       next: nextDue,
     } = useMemo(
-      () => createLearningSession(deck, actualSessionSize, allowNew, filter ?? []),
-      [newSessionSize, allowNew, filter, !!session]
+      () =>
+        createLearningSession(deck, actualSessionSize, allowNew && canNew, filter ?? []),
+      [newSessionSize, allowNew, filter, !!session, canNew]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
@@ -251,14 +253,6 @@ export function Learn() {
     progress = session
       ? session.history.length / (estReviews + session.history.length)
       : 0
-
-  const dayProgress = r.useSelector(r.selectors.selectDailyProgress),
-    sessionCount = Math.max(
-      Math.ceil(Math.min(dayProgress.goal, dayProgress.pgoal * 2) / actualSessionSize),
-      1
-    ),
-    doneSessionCount = Math.round(dayProgress.done / actualSessionSize),
-    canNew = doneSessionCount >= sessionCount
 
   return (
     <div className={learnWrapper}>
@@ -457,7 +451,7 @@ export function Learn() {
       ) : (
         <>
           <div className={dprogress}>
-            {new Array(Math.max(sessionCount, doneSessionCount)).fill(0).map((v, i) => (
+            {new Array(sessionCount).fill(0).map((v, i) => (
               <div key={i} className={dprogressItem(i < doneSessionCount)} />
             ))}
           </div>
