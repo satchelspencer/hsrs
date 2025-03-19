@@ -451,9 +451,16 @@ export function Learn() {
       ) : (
         <>
           <div className={dprogress}>
-            {new Array(sessionCount).fill(0).map((v, i) => (
-              <div key={i} className={dprogressItem(i < doneSessionCount)} />
-            ))}
+            <div
+              className={dprogressItem(dayProgress.done / dayProgress.goal)}
+              style={{ borderRight: '2px solid #678eb97a' }}
+            />
+            <div
+              className={cx(
+                dprogressItem(actualSessionSize / dayProgress.goal),
+                fadeInOut
+              )}
+            />
           </div>
           <div className={desc}>
             <RadioGroup
@@ -520,17 +527,42 @@ const dprogress = cx(
     display: flex;
     width: 350px;
     max-width: 100vw;
-    gap: 8px;
-    padding: 5px;
+    margin: 5px;
+    height: 8px;
+    border-radius: 2px;
+    background: ${styles.color(0.95)};
+    overflow: hidden;
   `
 )
 
-const dprogressItem = (done: boolean) =>
+const fadeInOut = css`
+  animation: fadeInOut 2s infinite ease-in-out;
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.5;
+    }
+  }
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+  padding-left: 2px;
+  margin-left: -2px;
+  background: hsl(211 51% 78% / 0.3);
+`
+
+const dprogressItem = (done: number) =>
   cx(css`
-    flex: 1;
+    flex: none;
     height: 8px;
     border-radius: 2px;
-    background: ${done ? styles.color.active(0.85) : styles.color(0.9)};
+    width: ${done * 100 + '%'};
+    max-width: 100%;
+    background: hsl(211deg 89% 78%);
   `)
 
 const tapArea = (right: boolean) =>
