@@ -167,17 +167,18 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
     estReviews = session.history.length + cardReviewsRemaning,
     delta = Math.floor((estReviews - session.reviews) / ncFactor)
 
+  const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element),
+    unseenEls = Object.keys(cardsGroupedByEl).filter((elId) =>
+      _.every(cardsGroupedByEl[elId], (c) => !session.cards[card2Id(c)])
+    )
+
   //console.log('!!', estReviews, session.reviews, delta)
 
   let redist = false
-  if (delta > 5) {
-    const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element),
-      unseenEls = Object.keys(cardsGroupedByEl).filter((elId) =>
-        _.every(cardsGroupedByEl[elId], (c) => !session.cards[card2Id(c)])
-      ),
-      toRemove =
-        _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
-        _.findLast(session.stack, (c) => unseenEls.includes(c.element)) //fall back to removing a review if needed
+  if (delta > 2) {
+    const toRemove =
+      _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
+      _.findLast(session.stack, (c) => unseenEls.includes(c.element)) //fall back to removing a review if needed
 
     //console.log(toRemove && cardsGroupedByEl[toRemove.element].length)
     if (toRemove && cardsGroupedByEl[toRemove.element].length <= delta) {
@@ -185,7 +186,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
       //console.log('removing', deck.elements[toRemove?.element!].name)
       redist = true
     }
-  } else if (delta < -5 && session.allowNew) {
+  } else if (delta < -2 && session.allowNew) {
     const newCards = getNew(
       {
         ...deck,
@@ -206,6 +207,14 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
       newCards.forEach((card) =>
         session.stack.splice(Math.floor(Math.random() * midPoint) + midPoint, 0, card)
       )
+
+      const toRemove = _.findLast(
+        session.stack,
+        (c) => unseenEls.includes(c.element) && !c.new
+      )
+      //console.log('remove sub', deck.elements[toRemove?.element!].name)
+      if (toRemove)
+        session.stack = session.stack.filter((c) => c.element !== toRemove.element)
       redist = true
     }
   }
@@ -305,7 +314,11 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
 function getDue(deck: t.Deck, limit: number, filter: string[]) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    now = getTime(),
+    endOfDay = DateTime.now()
+      .minus({ hours: 4 })
+      .endOf('day')
+      .plus({ hours: 4 })
+      .toSeconds(),
     cache = getCache(deck.elements),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
@@ -314,14 +327,14 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
       }),
       [
         (cardId) => {
-          return (deck.cards[cardId].due ?? Infinity) < now ? 0 : 1
+          return (deck.cards[cardId].due ?? Infinity) < endOfDay ? 0 : 1
         },
         (cardId) => {
           const state = deck.cards[cardId],
-            dueIn = (state.due ?? Infinity) - now,
+            dueIn = (state.due ?? Infinity) - endOfDay,
             lastOpenMissAgo =
               state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-                ? (now - state.lastMiss) / 8
+                ? (endOfDay - state.lastMiss) / 8
                 : Infinity
           return Math.min(dueIn, lastOpenMissAgo)
         },
@@ -358,7 +371,7 @@ function getDue(deck: t.Deck, limit: number, filter: string[]) {
       hasProps = !!props[card.property]
 
     if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (state.due < now) sampleAndAdd(dueCards, cardId, deck, filter)
+      if (state.due < endOfDay) sampleAndAdd(dueCards, cardId, deck, filter)
       else sampleAndAdd(nextCards, cardId, deck, filter)
     }
   }
@@ -408,7 +421,7 @@ function sampleAndAdd(
               cr = getRetr(card, seenAgo),
               retrDiff = Math.abs(cr - childTarget),
               depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4),
-              seenFactor = 1 / logistic(seenAgo / 3600 / 24)
+              seenFactor = 1 / logistic(seenAgo / 3600 / 24 / 7)
 
             return (retrDiff / depthFactor) * seenFactor + jitter
           },
@@ -430,10 +443,10 @@ function sampleAndAdd(
 export function getDayProgress(
   cards: t.CardStates,
   elements: t.IdMap<t.Element>,
-  offsetHour = 2
+  offsetHour = 4
 ) {
   const cache = getCache(elements),
-    now = DateTime.fromJSDate(new Date()),
+    now = DateTime.fromJSDate(new Date()).minus({ hours: 4 }),
     endOfDay = now.endOf('day').plus({ hours: offsetHour }).toSeconds(),
     startOfDay = now.startOf('day').plus({ hours: offsetHour }).toSeconds()
 
@@ -448,13 +461,11 @@ export function getDayProgress(
 
     if (!cache.hasProps[elementId] || elements[elementId].virtual) continue
 
-    if (state.due && state.due < endOfDay) {
+    if (state.firstSeen && state.firstSeen > startOfDay) newCount++
+    else if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
+    else if (state.due && state.due < endOfDay) {
       dueCount++
       if (state.due >= startOfDay) fractionalCount++
-    }
-    if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
-    if (state.firstSeen && state.firstSeen > startOfDay) {
-      newCount++
     }
   }
 
