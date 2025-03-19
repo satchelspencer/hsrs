@@ -1,6 +1,11 @@
 import { logistic } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
+import { current, isDraft } from 'immer'
+
+function undraft<T>(v: T): T {
+  return isDraft(v) ? current(v) : v
+}
 
 let lastEls: t.IdMap<t.Element> | null = null,
   lastCache: t.DeckCache | null = null
@@ -58,7 +63,8 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
   tree.topo = topoOrder.reverse()
 }
 
-export function getCache(elements: t.IdMap<t.Element>) {
+export function getCache(relements: t.IdMap<t.Element>) {
+  const elements = undraft(relements)
   if (elements === lastEls && lastCache) return lastCache
   //console.trace('cache')
   const t = new Date().getTime()
