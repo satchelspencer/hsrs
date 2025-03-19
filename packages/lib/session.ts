@@ -450,10 +450,10 @@ export function getDayProgress(
     endOfDay = now.endOf('day').plus({ hours: offsetHour }).toSeconds(),
     startOfDay = now.startOf('day').plus({ hours: offsetHour }).toSeconds()
 
-  let dueCount = 0,
-    fractionalCount = 0,
-    doneCount = 0,
+  let doneCount = 0,
     newCount = 0
+
+  const dayCounts: { [day: number]: number } = {}
 
   for (const cardId in cards) {
     const state = cards[cardId],
@@ -464,14 +464,21 @@ export function getDayProgress(
     if (state.firstSeen && state.firstSeen > startOfDay) newCount++
     else if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
     else if (state.due && state.due < endOfDay) {
-      dueCount++
-      if (state.due >= startOfDay) fractionalCount++
+      const day = DateTime.fromSeconds(state.due)
+        .minus({ hours: 4 })
+        .startOf('day')
+        .toSeconds()
+      dayCounts[day] = (dayCounts[day] ?? 0) + 1
     }
   }
 
+  const dcvs = Object.values(dayCounts),
+    dailyGoal = _.max(dcvs) ?? 0,
+    backlog = _.sum(dcvs) - dailyGoal,
+    chipper = backlog / dcvs.length / 2 //half avg of backlog days
+
   return {
-    goal: dueCount + doneCount,
-    pgoal: fractionalCount + doneCount,
+    goal: dailyGoal + chipper + doneCount,
     done: doneCount,
     new: newCount,
   }

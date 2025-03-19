@@ -450,18 +450,20 @@ export function Learn() {
         ) : null
       ) : (
         <>
-          <div className={dprogress}>
-            <div
-              className={dprogressItem(dayProgress.done / dayProgress.goal)}
-              style={{ borderRight: '2px solid #678eb97a' }}
-            />
-            <div
-              className={cx(
-                dprogressItem(actualSessionSize / dayProgress.goal),
-                fadeInOut
-              )}
-            />
-          </div>
+          {!!dayProgress.goal && (
+            <div className={dprogress}>
+              <div
+                className={dprogressItem(dayProgress.done / dayProgress.goal)}
+                style={{ borderRight: '2px solid #678eb97a' }}
+              />
+              <div
+                className={cx(
+                  dprogressItem(actualSessionSize / dayProgress.goal),
+                  fadeInOut
+                )}
+              />
+            </div>
+          )}
           <div className={desc}>
             <RadioGroup
               value={newSessionSize}
