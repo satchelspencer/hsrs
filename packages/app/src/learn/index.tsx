@@ -239,7 +239,7 @@ export function Learn() {
       next: nextDue,
     } = useMemo(
       () =>
-        createLearningSession(deck, actualSessionSize, allowNew && canNew, filter ?? []),
+        createLearningSession(deck, actualSessionSize, allowNew && canNew, filter ?? [], 'local'),
       [newSessionSize, allowNew, filter, !!session, canNew]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),

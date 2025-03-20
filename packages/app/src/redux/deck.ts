@@ -49,7 +49,8 @@ export const deck = createSlice({
         state,
         action.payload.size,
         state.settings.allowNew,
-        state.settings.filter ?? []
+        state.settings.filter ?? [],
+        'local'
       ).session
     },
     cancelSession: (state, action: PayloadAction<{}>) => {

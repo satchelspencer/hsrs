@@ -22,10 +22,11 @@ export function createLearningSession(
   deck: t.Deck,
   size: number,
   allowNew: boolean,
-  filter: string[]
+  filter: string[],
+  tz: string
 ): { session: t.LearningSession; new: number; due: number; next: number; maxp: number } {
   //const t = new Date().getTime()
-  const { dueCards, nextCards } = getDue(deck, size, filter),
+  const { dueCards, nextCards } = getDue(deck, size, filter, tz),
     newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, filter)) : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
@@ -312,10 +313,11 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
   return res.map((c) => ({ ...c, new: true }))
 }
 
-function getDue(deck: t.Deck, limit: number, filter: string[]) {
+function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     endOfDay = DateTime.now()
+      .setZone(tz)
       .minus({ hours: 4 })
       .endOf('day')
       .plus({ hours: 4 })
