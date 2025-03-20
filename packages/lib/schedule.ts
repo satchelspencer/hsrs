@@ -254,7 +254,6 @@ function getFSRSCache(w: number[]) {
   }
 }
 
-//todo cache  Math.exp(w[8]) , d0map,  Math.exp(w[17] * w[18])
 export function nextStateFSRS(
   memoryState: t.MemoryState | undefined,
   daysElapsed: number,

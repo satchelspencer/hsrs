@@ -28,7 +28,7 @@ export async function computeParams(
 ) {
   const fsrs = await initfsrs()
   return fsrs!.computeParametersAnki(
-    new Date().getTimezoneOffset() - 4 * 60,
+    -new Date().getTimezoneOffset() + 4 * 60,
     cids,
     ratings,
     ids,
