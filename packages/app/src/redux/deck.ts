@@ -2,8 +2,9 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
 import { createLearningSession, gradeCard, undoGrade } from '@hsrs/lib/session'
-import { applyHistoryToCards, computeParams } from '@hsrs/lib/schedule'
+import { applyHistoryToCards } from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
+import { computeParams } from './fsrs'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -186,7 +187,7 @@ export const deckThunks = {
           learnSet.push(learning)
         })
 
-      const params = computeParams(
+      const params = await computeParams(
         new BigInt64Array(cids.map((n) => BigInt(n))),
         new Uint8Array(ratings),
         new BigInt64Array(ids.map((n) => BigInt(n))),

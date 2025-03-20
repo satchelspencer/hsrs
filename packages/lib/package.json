@@ -7,7 +7,6 @@
     "@types/jexl": "^2.3.4",
     "@types/lodash": "^4.17.12",
     "@types/luxon": "^3.4.2",
-    "fsrs-browser": "^2.0.3",
     "hierarchical-clustering": "^1.1.0",
     "jexl": "^2.3.0",
     "lodash": "^4.17.21",

@@ -8,6 +8,7 @@ import {
   sampleElementIstance,
 } from './props'
 import {
+  defaultParams,
   defaultretention,
   getLearnTargetStability,
   getRetr,
@@ -401,7 +402,9 @@ function sampleAndAdd(
 
   const target = deck.settings.retention ?? defaultretention,
     childTarget = Math.pow(target, 1 / Math.max(cache.depths[element], 1)),
-    targetStability = getLearnTargetStability() * (cache.depths[element] + 1)
+    targetStability =
+      getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
+      (cache.depths[element] + 1)
 
   let i = 0
   while (i < SAMPLE_TRIES) {

@@ -1,47 +1,22 @@
 import { getCache } from './cache'
-import { fsrs as init, Fsrs, defaultParams } from './fsrs'
 import { getInheritedElement } from './props'
 import { card2Id, id2Card } from './session'
 import * as t from './types'
 import _ from 'lodash'
 
-let fsrs: Fsrs | null = null,
-  waiting: (() => void)[] = []
-
-init().then((f) => {
-  fsrs = f
-  waiting.forEach((c) => c())
-})
-
-export async function setParams(params = defaultParams) {
-  await ready()
-  fsrs = await init(params)
-}
-
-export function getLearnTargetStability() {
-  return fsrs!.memoryState(new Uint32Array([3]), new Uint32Array([0]))[0] * 0.9
-}
-
-export function computeParams(
-  cids: BigInt64Array,
-  ratings: Uint8Array,
-  ids: BigInt64Array,
-  types: Uint8Array
-) {
-  return fsrs!.computeParametersAnki(-3 * 60, cids, ratings, ids, types, null, true)
-}
-
-export async function ready() {
-  if (fsrs) return
-  else
-    await new Promise<void>((res) => {
-      waiting.push(() => res())
-    })
-}
-
+export const defaultParams = [
+  0.7707539200782776, 1.4344240427017212, 3.467081308364868, 16.19120979309082,
+  7.254122257232666, 0.3811998963356018, 1.7041410207748413, 0.014886749908328056,
+  1.3656686544418335, 0.22190921008586884, 0.8670082092285156, 1.9588409662246704,
+  0.08125182241201401, 0.3044493794441223, 2.29744815826416, 0.11656399071216583,
+  3.339834451675415, 0.3628292679786682, 0.34700527787208557,
+]
 export const defaultretention = 0.965
-
 export const grades = ['again', 'hard', 'good', 'easy']
+
+export function getLearnTargetStability(w: number[]) {
+  return nextStateFSRS(undefined, 0, 3, w).stability * 0.9
+}
 
 export function nextCardState(
   cardState: t.CardState | undefined,
@@ -49,13 +24,15 @@ export function nextCardState(
   probability: number,
   now: number,
   retention = defaultretention,
+  w: number[],
   root?: boolean
 ): t.CardState {
   const memoryState = nextState(
       cardState,
       cardState?.lastSeen ? now - cardState.lastSeen : 0,
       grade,
-      probability
+      probability,
+      w
     ),
     base = (1 - probability) * (cardState?.lastBase ?? now) + probability * now
   return {
@@ -74,7 +51,7 @@ export function nextCardState(
 }
 
 export function nextInterval(stability: number, retention: number) {
-  return Math.floor(fsrs!.nextInterval(stability, retention, 3) * 24 * 3600)
+  return Math.floor(nextIntervalFSRS(stability, retention) * 24 * 3600)
 }
 
 function invertRetr(retention: number, secondsElapsed: number): number {
@@ -87,24 +64,18 @@ export function nextState(
   memoryState: t.MemoryState | undefined,
   secondsElapsed: number,
   grade: number,
-  probability: number
+  probability: number,
+  w: number[]
 ): t.MemoryState {
   if (!memoryState) {
-    const [initStability, initDifficulty] = fsrs!.memoryState(
-      new Uint32Array([grade]),
-      new Uint32Array([0])
-    )
-    return {
-      stability: initStability,
-      difficulty: initDifficulty,
-    }
+    return nextStateFSRS(undefined, 0, grade, w)
   } else {
-    const nextMemoryState = fsrs!.nextStates(
-      memoryState.stability,
-      memoryState.difficulty,
-      0.9, //this value is unused because we're ignoring the scheduling from this output
-      secondsElapsed / (3600 * 24)
-    )[grades[grade - 1]].memory
+    const nextMemoryState = nextStateFSRS(
+      memoryState,
+      Math.floor(secondsElapsed / (3600 * 24)),
+      grade,
+      w
+    )
 
     const retr = getRetr(memoryState, secondsElapsed),
       nextRetr = getRetr(nextMemoryState, secondsElapsed),
@@ -125,8 +96,9 @@ export function nextState(
                 Math.exp(
                   -(1 / (maxStability - maxLinear)) * (stabilityInterp - maxLinear)
                 ))
+
     return {
-      stability: Math.max(asymStability, getLearnTargetStability() / 4),
+      stability: Math.max(asymStability, getLearnTargetStability(w) / 4),
       difficulty: difficultyInterp,
     }
   }
@@ -182,7 +154,8 @@ export function getLearningCardDiff(
       state = cards[flearning.cardId]
 
     const successProb = successProbs[i],
-      probability = state ? (1 - successProb) / (1 - totalSuccessProb) : 1,
+      probability =
+        state && flearnings.length > 1 ? (1 - successProb) / (1 - totalSuccessProb) : 1,
       ret = offsetRetention(baseRet, offsets[i])
 
     //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability)
@@ -193,6 +166,7 @@ export function getLearningCardDiff(
       probability,
       learning.time,
       ret,
+      deck.settings.fsrsParams ?? defaultParams,
       flearning.cardId === learning.cardId
     )
   }
@@ -243,4 +217,93 @@ export function getELRetrOffset(
       // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
       3 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
   return offset
+}
+
+/* fsrs in js */
+function nextIntervalFSRS(stability: number, retention: number) {
+  return (stability / (19 / 81)) * (Math.pow(retention, 1 / -0.5) - 1)
+}
+
+function retrFSRS(stability: number, daysElapsed: number) {
+  return Math.pow(1 + (19 / 81) * (daysElapsed / stability), -0.5)
+}
+
+function d0(grade: number, w: number[]) {
+  return w[4] - Math.exp(w[5] * (grade - 1)) + 1
+}
+
+type FsrsCache = {
+  ew8: number
+  d0Map: { [grade: number]: number }
+  e1718: number
+}
+
+let lastw: number[] | null = null,
+  lastCache: FsrsCache | null = null
+function getFSRSCache(w: number[]) {
+  if (w === lastw && lastCache) return lastCache
+  else {
+    lastw = w
+    lastCache = {
+      ew8: Math.exp(w[8]),
+      d0Map: {},
+      e1718: Math.exp(w[17] * w[18]),
+    }
+    for (let i = 1; i < 5; i++) lastCache.d0Map[i] = d0(i, w)
+    return lastCache
+  }
+}
+
+//todo cache  Math.exp(w[8]) , d0map,  Math.exp(w[17] * w[18])
+export function nextStateFSRS(
+  memoryState: t.MemoryState | undefined,
+  daysElapsed: number,
+  grade: number,
+  w: number[]
+): t.MemoryState {
+  const cache = getFSRSCache(w)
+  if (!memoryState) {
+    return { stability: w[grade - 1], difficulty: cache.d0Map[grade] }
+  } else {
+    if (grade === 0) return memoryState
+    const difficulty = Math.fround(memoryState.difficulty),
+      stability = Math.fround(memoryState.stability)
+
+    const deltaD = -w[6] * (grade - 3),
+      dp = memoryState.difficulty + (deltaD / 9) * (10 - difficulty),
+      dd = w[7] * (d0(4, w) - dp) + dp,
+      nextD = Math.min(Math.max(dd, 1), 10)
+
+    if (daysElapsed < 1) {
+      return {
+        stability: stability * Math.exp(w[17] * (grade - 3 + w[18])),
+        difficulty: nextD,
+      }
+    } else {
+      const retr = retrFSRS(stability, daysElapsed)
+      if (grade === 1) {
+        return {
+          stability: Math.min(
+            w[11] *
+              Math.pow(difficulty, -w[12]) *
+              (Math.pow(stability + 1, w[13]) - 1) *
+              Math.exp(w[14] * (1 - retr)),
+            stability / cache.e1718
+          ),
+          difficulty: nextD,
+        }
+      } else {
+        let sinci =
+          cache.ew8 *
+          (11 - difficulty) *
+          Math.pow(stability, -w[9]) *
+          (Math.exp(w[10] * (1 - retr)) - 1)
+
+        if (grade === 2) sinci *= w[15]
+        else if (grade === 4) sinci *= w[16]
+
+        return { stability: stability * (sinci + 1), difficulty: nextD }
+      }
+    }
+  }
 }
