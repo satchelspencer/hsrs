@@ -17,6 +17,7 @@ import {
 } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
+//import { computeElementInstance } from './expr'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -33,7 +34,11 @@ export function createLearningSession(
       stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
     })
 
-  //console.log('sess', new Date().getTime() - t, stack.map((s) => computeElementInstance(s, deck.elements).jp))
+  // console.log(
+  //   'sess',
+  //   new Date().getTime() - t,
+  //   stack.map((s) => computeElementInstance(s, deck.elements).jp)
+  // )
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
@@ -420,15 +425,16 @@ function sampleAndAdd(
           (elId) => {
             const card = deck.cards[card2Id({ element: elId, property })],
               jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
-            if (!card || !cache.hasProps[elId]) return jitter
+            if (!card) return jitter
 
             const seenAgo = now - (card.lastSeen ?? 0),
               cr = getRetr(card, seenAgo),
-              retrDiff = Math.abs(cr - childTarget),
-              depthFactor = Math.pow((cache.depths[elId] ?? 0) + 1, 4),
+              retrDiff = cr - childTarget,
+              retrFactor = logistic(Math.abs(retrDiff) * 10), //harder is a last resort
+              depthFactor = 1 / ((cache.nvds[elId] ?? 0) + 1), //Math.pow((cache.depths[elId] ?? 0) + 1, 8),
               seenFactor = 1 / logistic(seenAgo / 3600 / 24 / 7)
 
-            return (retrDiff / depthFactor) * seenFactor + jitter
+            return retrFactor * depthFactor * seenFactor + jitter
           },
           undefined,
           (elId) => {

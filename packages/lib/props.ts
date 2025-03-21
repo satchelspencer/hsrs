@@ -411,7 +411,10 @@ export function sampleElementIstance(
     maxOrder = orders[orders.length - 1] ?? -Infinity,
     normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
-  //console.log(elements[id].name, rootElement.mode, commonMode.map((s) => s.mode).join(''))
+  // console.log(
+  //   elements[id].name,
+  //   descendents.map((d, i) => elements[d].name + ' ' + orders[i])
+  // )
 
   while (normed.length) {
     const sum = _.sumBy(normed),

@@ -117,4 +117,5 @@ export type DeckCache = {
   paramTree: TreeCache
   depths: { [elId: string]: number }
   hasProps: { [elId: string]: boolean }
+  nvds: { [elId: string]: number }
 }

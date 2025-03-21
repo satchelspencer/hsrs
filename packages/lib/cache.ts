@@ -73,6 +73,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     paramTree: { parents: {}, children: {}, ancestors: {}, topo: [], leaves: {} },
     depths: {},
     hasProps: {},
+    nvds: {},
   }
 
   for (const id in elements) {
@@ -144,6 +145,8 @@ export function getCache(relements: t.IdMap<t.Element>) {
       paramNVDTotals[aid] = (paramNVDTotals[aid] ?? 0) + (paramNVDTotals[id] ?? 0)
     }
   }
+
+  cache.nvds = paramNVDTotals
 
   for (const id in elements) {
     cache.depths[id] *= (logistic((paramNVDTotals[id] ?? 0) / 50) - 0.5) * 2
