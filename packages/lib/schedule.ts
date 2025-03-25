@@ -18,6 +18,10 @@ export function getLearnTargetStability(w: number[]) {
   return nextStateFSRS(undefined, 0, 3, w).stability * 0.9
 }
 
+function roundf(number: number) {
+  return Math.round(number * 1e3) / 1e3
+}
+
 export function nextCardState(
   cardState: t.CardState | undefined,
   grade: number,
@@ -34,7 +38,9 @@ export function nextCardState(
       probability,
       w
     ),
-    base = (1 - probability) * (cardState?.lastBase ?? now) + probability * now
+    base = Math.floor(
+      (1 - probability) * (cardState?.lastBase ?? now) + probability * now
+    )
   return {
     ...memoryState,
     difficulty: root
@@ -98,8 +104,8 @@ export function nextState(
                 ))
 
     return {
-      stability: Math.max(asymStability, getLearnTargetStability(w) / 4),
-      difficulty: difficultyInterp,
+      stability: roundf(Math.max(asymStability, getLearnTargetStability(w) / 4)),
+      difficulty: roundf(difficultyInterp),
     }
   }
 }
