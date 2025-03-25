@@ -7,7 +7,7 @@ import { Icon } from '../components/icon'
 import { LabelGroup } from '../components/labels'
 import { db, db2learning, learning2db } from '../redux/db'
 import * as r from '../redux'
-import { historyVersionable, deckVersionable } from '../redux/versions'
+import { historyVersionable, deckVersionable } from '@hsrs/lib/versions'
 import { defaultretention, getTime } from '@hsrs/lib/schedule'
 import CodeInput from '../components/code'
 

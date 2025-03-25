@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { css, cx } from '@emotion/css'
 
@@ -23,9 +23,40 @@ if (container) {
 
 const routes = ['learn', 'lib', 'settings']
 
+const darkStyles = `
+  html {
+    filter: hue-rotate(180deg) invert(1) contrast(0.8);
+  }
+  * {
+    box-shadow: none !important;
+  }
+`
+
 export function App() {
   const dispatch = r.useDispatch(),
-    currentRoute = r.useSelector((s) => s.ui.route)
+    currentRoute = r.useSelector((s) => s.ui.route),
+    dark = r.useSelector((s) => s.settings.vars['dark'])
+
+  useEffect(() => {
+    const styleElement = document.createElement('style')
+    styleElement.innerHTML =
+      dark === undefined
+        ? `
+            @media (prefers-color-scheme: dark) {
+             ${darkStyles}
+            }
+          `
+        : dark === 'true'
+        ? darkStyles
+        : ''
+
+    document.head.appendChild(styleElement)
+
+    return () => {
+      document.head.removeChild(styleElement)
+    }
+  }, [dark === undefined, dark === 'true'])
+
   return (
     <div className={appWrapper}>
       <div className={appNav}>

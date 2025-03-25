@@ -11,14 +11,6 @@ injectGlobal`
   * {
     box-sizing:border-box;
   }
-  @media (prefers-color-scheme: dark) {
-    html {
-      filter: hue-rotate(180deg) invert(1) contrast(0.8);
-    }
-    * {
-      box-shadow:none !important;
-    }
-  }
 `
 
 function createColor(base: Color) {
