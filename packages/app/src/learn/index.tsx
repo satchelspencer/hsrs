@@ -232,21 +232,26 @@ export function Learn() {
     dayProgress = r.useSelector(r.selectors.selectDailyProgress),
     sessionCount = Math.ceil(dayProgress.goal / actualSessionSize),
     doneSessionCount = Math.ceil(dayProgress.done / actualSessionSize),
-    canNew = doneSessionCount >= sessionCount,
+    canNew = !dayProgress.goal || doneSessionCount >= sessionCount,
     {
       new: cardsAvailable,
       due: cardsDue,
       next: nextDue,
     } = useMemo(
       () =>
-        createLearningSession(deck, actualSessionSize, allowNew && canNew, filter ?? [], 'local'),
+        createLearningSession(
+          deck,
+          actualSessionSize,
+          allowNew && canNew,
+          filter ?? [],
+          'local'
+        ),
       [newSessionSize, allowNew, filter, !!session, canNew]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
       session &&
       session.history.filter((h) => h.score !== 1).length / session.history.length
-
   const estReviews = useMemo(() => {
       return session ? estimateReviewsRemaining(session) : 0
     }, [session?.stack]),
@@ -453,8 +458,8 @@ export function Learn() {
           {!!dayProgress.goal && (
             <div className={dprogress}>
               <div
-                className={dprogressItem(dayProgress.done / dayProgress.goal)}
-                style={{ borderRight: '2px solid #678eb97a' }}
+                className={dprogressItem(dayProgress.done / dayProgress.goal, true)}
+                style={{ zIndex: 1 }}
               />
               <div
                 className={cx(
@@ -530,8 +535,8 @@ const dprogress = cx(
     width: 350px;
     max-width: 100vw;
     margin: 5px;
-    height: 8px;
-    border-radius: 2px;
+    height: 12px;
+    border-radius: 12px;
     background: ${styles.color(0.95)};
     overflow: hidden;
   `
@@ -541,30 +546,31 @@ const fadeInOut = css`
   animation: fadeInOut 2s infinite ease-in-out;
   @keyframes fadeInOut {
     0% {
-      opacity: 0.5;
+      opacity: 0.2;
     }
     50% {
       opacity: 1;
     }
     100% {
-      opacity: 0.5;
+      opacity: 0.2;
     }
   }
   border-top-left-radius: 0px;
   border-bottom-left-radius: 0px;
-  padding-left: 2px;
-  margin-left: -2px;
-  background: hsl(211 51% 78% / 0.3);
+  padding-left: 8px;
+  margin-left: -8px;
+  background: hsl(211 51% 78% / 0.5);
 `
 
-const dprogressItem = (done: number) =>
+const dprogressItem = (done: number, border?: boolean) =>
   cx(css`
     flex: none;
-    height: 8px;
-    border-radius: 2px;
+    height: 12px;
+    border-radius: 8px;
     width: ${done * 100 + '%'};
     max-width: 100%;
-    background: hsl(211deg 89% 78%);
+    background: ${done >= 1 ? `oklab(0.82 -0.12 0.08 / 1)` : `hsl(211deg 89% 78%)`};
+    ${done < 1 && border && `border-right: 2px solid #678eb97a;`}
   `)
 
 const tapArea = (right: boolean) =>

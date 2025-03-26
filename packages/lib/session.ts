@@ -183,9 +183,10 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
 
   let redist = false
   if (delta > 2) {
-    const toRemove =
-      _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
-      _.findLast(session.stack, (c) => unseenEls.includes(c.element)) //fall back to removing a review if needed
+    const toRemove = _.findLast(
+      session.stack,
+      (c) => unseenEls.includes(c.element) && !!c.new
+    )
 
     //console.log(toRemove && cardsGroupedByEl[toRemove.element].length)
     if (toRemove && cardsGroupedByEl[toRemove.element].length <= delta) {
@@ -489,7 +490,7 @@ export function getDayProgress(
     chipper = backlog / dcvs.length / 2 //half avg of backlog days
 
   return {
-    goal: (dailyGoal + chipper + doneCount) * 0.99,
+    goal: (dailyGoal + chipper + doneCount) * 0.95,
     done: doneCount,
     new: newCount,
   }
