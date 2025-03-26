@@ -490,7 +490,7 @@ export function getDayProgress(
     chipper = backlog / dcvs.length / 2 //half avg of backlog days
 
   return {
-    goal: (dailyGoal + chipper + doneCount) * 0.95,
+    goal: Math.floor((dailyGoal + chipper + doneCount) * 0.95),
     done: doneCount,
     new: newCount,
   }

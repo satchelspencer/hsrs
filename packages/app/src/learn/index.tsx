@@ -560,6 +560,7 @@ const fadeInOut = css`
   padding-left: 8px;
   margin-left: -8px;
   background: hsl(211 51% 78% / 0.5);
+  box-sizing: content-box;
 `
 
 const dprogressItem = (done: number, border?: boolean) =>
