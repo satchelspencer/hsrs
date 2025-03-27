@@ -123,8 +123,7 @@ export const deckThunks = {
         deck = getState().deck
       await db.cardLearning.orderBy('id').each((learning) => {
         if (learning['id'] % 1000 === 0) console.log(learning['id'])
-        if (_.every(learning.elIds, (e) => deck.elements[e]))
-          applyHistoryToCards(newCards, [learning], deck)
+        applyHistoryToCards(newCards, [learning], deck)
       })
       return newCards
     }

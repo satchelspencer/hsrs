@@ -230,9 +230,7 @@ export function Learn() {
   const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings),
     actualSessionSize = Math.pow(2, newSessionSize) * 30,
     dayProgress = r.useSelector(r.selectors.selectDailyProgress),
-    sessionCount = Math.ceil(dayProgress.goal / actualSessionSize),
-    doneSessionCount = Math.ceil(dayProgress.done / actualSessionSize),
-    canNew = !dayProgress.goal || doneSessionCount >= sessionCount,
+    canNew = !dayProgress.goal || dayProgress.goal - dayProgress.done < actualSessionSize,
     {
       new: cardsAvailable,
       due: cardsDue,
