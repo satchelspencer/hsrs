@@ -25,9 +25,16 @@ export function createLearningSession(
   allowNew: boolean,
   filter: string[],
   tz: string
-): { session: t.LearningSession; new: number; due: number; next: number; maxp: number } {
+): {
+  session: t.LearningSession
+  new: number
+  due: number
+  next: number
+  maxp: number
+  progress: DayProgress
+} {
   //const t = new Date().getTime()
-  const { dueCards, nextCards } = getDue(deck, size, filter, tz),
+  const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz),
     newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, filter)) : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
@@ -52,6 +59,7 @@ export function createLearningSession(
     due: dueCards.length,
     next: previewCards.length,
     maxp: Math.max(0, ...previewCards.map((card) => deck.cards[card2Id(card)].due ?? 0)),
+    progress,
   }
 }
 
@@ -319,15 +327,14 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
   return res.map((c) => ({ ...c, new: true }))
 }
 
+type DayProgress = { goal: number; done: number; new: number; next: number }
+
 function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    endOfDay = DateTime.now()
-      .setZone(tz)
-      .minus({ hours: 4 })
-      .endOf('day')
-      .plus({ hours: 4 })
-      .toSeconds(),
+    nowTz = DateTime.now().setZone(tz).minus({ hours: 4 }),
+    endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
+    startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
     cache = getCache(deck.elements),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
@@ -350,42 +357,54 @@ function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
       ]
     )
 
-  // console.log(
-  //   cardsIds
-  //     .map((c) => {
-  //       const state = deck.cards[c],
-  //         due = ((state.due ?? Infinity) - now) / 3600 / 24,
-  //         mago =
-  //           state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-  //             ? (now - state.lastMiss) / 3600 / 24
-  //             : Infinity
-  //       return [
-  //         due < 0 ? 'due' : '   ',
-  //         mago < due ? '***' : '   ',
-  //         deck.elements[id2Card(c).element]?.name,
-  //         id2Card(c).property,
-  //         due,
-  //         mago,
-  //         //state.due && new Date(state.due * 1000),
-  //       ] //.join(' ')
-  //     })
-  //     .join('\n')
-  // )
+  let doneCount = 0,
+    newCount = 0
+  const dayCounts: { [day: number]: number } = {},
+    nonSameDays: { [cardId: string]: true } = {}
+  for (const cardId of cardsIds) {
+    const state = deck.cards[cardId]
 
-  while (dueCards.length + nextCards.length < limit && cardsIds.length) {
-    const cardId = cardsIds.shift()!,
-      state = deck.cards[cardId],
-      card = id2Card(cardId),
-      { props, virtual } = getInheritedElement(card.element, deck.elements),
-      hasProps = !!props[card.property]
-
-    if (!virtual && hasProps && state.due && state.lastSeen) {
-      if (state.due < endOfDay) sampleAndAdd(dueCards, cardId, deck, filter)
-      else sampleAndAdd(nextCards, cardId, deck, filter)
+    if ((state.firstSeen ?? Infinity) > startOfDay) newCount++
+    else if ((state.lastRoot ?? Infinity) > startOfDay) doneCount++
+    else if (
+      (state.due ?? Infinity) < endOfDay &&
+      (state.lastSeen ?? Infinity) < startOfDay
+    ) {
+      const day = DateTime.fromSeconds(state.due!)
+        .minus({ hours: 4 })
+        .startOf('day')
+        .toSeconds()
+      dayCounts[day] = (dayCounts[day] ?? 0) + 1
+      nonSameDays[cardId] = true
     }
   }
 
-  return { dueCards, nextCards }
+  const dcvs = Object.values(dayCounts),
+    dailyGoal = _.max(dcvs) ?? 0,
+    backlog = _.sum(dcvs) - dailyGoal,
+    chipper = backlog / dcvs.length / 2 //half avg of backlog days
+
+  let sameDays = 0,
+    sampleFailures = 0
+  while (dueCards.length + nextCards.length < limit && cardsIds.length) {
+    const cardId = cardsIds.shift()!,
+      state = deck.cards[cardId]
+
+    if (state.due && state.due < endOfDay) {
+      const added = sampleAndAdd(dueCards, cardId, deck, filter)
+      if (!added) sampleFailures++
+      else if (!nonSameDays[cardId]) sameDays++
+    } else sampleAndAdd(nextCards, cardId, deck, filter)
+  }
+
+  const progress: DayProgress = {
+    goal: Math.floor(dailyGoal - sampleFailures + chipper + doneCount), //goal discounts sample failures
+    done: doneCount,
+    new: newCount,
+    next: dueCards.length - sameDays, //next discounts same day reviews
+  }
+
+  return { dueCards, nextCards, progress }
 }
 
 const SAMPLE_TRIES = 20,
@@ -446,52 +465,9 @@ function sampleAndAdd(
         ),
         property,
       })
-      break
+      return true
     } catch {}
     i++
   }
-}
-
-export function getDayProgress(
-  cards: t.CardStates,
-  elements: t.IdMap<t.Element>,
-  offsetHour = 4
-) {
-  const cache = getCache(elements),
-    now = DateTime.fromJSDate(new Date()).minus({ hours: 4 }),
-    endOfDay = now.endOf('day').plus({ hours: offsetHour }).toSeconds(),
-    startOfDay = now.startOf('day').plus({ hours: offsetHour }).toSeconds()
-
-  let doneCount = 0,
-    newCount = 0
-
-  const dayCounts: { [day: number]: number } = {}
-
-  for (const cardId in cards) {
-    const state = cards[cardId],
-      elementId = id2Card(cardId).element
-
-    if (!cache.hasProps[elementId] || elements[elementId].virtual) continue
-
-    if (state.firstSeen && state.firstSeen > startOfDay) newCount++
-    else if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
-    else if (state.due && state.due < endOfDay) {
-      const day = DateTime.fromSeconds(state.due)
-        .minus({ hours: 4 })
-        .startOf('day')
-        .toSeconds()
-      dayCounts[day] = (dayCounts[day] ?? 0) + 1
-    }
-  }
-
-  const dcvs = Object.values(dayCounts),
-    dailyGoal = _.max(dcvs) ?? 0,
-    backlog = _.sum(dcvs) - dailyGoal,
-    chipper = backlog / dcvs.length / 2 //half avg of backlog days
-
-  return {
-    goal: Math.floor((dailyGoal + chipper + doneCount) * 0.95),
-    done: doneCount,
-    new: newCount,
-  }
+  return false
 }

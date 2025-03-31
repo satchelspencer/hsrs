@@ -10,7 +10,6 @@ import { createSelector } from './store'
 import _ from 'lodash'
 import { Selection } from './ui'
 import { getCache } from '@hsrs/lib/cache'
-import { getDayProgress } from '@hsrs/lib/session'
 
 export const selectSelections = createSelector(
   [(state) => state.ui.selections, (state) => state.deck.elements],
@@ -78,9 +77,4 @@ export const selectNonVirtialElementIdsByParent = createSelector(
       ? getNonVirtualDescendents(parentId, elements, getCache(elements))
       : []
   }
-)
-
-export const selectDailyProgress = createSelector(
-  [(state) => state.deck.cards, (state) => state.deck.elements],
-  (cards, elements) => getDayProgress(cards, elements)
 )

@@ -229,22 +229,15 @@ export function Learn() {
 
   const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings),
     actualSessionSize = Math.pow(2, newSessionSize) * 30,
-    dayProgress = r.useSelector(r.selectors.selectDailyProgress),
-    canNew = !dayProgress.goal || dayProgress.goal - dayProgress.done < actualSessionSize,
     {
       new: cardsAvailable,
       due: cardsDue,
       next: nextDue,
+      progress: dayProgress,
     } = useMemo(
       () =>
-        createLearningSession(
-          deck,
-          actualSessionSize,
-          allowNew && canNew,
-          filter ?? [],
-          'local'
-        ),
-      [newSessionSize, allowNew, filter, !!session, canNew]
+        createLearningSession(deck, actualSessionSize, allowNew, filter ?? [], 'local'),
+      [newSessionSize, allowNew, filter, !!session]
     ),
     sessionSeconds = _.sumBy(session?.history, (h) => h.took),
     accuracy =
@@ -461,7 +454,7 @@ export function Learn() {
               />
               <div
                 className={cx(
-                  dprogressItem(actualSessionSize / dayProgress.goal),
+                  dprogressItem(dayProgress.next / dayProgress.goal),
                   fadeInOut
                 )}
               />
@@ -496,17 +489,10 @@ export function Learn() {
           <div className={desc} style={{ opacity: 0.7 }}>
             <b>{cardsDue}</b>&nbsp;due,&nbsp;
             <b>{cardsAvailable}</b>&nbsp;new,&nbsp;<b>{nextDue}</b>&nbsp;review&nbsp;
-            <div
-              className={desc}
-              style={{
-                fontSize: 'inherit',
-                opacity: canNew ? 1 : 0.4,
-                pointerEvents: canNew ? 'all' : 'none',
-              }}
-            >
+            <div className={desc} style={{ fontSize: 'inherit' }}>
               <input
                 type="checkbox"
-                checked={!!allowNew && canNew}
+                checked={!!allowNew}
                 onChange={() =>
                   dispatch(r.actions.setDeckSettings({ allowNew: !allowNew }))
                 }
