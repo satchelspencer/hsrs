@@ -332,7 +332,7 @@ type DayProgress = { goal: number; done: number; new: number; next: number }
 function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    nowTz = DateTime.now().setZone(tz).minus({ hours: 4 }),
+    nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
     cache = getCache(deck.elements),
@@ -382,7 +382,7 @@ function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
   const dcvs = Object.values(dayCounts),
     dailyGoal = _.max(dcvs) ?? 0,
     backlog = _.sum(dcvs) - dailyGoal,
-    chipper = backlog / dcvs.length / 2 //half avg of backlog days
+    chipper = backlog ? backlog / dcvs.length / 2 : 0 //half avg of backlog days
 
   let sameDays = 0,
     sampleFailures = 0
@@ -398,7 +398,7 @@ function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
   }
 
   const progress: DayProgress = {
-    goal: Math.floor(dailyGoal - sampleFailures + chipper + doneCount), //goal discounts sample failures
+    goal: Math.max(Math.floor(dailyGoal - sampleFailures + chipper + doneCount), 1), //goal discounts sample failures
     done: doneCount,
     new: newCount,
     next: dueCards.length - sameDays, //next discounts same day reviews
