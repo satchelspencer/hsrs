@@ -17,7 +17,7 @@ import {
 } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
-//import { computeElementInstance } from './expr'
+import { computeElementInstance, computeElementMode } from './expr'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -259,14 +259,30 @@ export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   return cardReviewsRemaning
 }
 
-export function getSessionDone(session: t.LearningSession | null) {
-  if (!session) return false
-  const states = _.values(session.cards)
+export function getSessionState(
+  session: t.LearningSession | null,
+  elements: t.IdMap<t.Element>,
+  revealed: boolean
+) {
+  const estReviews = session ? estimateReviewsRemaining(session) : 0,
+    card = session?.stack[0],
+    value = card && computeElementInstance(card, elements)
 
-  return (
-    states.length >= _.uniqBy(session.stack, (c) => card2Id(c)).length &&
-    _.every(states, (c) => c.stability >= 1)
-  )
+  return {
+    progress: {
+      sessionSeconds: _.sumBy(session?.history, (h) => h.took),
+      accuracy:
+        session &&
+        session.history.filter((h) => h.score !== 1).length / session.history.length,
+      completion: session
+        ? session.history.length / (estReviews + session.history.length)
+        : 0,
+    },
+    card,
+    value,
+    mode: card && computeElementMode(card, elements),
+    shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
+  }
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {

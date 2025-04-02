@@ -5,13 +5,12 @@ import _ from 'lodash'
 import * as styles from '../styles'
 import * as r from '../redux'
 import { Button, RadioGroup } from '../components/button'
-import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
+import { computeElementInstance } from '@hsrs/lib/expr'
 import {
   applySessionHistoryToCards,
   card2Id,
   createLearningSession,
-  estimateReviewsRemaining,
-  getSessionDone,
+  getSessionState,
   id2Card,
   nextSessionState,
 } from '@hsrs/lib/session'
@@ -59,18 +58,18 @@ export function Learn() {
     settings = r.useSelector((s) => s.settings),
     dispatch = r.useDispatch()
 
-  const card = session?.stack[0],
-    value = card && computeElementInstance(card, elements),
-    mode = card && computeElementMode(card, elements),
-    [revealed, setRevealed] = useState(false),
-    shownValue = revealed ? value : _.pick(value, card?.property ?? ''),
+  const [revealed, setRevealed] = useState(false),
+    sessionState = useMemo(
+      () => getSessionState(session, elements, revealed),
+      [session, elements, revealed]
+    ),
+    { progress, card, value, mode, shownValue } = sessionState,
     plugin =
       card &&
       getElementAndParents(card.element, elements)
         .map((e) => elements[e].name)
         .find((e) => settings.plugins[e]),
-    pluginUrl = plugin && settings.plugins[plugin],
-    sessionDone = getSessionDone(session)
+    pluginUrl = plugin && settings.plugins[plugin]
 
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
   useEffect(() => {
@@ -238,27 +237,20 @@ export function Learn() {
       () =>
         createLearningSession(deck, actualSessionSize, allowNew, filter ?? [], 'local'),
       [newSessionSize, allowNew, filter, !!session]
-    ),
-    sessionSeconds = _.sumBy(session?.history, (h) => h.took),
-    accuracy =
-      session &&
-      session.history.filter((h) => h.score !== 1).length / session.history.length
-  const estReviews = useMemo(() => {
-      return session ? estimateReviewsRemaining(session) : 0
-    }, [session?.stack]),
-    progress = session
-      ? session.history.length / (estReviews + session.history.length)
-      : 0
+    )
 
   return (
     <div className={learnWrapper}>
       {session && (
         <div className={progressWrapper}>
-          <div className={progressInner} style={{ width: progress * 100 + '%' }} />
+          <div
+            className={progressInner}
+            style={{ width: progress.completion * 100 + '%' }}
+          />
         </div>
       )}
       {session ? (
-        sessionDone ? (
+        progress.completion === 1 ? (
           <>
             <Button
               className={mainAction}
@@ -269,12 +261,12 @@ export function Learn() {
             </Button>
             <div className={desc}>
               {session.history.length} reviews done in{' '}
-              {sessionSeconds > 60 ? (
-                <>{(sessionSeconds / 60).toFixed(1)} minutes</>
+              {progress.sessionSeconds > 60 ? (
+                <>{(progress.sessionSeconds / 60).toFixed(1)} minutes</>
               ) : (
-                <>{sessionSeconds.toFixed(1)} seconds</>
+                <>{progress.sessionSeconds.toFixed(1)} seconds</>
               )}
-              . {accuracy && Math.floor(accuracy * 100)}% accuracy
+              . {progress.accuracy && Math.floor(progress.accuracy * 100)}% accuracy
             </div>
           </>
         ) : value ? (
@@ -422,7 +414,7 @@ export function Learn() {
                     onClick={() => {
                       dispatch(
                         r.actions.setSelection({
-                          selection: [{ type: 'element', jump: true, id: card.element }],
+                          selection: [{ type: 'element', jump: true, id: card!.element }],
                           index: 0,
                         })
                       )
