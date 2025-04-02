@@ -26,12 +26,10 @@ import {
   nextInterval,
 } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
-import Worker from '../worker?worker'
+import { findAliasesAync } from '@hsrs/lib/async'
 import * as t from '@hsrs/lib/types'
 import { ElListPicker } from '../editor/element'
 import { getCache } from '@hsrs/lib/cache'
-
-const worker = new Worker()
 
 type CardStat =
   | {
@@ -72,19 +70,14 @@ export function Learn() {
     pluginUrl = plugin && settings.plugins[plugin]
 
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
+  const reqId = useRef(0)
   useEffect(() => {
     setAliases([])
     if (card) {
-      worker.onmessage = ({ data }) => {
-        setAliases(data.map((d) => computeElementInstance(d, elements)))
-      }
-      worker.postMessage({
-        type: 'findAliases',
-        instance: card,
-        propName: card?.property,
-        elements: elements,
-        cache: getCache(elements),
-        cards: deck.cards,
+      const nid = ++reqId.current
+      findAliasesAync(card, card?.property, deck).then((aliases) => {
+        if (nid === reqId.current)
+          setAliases(aliases.map((d) => computeElementInstance(d, elements)))
       })
     }
   }, [card])
