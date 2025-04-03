@@ -7,3 +7,4 @@ yarn-error.log
 packages/*
 !packages/app
 !packages/lib
+!packages/tts
