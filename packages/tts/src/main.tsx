@@ -53,11 +53,9 @@ export function useTtsState(state: CardProps) {
     if (!audioTxt) return
     const src = ttsCache.get(audioTxt)
     if (src && aref.current) {
-      aref.current.oncanplay = () => {
-        setLoaded(true)
-        aref.current?.play()
-      }
       aref.current.src = src
+      setLoaded(true)
+      aref.current?.play()
     } else {
       setLoaded(true)
       speechSynthesis.pause()
