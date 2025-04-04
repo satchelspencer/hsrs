@@ -14,6 +14,10 @@ interface CardProps extends CardState {
   tts: (text: string, raw?: string) => Promise<string | undefined>
 }
 
+function dedupeAudio<T extends string | undefined>(text: T) {
+  return text && [...new Set(text.split('~, '))].join(', ').replaceAll('~', '')
+}
+
 export function useTtsState(state: CardProps) {
   const modeKeys = state.vars['modes']?.split('.').map((c) => c.split('-')) ?? [],
     value = state.value ?? {},
@@ -29,7 +33,7 @@ export function useTtsState(state: CardProps) {
           Object.entries(state.value).map(([key, value]) => [
             key,
             typeof value === 'string'
-              ? [...new Set([value, ...state.aliases.map((a) => a[key])])].join(', ')
+              ? [value, ...state.aliases.map((a) => a[key])].join('~, ')
               : value,
           ])
         )
@@ -77,7 +81,8 @@ export function useTtsState(state: CardProps) {
       if (ttsCache.get(audioTxt)) {
         playSrc()
       } else {
-        state.tts(audioTxt, audioRaw).then((audioSrc) => {
+        console.log(dedupeAudio(audioTxt), dedupeAudio(audioRaw))
+        state.tts(dedupeAudio(audioTxt), dedupeAudio(audioRaw)).then((audioSrc) => {
           ttsCache.set(audioTxt, audioSrc)
           if (reqId.current !== nid) return
           playSrc()
@@ -152,7 +157,7 @@ function Card(props: CardProps) {
               &nbsp;({state.modeText})&nbsp;
             </span>
           )}
-          {state.valueWithALiases[k] + ''}
+          {(state.valueWithALiases[k] + '').replaceAll('~', '')}
         </div>
       ))}
       <audio hidden ref={state.aref} controls />

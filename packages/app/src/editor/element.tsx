@@ -14,6 +14,7 @@ import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { findAliases } from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
+import { cleanRuby } from '@hsrs/lib/ruby'
 
 interface ElementEditorProps {
   id: string
@@ -287,7 +288,7 @@ export function ElementEditor(props: ElementEditorProps) {
                     .filter((l) => typeof example[l] === 'string')
                     .map((id) => [
                       <div className={propName}>{id}</div>,
-                      <div>{example[id]}</div>,
+                      <div>{cleanRuby(example[id])}</div>,
                     ])}
                 />
                 {!Object.keys(_.omit(example, Object.keys(exampleInstance.params ?? {})))

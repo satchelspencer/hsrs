@@ -4,6 +4,10 @@ import * as t from './types'
 import { getInheritedElement, satisfiesMode } from './props'
 import { getCache } from './cache'
 
+export const RUBY_DELIM = '~'
+
+jexl.addBinaryOp(':::', 20, (a, b) => a + RUBY_DELIM + b)
+
 jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
 )
@@ -69,11 +73,18 @@ function cacheJexl(expr: string, context: any) {
 
 export function run(expr: string, context: any, root?: boolean): any {
   if (expr === 'null') return undefined
-  if (!expr.includes('.') && !expr.includes('|') && !expr.includes('+')) return expr
+  if (
+    !expr.includes('.') &&
+    !expr.includes('|') &&
+    !expr.includes('+') &&
+    !expr.includes(':::')
+  )
+    return expr
   try {
     const res = cacheJexl(expr, context) ?? expr
     return _.isNaN(res) ? expr : root ? moveit(res) : res
-  } catch {
+  } catch (e) {
+    console.log()
     return expr
   }
 }
@@ -134,10 +145,20 @@ export function computeElementInstance(
     const mapped = _.mapValues(
       _.omit(elProps, prop),
       (v, k) =>
-        v && run(v.replaceAll('.' + k, '.' + prop), { ...params, _: result }, !child)
+        v &&
+        run(
+          v.replaceAll('.' + k, '.' + prop).replaceAll('+', ':::'),
+          { ...params, _: result },
+          !child
+        )
     )
     result[prop] =
-      elProps[prop] && run(elProps[prop], { ...params, _: result, $: mapped }, !child)
+      elProps[prop] &&
+      run(
+        elProps[prop].replaceAll('+', ':::'),
+        { ...params, _: result, $: mapped },
+        !child
+      )
   }
 
   return { ...result, ...params }
