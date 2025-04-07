@@ -37,6 +37,6 @@ export function renderRuby(text: string, ruby: string) {
   return res
 }
 
-export function cleanRuby(text: string) {
-  return text.replaceAll(RUBY_DELIM, '')
+export function cleanRuby<T>(text: T): T {
+  return typeof text === 'string' ? (text.replaceAll(RUBY_DELIM, '') as T) : text
 }

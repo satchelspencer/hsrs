@@ -4,6 +4,7 @@ import { computeElementInstance, computeElementMode } from './expr'
 import lcs from 'node-lcs'
 import { card2Id } from './session'
 import { getCache } from './cache'
+import { cleanRuby } from './ruby'
 
 export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
   const res: string[] = [],
@@ -255,7 +256,7 @@ export function findAliases(
           continue
         if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: value }
         if (
-          iv[propName] === target &&
+          cleanRuby(iv[propName]) === cleanRuby(target) &&
           !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
           targetMode === omode
         ) {
