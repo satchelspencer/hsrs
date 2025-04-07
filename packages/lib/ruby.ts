@@ -13,7 +13,7 @@ export function renderRuby(text: string, ruby: string) {
       rc = rcs[i]
 
     if (tc === rc) {
-      res += `${tc}`
+      res += `${tc}<wbr/>`
     } else {
       let prec = '',
         postc = ''
@@ -31,12 +31,14 @@ export function renderRuby(text: string, ruby: string) {
       const tcc = tc.substring(prec.length, tc.length - postc.length),
         rcc = rc.substring(prec.length, rc.length - postc.length)
 
-      res += `${prec}<ruby>${tcc}<rt>${rcc}</rt></ruby>${postc}`
+      res += `${prec}<ruby>${tcc}<rt>${rcc}</rt></ruby>${postc}<wbr/>`
     }
   }
   return res
 }
 
-export function cleanRuby<T>(text: T): T {
-  return typeof text === 'string' ? (text.replaceAll(RUBY_DELIM, '') as T) : text
+export function cleanRuby<T>(text: T, breaks?: boolean): T {
+  return typeof text === 'string'
+    ? (text.replaceAll(RUBY_DELIM, breaks ? '<wbr/>' : '') as T)
+    : text
 }
