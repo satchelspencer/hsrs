@@ -466,11 +466,12 @@ function sampleAndAdd(
             const seenAgo = now - (card.lastSeen ?? 0),
               cr = getRetr(card, seenAgo),
               retrDiff = cr - childTarget,
-              retrFactor = logistic(Math.abs(retrDiff) * 10), //harder is a last resort
+              retrFactor = logistic(retrDiff * 10), //harder is a last resort
               depthFactor = 1 / ((cache.nvds[elId] ?? 0) + 1), //Math.pow((cache.depths[elId] ?? 0) + 1, 8),
-              seenFactor = 1 / logistic(seenAgo / 3600 / 24 / 7)
+              seenFactor = 1 / logistic(seenAgo / 3600 / 24 / 7),
+              rdFactor = Math.pow(cache.pdepths[elId] / (cache.pdepths[element] + 1), 2)
 
-            return retrFactor * depthFactor * seenFactor + jitter
+            return rdFactor * retrFactor * depthFactor * seenFactor + jitter
           },
           undefined,
           (elId) => {

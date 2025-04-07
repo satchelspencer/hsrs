@@ -74,6 +74,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     depths: {},
     hasProps: {},
     nvds: {},
+    pdepths: {},
   }
 
   for (const id in elements) {
@@ -149,6 +150,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
   cache.nvds = paramNVDTotals
 
   for (const id in elements) {
+    cache.pdepths[id] = cache.depths[id]
     cache.depths[id] *= (logistic((paramNVDTotals[id] ?? 0) / 50) - 0.5) * 2
   }
   //console.log(cache, new Date().getTime() - t)
