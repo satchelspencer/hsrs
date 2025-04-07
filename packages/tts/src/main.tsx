@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { hsrsPlugin, CardState } from 'hsrs-plugin'
+import { cleanRuby } from '@hsrs/lib/ruby'
+import { RUBY_DELIM } from '@hsrs/lib/expr'
 
 const container = document.getElementById('root')
 if (container) {
@@ -14,9 +16,7 @@ interface CardProps extends CardState {
   tts: (text: string, raw?: string) => Promise<string | undefined>
 }
 
-function dedupeAudio<T extends string | undefined>(text: T) {
-  return text && [...new Set(text.split('~, '))].join(', ').replaceAll('~', '')
-}
+const aliasDelim = RUBY_DELIM + ', '
 
 export function useTtsState(state: CardProps) {
   const modeKeys = state.vars['modes']?.split('.').map((c) => c.split('-')) ?? [],
@@ -33,7 +33,7 @@ export function useTtsState(state: CardProps) {
           Object.entries(state.value).map(([key, value]) => [
             key,
             typeof value === 'string'
-              ? [value, ...state.aliases.map((a) => a[key])].join('~, ')
+              ? [value, ...state.aliases.map((a) => a[key])].join(aliasDelim)
               : value,
           ])
         )
@@ -47,6 +47,7 @@ export function useTtsState(state: CardProps) {
     [loaded, setLoaded] = useState(false),
     audioRaw = txtKey && valueWithALiases[txtKey],
     audioTxt = cardHasAudio && (ttsKey[0] !== '_' ? valueWithALiases[ttsKey] : audioRaw),
+    dedupedAudio = dedupeAudio(audioTxt || '', audioRaw),
     modeText = (mode + '')
       .split('')
       .map((c, i) => modeKeys[i]?.find((v) => v[0] === c))
@@ -54,8 +55,8 @@ export function useTtsState(state: CardProps) {
       .join(', ')
 
   const playSrc = () => {
-    if (!audioTxt) return
-    const src = ttsCache.get(audioTxt)
+    if (!dedupedAudio.text) return
+    const src = ttsCache.get(dedupedAudio.text)
     if (src && aref.current) {
       aref.current.src = src
       setLoaded(true)
@@ -64,7 +65,7 @@ export function useTtsState(state: CardProps) {
       setLoaded(true)
       speechSynthesis.pause()
       speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(audioTxt)
+      const utterance = new SpeechSynthesisUtterance(dedupedAudio.text)
       utterance.lang = state.vars['lang']
       speechSynthesis.speak(utterance)
     }
@@ -77,19 +78,18 @@ export function useTtsState(state: CardProps) {
     if (aref.current) aref.current.pause()
     speechSynthesis.pause()
     speechSynthesis.cancel()
-    if (cardHasAudio && aref.current && audioTxt) {
-      if (ttsCache.get(audioTxt)) {
+    if (cardHasAudio && aref.current && dedupedAudio.text) {
+      if (ttsCache.get(dedupedAudio.text)) {
         playSrc()
       } else {
-        console.log(dedupeAudio(audioTxt), dedupeAudio(audioRaw))
-        state.tts(dedupeAudio(audioTxt), dedupeAudio(audioRaw)).then((audioSrc) => {
-          ttsCache.set(audioTxt, audioSrc)
+        state.tts(dedupedAudio.text, dedupedAudio.raw).then((audioSrc) => {
+          ttsCache.set(dedupedAudio.text, audioSrc)
           if (reqId.current !== nid) return
           playSrc()
         })
       }
     }
-  }, [audioTxt, aref.current, state.id, cardHasAudio])
+  }, [dedupedAudio.text, aref.current, state.id, cardHasAudio])
 
   const [styles, setStyles] = useState<React.CSSProperties>({})
   useEffect(() => {
@@ -122,6 +122,25 @@ export function useTtsState(state: CardProps) {
     modeKey: shownKeys.find((k) => k !== ttsKey && k !== txtKey),
     ...state,
   }
+}
+
+function dedupeAudio(txt: string, raw?: string) {
+  const ts = txt.split(aliasDelim).reverse(),
+    rs = raw?.split(aliasDelim).reverse(),
+    tset: { [text: string]: string | undefined } = {}
+
+  for (let i = 0; i < ts.length; i++) {
+    tset[cleanRuby(ts[i])] = cleanRuby(rs?.[i])
+  }
+
+  const outTxt: string[] = [],
+    outRaw: (string | undefined)[] = []
+  for (const t in tset) {
+    outTxt.push(t)
+    outRaw.push(tset[t])
+  }
+
+  return { text: outTxt.join(', '), raw: raw && outRaw.join(', ') }
 }
 
 function Card(props: CardProps) {
@@ -157,7 +176,7 @@ function Card(props: CardProps) {
               &nbsp;({state.modeText})&nbsp;
             </span>
           )}
-          {(state.valueWithALiases[k] + '').replaceAll('~', '')}
+          {[...new Set(cleanRuby(state.valueWithALiases[k]).split(', '))].join(', ')}
         </div>
       ))}
       <audio hidden ref={state.aref} controls />
