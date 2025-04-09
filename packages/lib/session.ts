@@ -18,6 +18,7 @@ import {
 import * as t from './types'
 import _ from 'lodash'
 import { computeElementInstance, computeElementMode } from './expr'
+import { cleanRuby } from './ruby'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -33,7 +34,7 @@ export function createLearningSession(
   maxp: number
   progress: DayProgress
 } {
-  //const t = new Date().getTime()
+  const t = new Date().getTime()
   const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz),
     newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, filter)) : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
@@ -44,7 +45,9 @@ export function createLearningSession(
   // console.log(
   //   'sess',
   //   new Date().getTime() - t,
-  //   stack.map((s) => computeElementInstance(s, deck.elements).jp)
+  //   '\n\n',
+  //   stack.map((s) => cleanRuby(computeElementInstance(s, deck.elements).jp)).join('\n'),
+  //   stack
   // )
   return {
     session: {
@@ -444,10 +447,10 @@ function sampleAndAdd(
     return
 
   const target = deck.settings.retention ?? defaultretention,
-    childTarget = Math.pow(target, 1 / Math.max(cache.depths[element], 1)),
+    childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
     targetStability =
       getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-      (cache.depths[element] + 1)
+      (Math.pow(cache.depths[element], 1.5) + 1)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
@@ -466,12 +469,11 @@ function sampleAndAdd(
             const seenAgo = now - (card.lastSeen ?? 0),
               cr = getRetr(card, seenAgo),
               retrDiff = cr - childTarget,
-              retrFactor = logistic(retrDiff * 10), //harder is a last resort
-              depthFactor = 1 / ((cache.nvds[elId] ?? 0) + 1), //Math.pow((cache.depths[elId] ?? 0) + 1, 8),
-              seenFactor = 1 / logistic(seenAgo / 3600 / 24 / 7),
-              rdFactor = Math.pow(cache.pdepths[elId] / (cache.pdepths[element] + 1), 2)
+              retrFactor = logistic(retrDiff),
+              depthFactor = logistic(-(cache.nvds[elId] ?? 0)),
+              seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24)
 
-            return rdFactor * retrFactor * depthFactor * seenFactor + jitter
+            return retrFactor * depthFactor * seenFactor + jitter
           },
           undefined,
           (elId) => {

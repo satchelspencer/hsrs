@@ -414,7 +414,7 @@ export function sampleElementIstance(
 
   // console.log(
   //   elements[id].name,
-  //   descendents.map((d, i) => elements[d].name + ' ' + orders[i])
+  //   descendents.map((d, i) => elements[d].name + ' ' + normed[i])
   // )
 
   while (normed.length) {
@@ -429,8 +429,9 @@ export function sampleElementIstance(
       index++
     }
     if (hardSample) index = 0
-    normed.splice(index, 1)
+    if (Math.random() > 0.99) normed.splice(index, 1)
     const [descendent] = descendents.splice(index, 1)
+    if (!descendent) continue
 
     const {
       params = {},
