@@ -120,3 +120,16 @@ export type DeckCache = {
   hasProps: { [elId: string]: boolean }
   nvds: { [elId: string]: number }
 }
+
+export type HourlyStats = {
+  time: number
+  scores: { [grade: number]: GradeStats }
+  added: number
+}
+
+export type GradeStats = {
+  count: number
+  took: number //time spent
+}
+
+export type HourlyStatsMap = { [time: number]: HourlyStats }

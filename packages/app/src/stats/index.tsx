@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
 
 import * as r from '../redux'
@@ -11,18 +11,22 @@ import {
   editorWrapper,
   editorWrapperOuter,
 } from '../editor/element'
-import { getStats, StatResult, StatsOptions } from './util'
-import {
-  useAvgTimeSpent,
-  useCountGroupedByDayAndScore,
-  useStabilityDist,
-  useSeenPercentage,
-  useDifficultyDist,
-  useTotalCardsSeenOverTime,
-  useAccuracyOverTime,
-  useProgressDist,
-} from './stats'
+import { getStats, StatsOptions } from './util'
 import { css, cx } from '@emotion/css'
+import { Deck, HourlyStatsMap } from '@hsrs/lib/types'
+import {
+  Accuracy,
+  DifficultyDist,
+  HoursSpent,
+  NewCards,
+  ProgressDist,
+  Reviews,
+  SeenPercentage,
+  StabilityDist,
+} from './stats'
+import { getCache } from '@hsrs/lib/cache'
+import { getNonVirtualDescendents, isParent } from '@hsrs/lib/props'
+import { id2Card } from '@hsrs/lib/session'
 
 interface StatsEditorProps {
   id: string
@@ -33,32 +37,16 @@ interface StatsEditorProps {
 export function Stats(props: StatsEditorProps) {
   const deck = r.useSelector((state) => state.deck),
     dispatch = r.useDispatch(),
-    [options, setOptions] = useState<StatsOptions>({ maxGroups: 50, period: 'month' })
-
-  const countGroupedByDayAndScore = useCountGroupedByDayAndScore(options),
-    avgTimeSpent = useAvgTimeSpent(),
-    stabilityDist = useStabilityDist(options),
-    seenPercentage = useSeenPercentage(),
-    difficultyDist = useDifficultyDist(options),
-    useNewCards = useTotalCardsSeenOverTime(options),
-    useAccuracy = useAccuracyOverTime(options),
-    progressDist = useProgressDist(),
-    statsDefs = [
-      avgTimeSpent,
-      countGroupedByDayAndScore,
-      seenPercentage,
-      stabilityDist,
-      difficultyDist,
-      useNewCards,
-      useAccuracy,
-      progressDist,
-    ],
-    [stats, setStats] = useState<StatResult[]>([])
+    [options, setOptions] = useState<StatsOptions>({ maxGroups: 50, period: 'month' }),
+    [stats, setStats] = useState<HourlyStatsMap>({}),
+    [loading, setLoading] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
-    getStats(props.id, deck, statsDefs, options).then((results) => {
+    setLoading(true)
+    getStats(props.id, deck, options).then((results) => {
       if (!isCancelled) {
+        setLoading(false)
         setStats(results)
       }
     })
@@ -66,6 +54,24 @@ export function Stats(props: StatsEditorProps) {
       isCancelled = true
     }
   }, [props.id, options])
+
+  const subDeck = useMemo<Deck>(() => {
+    const children = getNonVirtualDescendents(
+        props.id,
+        deck.elements,
+        getCache(deck.elements)
+      ),
+      elements = _.pickBy(
+        _.pickBy(deck.elements, (e, id) =>
+          children.find((cid) => cid === id || isParent(cid, id, deck.elements))
+        )
+      )
+    return {
+      ...deck,
+      elements,
+      cards: _.pickBy(deck.cards, (c, v) => !!elements[id2Card(v).element]),
+    }
+  }, [deck, props.id])
 
   return (
     <div className={editorWrapperOuter} style={{ background: 'white' }}>
@@ -115,14 +121,29 @@ export function Stats(props: StatsEditorProps) {
             ],
           ]}
         />
-        <LabelGroup
-          vert
-          items={stats.map((stat, i) => [
-            <span className={statName}>{stat.name}</span>,
-            stat.renderFn(stat.finalData),
-            !stat.singleLine,
-          ])}
-        />
+        {loading ? (
+          'Loading...'
+        ) : (
+          <LabelGroup
+            vert
+            items={[
+              ['Hours spent', <HoursSpent stats={stats} options={options} />],
+              ['Reviews', <Reviews stats={stats} options={options} />, false],
+              ['Stability', <StabilityDist deck={subDeck} options={options} />],
+              ['Progress', <SeenPercentage deck={subDeck} options={options} />, false],
+              [
+                'Progress distribution',
+                <ProgressDist deck={subDeck} options={options} />,
+              ],
+              [
+                'Difficulty distribution',
+                <DifficultyDist deck={subDeck} options={options} />,
+              ],
+              ['Total new cards seen', <NewCards stats={stats} options={options} />],
+              ['Accuracy', <Accuracy stats={stats} options={options} />],
+            ]}
+          />
+        )}
       </div>
     </div>
   )

@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useMemo } from 'react'
+import { DateTime, DateTimeUnit } from 'luxon'
 import _ from 'lodash'
 import { Bar, Chart, Line } from 'react-chartjs-2'
 
 import * as t from '@hsrs/lib/types'
 
-import { formatDate, groupByTimescale } from './time'
-import { commonChartOptions, createStatHook, StatsOptions } from './util'
+import { commonChartOptions, groupByTimescale, StatsOptions } from './util'
 import { getAllCards, getInheritedElement } from '@hsrs/lib/props'
 import { card2Id, id2Card } from '@hsrs/lib/session'
 import { getCache } from '@hsrs/lib/cache'
@@ -16,81 +16,85 @@ import {
   offsetRetention,
 } from '@hsrs/lib/schedule'
 
-export const useCountGroupedByDayAndScore = createStatHook((options: StatsOptions) => ({
-  name: 'Hours spent',
-  initAcc: () => [] as t.CardLearning[],
-  accumulator: (acc, item) => acc.push(item),
-  finalize: (items) => {
-    const grouped = groupByTimescale(items, (it) => it.time, options.maxGroups)
+interface TimeStatProps {
+  stats: t.HourlyStatsMap
+  options: StatsOptions
+}
 
-    const allScores = new Set<number>()
-    for (const bucketKey in grouped) {
-      const bucketItems = grouped[bucketKey]
-      for (const item of bucketItems) allScores.add(item.score ?? 0)
+interface DeckStatProps {
+  deck: t.Deck
+  options: StatsOptions
+}
+
+function formatDate(seconds: number, scale: DateTimeUnit) {
+  return DateTime.fromSeconds(seconds).toFormat(
+    scale === 'year' ? 'yyyy' : scale === 'month' ? 'MMM yyyy' : 'MMM d'
+  )
+}
+
+export function HoursSpent(props: TimeStatProps) {
+  const data = useMemo(() => {
+      const { grouped, scale } = groupByTimescale(props.stats, props.options.maxGroups),
+        scoresArr = [1, 2, 3, 4],
+        sortedKeys = _.sortBy(Object.keys(grouped).map(Number))
+      return {
+        labels: sortedKeys.map((d) => formatDate(d, scale)),
+        datasets: scoresArr.map((score) => ({
+          label: score + '',
+          data: sortedKeys.map(
+            (bucketKey) => (grouped[bucketKey].scores[score]?.took ?? 0) / 3600 / 24
+          ),
+        })),
+      }
+    }, [props.stats, props.options]),
+    scoreColors = ['', '#c24141', '#cd9138', '#50bf68', '#29c34b']
+
+  return (
+    <Bar
+      data={{
+        labels: data.labels,
+        datasets: data.datasets.map((ds) => ({
+          ...ds,
+          backgroundColor: scoreColors[ds.label] + '50',
+          borderColor: scoreColors[ds.label],
+          borderWidth: 1,
+        })),
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
+        },
+      }}
+    />
+  )
+}
+
+export function Reviews(props: TimeStatProps) {
+  const data = useMemo(() => {
+    let count = 0,
+      took = 0
+
+    for (const d in props.stats) {
+      for (const s in props.stats[d].scores) {
+        count += props.stats[d].scores[s].count
+        took += props.stats[d].scores[s].took
+      }
     }
-    const scoresArr = _.sortBy(Array.from(allScores)),
-      sortedKeys = _.sortBy(Object.keys(grouped).map(Number))
+    return { count, took }
+  }, [props.stats, props.options])
 
-    return {
-      labels: sortedKeys.map(formatDate),
-      datasets: scoresArr.map((score) => ({
-        label: score + '',
-        data: sortedKeys.map(
-          (bucketKey) =>
-            grouped[bucketKey]
-              .filter((it) => (it.score ?? 0) === score)
-              .reduce((acc, l) => l.took + acc, 0) / 3600
-        ),
-      })),
-    }
-  },
-  render: (data) => {
-    const scoreColors = ['', '#c24141', '#cd9138', '#50bf68', '#29c34b']
-    return (
-      <Bar
-        data={{
-          labels: data.labels,
-          datasets: data.datasets.map((ds) => ({
-            ...ds,
-            backgroundColor: scoreColors[ds.label] + '50',
-            borderColor: scoreColors[ds.label],
-            borderWidth: 1,
-          })),
-        }}
-        options={{
-          ...commonChartOptions,
-          scales: {
-            x: { stacked: true },
-            y: { stacked: true, beginAtZero: true },
-          },
-        }}
-      />
-    )
-  },
-}))
-
-export const useAvgTimeSpent = createStatHook(() => ({
-  name: 'Reviews',
-  singleLine: true,
-  initAcc: () => ({ total: 0, count: 0 }),
-  accumulator: (acc, item) => {
-    acc.total += item.took
-    acc.count++
-  },
-  finalize: (acc) => acc,
-  render: (data) => (
+  return (
     <div>
-      <i>{data.count}</i> over <i>{(data.total / 3600).toFixed(2)}</i> hours, averaging{' '}
-      <i>{(data.total / data.count).toFixed(2)}</i> seconds
+      <i>{data.count}</i> over <i>{(data.took / 3600).toFixed(2)}</i> hours, averaging{' '}
+      <i>{(data.took / data.count).toFixed(2)}</i> seconds
     </div>
-  ),
-}))
+  )
+}
 
-export const useStabilityDist = createStatHook((options: StatsOptions) => ({
-  name: 'Interval distribution',
-  initAcc: () => ({}),
-  accumulator: () => {},
-  finalize: (x, deck) => {
+export function StabilityDist({ deck, options }: DeckStatProps) {
+  const data = useMemo(() => {
     const cache = getCache(deck.elements),
       baseRetr = deck.settings.retention ?? defaultretention,
       stabilityValues = Object.keys(deck.cards).map((cardId) => {
@@ -122,56 +126,49 @@ export const useStabilityDist = createStatHook((options: StatsOptions) => ({
       ),
       data: bins,
     }
-  },
-  render: (data) => {
-    return (
-      <Bar
-        data={{
-          labels: data.labels,
-          datasets: [
-            {
-              label: 'Card Count',
-              data: data.data,
-              backgroundColor: '#518bc150',
-              borderColor: '#518bc1',
-              borderWidth: 1,
-            },
-          ],
-        }}
-        options={{
-          ...commonChartOptions,
-          scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
-        }}
-      />
-    )
-  },
-}))
+  }, [])
 
-export const useSeenPercentage = createStatHook(() => ({
-  name: 'Progress',
-  singleLine: true,
-  initAcc: () => ({}),
-  accumulator: () => {},
-  finalize: (acc, deck) => {
+  return (
+    <Bar
+      data={{
+        labels: data.labels,
+        datasets: [
+          {
+            label: 'Card Count',
+            data: data.data,
+            backgroundColor: '#518bc150',
+            borderColor: '#518bc1',
+            borderWidth: 1,
+          },
+        ],
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+      }}
+    />
+  )
+}
+
+export function SeenPercentage({ deck }: DeckStatProps) {
+  const data = useMemo(() => {
     const allCards = getAllCards(deck.elements),
       totalCards = allCards.length,
       seenCount = allCards.filter((c) => !!deck.cards[card2Id(c)]).length,
       percentage = totalCards > 0 ? ((seenCount / totalCards) * 100).toFixed(2) : '0.00'
     return { seenCount, totalCards: totalCards, percentage }
-  },
-  render: (data) => (
+  }, [deck])
+
+  return (
     <div>
       <i>{data.seenCount}</i> seen of <i>{data.totalCards}</i> cards available (
       <i>{data.percentage}%</i>)
     </div>
-  ),
-}))
+  )
+}
 
-export const useProgressDist = createStatHook(() => ({
-  name: 'Progress distribution',
-  initAcc: () => ({}),
-  accumulator: () => {},
-  finalize: (acc, deck) => {
+export function ProgressDist({ deck }: DeckStatProps) {
+  const data = useMemo(() => {
     const allCards = getAllCards(deck.elements),
       seenMap: { [order: string]: number } = {},
       totalMap: { [order: string]: number } = {}
@@ -193,37 +190,33 @@ export const useProgressDist = createStatHook(() => ({
         { label: 'Remaining', data: labels.map((l) => totalMap[l] - (seenMap[l] ?? 0)) },
       ],
     }
-  },
-  render: (data) => {
-    const colors = ['#50bf68', '#cdcdcd']
-    return (
-      <Bar
-        data={{
-          labels: data.labels,
-          datasets: data.datasets.map((ds, i) => ({
-            ...ds,
-            backgroundColor: colors[i] + '50',
-            borderColor: colors[i],
-            borderWidth: 1,
-          })),
-        }}
-        options={{
-          ...commonChartOptions,
-          scales: {
-            x: { stacked: true },
-            y: { stacked: true, beginAtZero: true },
-          },
-        }}
-      />
-    )
-  },
-}))
+  }, [deck])
 
-export const useDifficultyDist = createStatHook((options: StatsOptions) => ({
-  name: 'Difficulty distribution',
-  initAcc: () => ({}),
-  accumulator: () => {},
-  finalize: (acc, deck) => {
+  const colors = ['#50bf68', '#cdcdcd']
+  return (
+    <Bar
+      data={{
+        labels: data.labels,
+        datasets: data.datasets.map((ds, i) => ({
+          ...ds,
+          backgroundColor: colors[i] + '50',
+          borderColor: colors[i],
+          borderWidth: 1,
+        })),
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
+        },
+      }}
+    />
+  )
+}
+
+export function DifficultyDist({ deck, options }: DeckStatProps) {
+  const data = useMemo(() => {
     const difficultyValues = Object.values(deck.cards).map(
         (card) => card.difficulty ?? 0
       ),
@@ -245,65 +238,57 @@ export const useDifficultyDist = createStatHook((options: StatsOptions) => ({
     const labels = bins.map((_, i) => (minDiff + i * binSize).toFixed(1))
 
     return { labels, data: bins }
-  },
-  render: (data) => {
-    function getGradientColor(i: number, total: number) {
-      const t = total > 1 ? i / (total - 1) : 0,
-        r = Math.round(230 * t),
-        g = Math.round(230 * (1 - t))
-      return {
-        background: `rgba(${r}, ${g}, 0, 0.3)`,
-        border: `rgb(${r}, ${g}, 0,0.7)`,
-      }
+  }, [deck, options])
+
+  function getGradientColor(i: number, total: number) {
+    const t = total > 1 ? i / (total - 1) : 0,
+      r = Math.round(230 * t),
+      g = Math.round(230 * (1 - t))
+    return {
+      background: `rgba(${r}, ${g}, 0, 0.3)`,
+      border: `rgb(${r}, ${g}, 0,0.7)`,
     }
+  }
 
-    const total = data.data.length,
-      backgroundColors = data.data.map((_, i) => getGradientColor(i, total).background),
-      borderColors = data.data.map((_, i) => getGradientColor(i, total).border)
+  const total = data.data.length,
+    backgroundColors = data.data.map((_, i) => getGradientColor(i, total).background),
+    borderColors = data.data.map((_, i) => getGradientColor(i, total).border)
 
-    return (
-      <Bar
-        data={{
-          labels: data.labels,
-          datasets: [
-            {
-              label: 'Card Count',
-              data: data.data,
-              backgroundColor: backgroundColors,
-              borderColor: borderColors,
-              borderWidth: 1,
-            },
-          ],
-        }}
-        options={{
-          ...commonChartOptions,
-          scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
-        }}
-      />
-    )
-  },
-}))
+  return (
+    <Bar
+      data={{
+        labels: data.labels,
+        datasets: [
+          {
+            label: 'Card Count',
+            data: data.data,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+          },
+        ],
+      }}
+      options={{
+        ...commonChartOptions,
+        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+      }}
+    />
+  )
+}
 
-export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) => ({
-  name: 'Total New Cards Seen',
-  initAcc: () => [] as t.CardLearning[],
-  accumulator: (acc, item) => acc.push(item),
-  finalize: (items, deck) => {
-    const newCardEvents: t.CardLearning[] = []
-    for (const item of items) {
-      if (deck.cards[item.cardId]?.firstSeen === item.time) newCardEvents.push(item)
-    }
-    const grouped = groupByTimescale(newCardEvents, (it) => it.time, options.maxGroups),
+export function NewCards(props: TimeStatProps) {
+  const data = useMemo(() => {
+    const { grouped, scale } = groupByTimescale(props.stats, props.options.maxGroups),
       sortedKeys = _.sortBy(Object.keys(grouped).map(Number)),
-      labels = sortedKeys.map(formatDate),
-      newCounts = sortedKeys.map((key) => grouped[key].length),
+      newCounts = sortedKeys.map((key) => grouped[key].added),
       cumulativeCounts = newCounts.reduce((acc: number[], count, i) => {
         if (i === 0) acc.push(count)
         else acc.push(acc[i - 1] + count)
         return acc
       }, [])
+
     return {
-      labels,
+      labels: sortedKeys.map((d) => formatDate(d, scale)),
       datasets: [
         {
           label: 'Total Cards Seen',
@@ -314,8 +299,9 @@ export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) 
         { label: 'New Cards Seen', data: newCounts, type: 'bar', yAxisID: 'y2' },
       ],
     }
-  },
-  render: (data) => (
+  }, [props.stats, props.options])
+
+  return (
     <Chart
       type="line"
       data={{
@@ -357,28 +343,28 @@ export const useTotalCardsSeenOverTime = createStatHook((options: StatsOptions) 
         },
       }}
     />
-  ),
-}))
+  )
+}
 
-export const useAccuracyOverTime = createStatHook((options: StatsOptions) => ({
-  name: 'Accuracy',
-  initAcc: () => [] as t.CardLearning[],
-  accumulator: (acc, item) => acc.push(item),
-  finalize: (items) => {
-    const grouped = groupByTimescale(items, (it) => it.time, options.maxGroups),
+export function Accuracy(props: TimeStatProps) {
+  const data = useMemo(() => {
+    const { grouped, scale } = groupByTimescale(props.stats, props.options.maxGroups),
       sortedKeys = _.sortBy(Object.keys(grouped).map(Number)),
-      labels = sortedKeys.map(formatDate),
       accuracyValues = sortedKeys.map((key) => {
         const events = grouped[key],
-          total = events.length,
-          passed = events.filter((it) => (it.score ?? 0) >= 2).length,
+          total = _.sumBy(Object.values(events.scores), (v) => v.count),
+          passed = total - (events.scores[1]?.count ?? 0),
           accuracy = total ? (passed / total) * 100 : 0
         return parseFloat(accuracy.toFixed(2))
       })
 
-    return { labels, datasets: [{ label: 'Accuracy (%)', data: accuracyValues }] }
-  },
-  render: (data) => (
+    return {
+      labels: sortedKeys.map((d) => formatDate(d, scale)),
+      datasets: [{ label: 'Accuracy (%)', data: accuracyValues }],
+    }
+  }, [props.stats, props.options])
+
+  return (
     <Line
       data={{
         labels: data.labels,
@@ -397,5 +383,5 @@ export const useAccuracyOverTime = createStatHook((options: StatsOptions) => ({
         scales: { x: { stacked: false }, y: { stacked: false } },
       }}
     />
-  ),
-}))
+  )
+}

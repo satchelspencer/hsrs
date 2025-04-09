@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { DateTime, DateTimeUnit } from 'luxon'
 import _ from 'lodash'
 import {
   Chart as ChartJS,
@@ -27,27 +27,9 @@ ChartJS.register(
 
 import * as t from '@hsrs/lib/types'
 import { db } from '../redux/db'
-import { getNonVirtualDescendents, isParent } from '@hsrs/lib/props'
-import { getTime } from '@hsrs/lib/schedule'
-import { id2Card } from '@hsrs/lib/session'
+import { getNonVirtualDescendents } from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
-
-export interface StatDefinition<TAcc = any, TFinal = any> {
-  name: string
-  initAcc: () => TAcc
-  accumulator: (accumulatedData: TAcc, item: t.CardLearning) => void
-  finalize: (accumulatedData: TAcc, deck: t.Deck) => TFinal
-  render: (finalData: TFinal) => React.ReactNode
-  singleLine?: boolean
-}
-
-export function createStatHook<TAcc, TFinal, TDeps extends readonly any[]>(
-  config: (...deps: TDeps) => StatDefinition<TAcc, TFinal>
-) {
-  return function useStatHook(...deps: TDeps) {
-    return useMemo(() => config(...deps), deps)
-  }
-}
+import { addLearning2Stat, getLearningHour } from '@hsrs/lib/stats'
 
 export const commonChartOptions: any = {
   responsive: true,
@@ -55,38 +37,30 @@ export const commonChartOptions: any = {
   plugins: { legend: { display: false } },
 }
 
-export interface StatResult extends StatDefinition {
-  renderFn: (data: any) => React.ReactNode
-  finalData: any
+export interface StatsOptions {
+  maxGroups: number
+  period: 'all' | 'year' | 'month' | 'week' | 'day'
 }
 
 export async function getStats(
   parentId: string,
   deck: t.Deck,
-  statsDefs: StatDefinition[],
   options: StatsOptions
-): Promise<StatResult[]> {
+): Promise<t.HourlyStatsMap> {
   const children = getNonVirtualDescendents(
       parentId,
       deck.elements,
       getCache(deck.elements)
     ),
-    accumulators = statsDefs.map((stat) => stat.initAcc()),
-    now = getTime(),
     startTime =
       options.period === 'all'
         ? 0
-        : options.period === 'year'
-        ? now - 3600 * 24 * 365
-        : options.period === 'month'
-        ? now - 3600 * 24 * 30
-        : options.period === 'week'
-        ? now - 3600 * 24 * 7
-        : options.period === 'day'
-        ? now - 3600 * 24
-        : Infinity
+        : DateTime.now()
+            .minus({ [options.period]: 1 })
+            .toSeconds()
 
-  const seen: Record<string, boolean> = {}
+  const seen: Record<string, boolean> = {},
+    records: t.CardLearning[] = []
   await db.cardLearning
     .where('elIds')
     .anyOf(children)
@@ -95,31 +69,56 @@ export async function getStats(
       const k = record.cardId + record.time
       if (seen[k]) return
       seen[k] = true
-      for (const i in statsDefs) {
-        const stat = statsDefs[i],
-          accum = accumulators[i]
-        if (record.score) stat.accumulator(accum, record)
-      }
+      records.push(record)
     })
 
-  const elements = _.pickBy(
-    _.pickBy(deck.elements, (e, id) =>
-      children.find((cid) => cid === id || isParent(cid, id, deck.elements))
-    )
-  )
-
-  return statsDefs.map((stat, i) => ({
-    ...stat,
-    renderFn: stat.render,
-    finalData: stat.finalize(accumulators[i], {
-      ...deck,
-      elements,
-      cards: _.pickBy(deck.cards, (c, v) => !!elements[id2Card(v).element]),
-    }),
-  }))
+  return learnings2Hours(records, deck.cards)
 }
 
-export interface StatsOptions {
-  maxGroups: number
-  period: 'all' | 'year' | 'month' | 'week' | 'day'
+export function learnings2Hours(learnings: t.CardLearning[], states: t.CardStates) {
+  const hours: t.HourlyStatsMap = {}
+  for (const learning of learnings) {
+    const hour = getLearningHour(learning)
+    hours[hour] ??= { added: 0, scores: {}, time: hour }
+    addLearning2Stat(states, learning, hours[hour])
+  }
+  return hours
+}
+
+function applyStats(target: t.HourlyStats, src: t.HourlyStats) {
+  target.added += src.added
+  for (const score in src.scores) {
+    target.scores[score] ??= { took: 0, count: 0 }
+    target.scores[score].count += src.scores[score].count
+    target.scores[score].took += src.scores[score].took
+  }
+}
+
+export function groupByTimescale(map: t.HourlyStatsMap, maxGroups: number) {
+  const items = Object.values(map)
+
+  let minTime = Infinity,
+    maxTime = -Infinity
+
+  for (const item of items) {
+    const ts = item.time
+    if (ts < minTime) minTime = ts
+    if (ts > maxTime) maxTime = ts
+  }
+
+  const diff = DateTime.fromSeconds(maxTime).diff(
+      DateTime.fromSeconds(minTime),
+      'days'
+    ).days,
+    groupUnit: DateTimeUnit =
+      diff <= maxGroups ? 'day' : diff * 7 <= maxGroups ? 'week' : 'month',
+    grouped: Record<number, t.HourlyStats> = {}
+
+  for (const item of items) {
+    const bucket = DateTime.fromSeconds(item.time).startOf(groupUnit).toSeconds()
+    grouped[bucket] ??= { added: 0, scores: {}, time: bucket }
+    applyStats(grouped[bucket], item)
+  }
+
+  return { grouped, scale: groupUnit }
 }
