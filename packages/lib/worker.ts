@@ -1,5 +1,6 @@
 import { WorkerMessage, WorkerMetaMessage, WorkerResponseMessage } from './async'
 import { findAliases } from './props'
+import { createLearningSession } from './session'
 
 function handleMessage(
   message: WorkerMessage
@@ -10,6 +11,16 @@ function handleMessage(
       message.propName,
       message.elements,
       message.cards,
+      message.cache
+    )
+  }
+  if (message.type === 'createSession') {
+    return createLearningSession(
+      message.deck,
+      message.size,
+      message.allowNew,
+      message.filter,
+      message.tz,
       message.cache
     )
   }

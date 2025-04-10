@@ -25,18 +25,14 @@ export function createLearningSession(
   size: number,
   allowNew: boolean,
   filter: string[],
-  tz: string
-): {
-  session: t.LearningSession
-  new: number
-  due: number
-  next: number
-  maxp: number
-  progress: DayProgress
-} {
-  const t = new Date().getTime()
-  const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz),
-    newCards = allowNew ? _.shuffle(getNew(deck, size - dueCards.length, filter)) : [],
+  tz: string,
+  cache = getCache(deck.elements)
+): t.SessionAndProgress {
+  //const t = new Date().getTime()
+  const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
+    newCards = allowNew
+      ? _.shuffle(getNew(deck, size - dueCards.length, filter, cache))
+      : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
       stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
@@ -217,7 +213,8 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
         },
       },
       -delta,
-      session.filter
+      session.filter,
+      getCache(deck.elements)
     )
 
     if (newCards.length <= -delta) {
@@ -318,7 +315,12 @@ function getNewCardFactor() {
   return 4 //TODO
 }
 
-function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[] {
+function getNew(
+  deck: t.Deck,
+  limit: number,
+  filter: string[],
+  cache: t.DeckCache
+): t.CardInstance[] {
   const res: t.CardInstance[] = [],
     cards = _.sortBy(
       getAllCards(deck.elements),
@@ -337,7 +339,7 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
       if (property[0] === '_') continue
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
-        sampleAndAdd(res, id, deck, filter)
+        sampleAndAdd(res, id, deck, filter, cache)
         usedEls[card.element] = true
       }
     }
@@ -346,15 +348,18 @@ function getNew(deck: t.Deck, limit: number, filter: string[]): t.CardInstance[]
   return res.map((c) => ({ ...c, new: true }))
 }
 
-type DayProgress = { goal: number; done: number; new: number; next: number }
-
-function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
+function getDue(
+  deck: t.Deck,
+  limit: number,
+  filter: string[],
+  tz: string,
+  cache: t.DeckCache
+) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
-    cache = getCache(deck.elements),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
         const elid = id2Card(cid).element
@@ -410,13 +415,13 @@ function getDue(deck: t.Deck, limit: number, filter: string[], tz: string) {
       state = deck.cards[cardId]
 
     if (state.due && state.due < endOfDay) {
-      const added = sampleAndAdd(dueCards, cardId, deck, filter)
+      const added = sampleAndAdd(dueCards, cardId, deck, filter, cache)
       if (!added) sampleFailures++
       else if (!nonSameDays[cardId]) sameDays++
-    } else sampleAndAdd(nextCards, cardId, deck, filter)
+    } else sampleAndAdd(nextCards, cardId, deck, filter, cache)
   }
 
-  const progress: DayProgress = {
+  const progress: t.DayProgress = {
     goal: Math.max(Math.floor(dailyGoal - sampleFailures + chipper + doneCount), 1), //goal discounts sample failures
     done: doneCount,
     new: newCount,
@@ -433,11 +438,11 @@ function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
   deck: t.Deck,
-  filter: string[]
+  filter: string[],
+  cache: t.DeckCache
 ) {
   const { element, property } = id2Card(cardId),
-    now = getTime(),
-    cache = getCache(deck.elements)
+    now = getTime()
 
   if (!deck.elements[element]) return
   if (

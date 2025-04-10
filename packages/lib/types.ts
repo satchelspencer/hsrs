@@ -133,3 +133,14 @@ export type GradeStats = {
 }
 
 export type HourlyStatsMap = { [time: number]: HourlyStats }
+
+export interface SessionAndProgress {
+  session: LearningSession
+  new: number
+  due: number
+  next: number
+  maxp: number
+  progress: DayProgress
+}
+
+export type DayProgress = { goal: number; done: number; new: number; next: number }

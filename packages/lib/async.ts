@@ -17,11 +17,21 @@ interface FindAliasesMessage extends WorkerMessageBase<t.ElementInstance[]> {
   cache: t.DeckCache
 }
 
+interface CreateSessionMessage extends WorkerMessageBase<t.SessionAndProgress> {
+  type: 'createSession'
+  deck: t.Deck
+  size: number
+  allowNew: boolean
+  filter: string[]
+  tz: string
+  cache: t.DeckCache
+}
+
 interface PingMessage extends WorkerMessageBase<true> {
   type: 'ping'
 }
 
-export type WorkerMessage = FindAliasesMessage | PingMessage
+export type WorkerMessage = FindAliasesMessage | CreateSessionMessage | PingMessage
 
 type WorkerMessageMeta = { messageId: string }
 
@@ -61,6 +71,25 @@ export async function findAliasesAync(
     propName,
     elements: deck.elements,
     cards: deck.cards,
+    cache: getCache(deck.elements),
+  }
+  return callWorker(message)
+}
+
+export function createSessionAsync(
+  deck: t.Deck,
+  size: number,
+  allowNew: boolean,
+  filter: string[],
+  tz: string
+) {
+  const message: CreateSessionMessage = {
+    type: 'createSession',
+    deck,
+    size,
+    allowNew,
+    filter,
+    tz,
     cache: getCache(deck.elements),
   }
   return callWorker(message)
