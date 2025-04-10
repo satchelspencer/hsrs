@@ -96,11 +96,14 @@ export function Reviews(props: TimeStatProps) {
 export function StabilityDist({ deck, options }: DeckStatProps) {
   const data = useMemo(() => {
     const cache = getCache(deck.elements),
+      allCards = getAllCards(deck.elements).filter((c) => !!deck.cards[card2Id(c)]),
       baseRetr = deck.settings.retention ?? defaultretention,
-      stabilityValues = Object.keys(deck.cards).map((cardId) => {
-        const { element } = id2Card(cardId),
-          ret = offsetRetention(baseRetr, getELRetrOffset(element, deck.elements, cache)),
-          state = deck.cards[cardId]
+      stabilityValues = allCards.map((card) => {
+        const ret = offsetRetention(
+            baseRetr,
+            getELRetrOffset(card.element, deck.elements, cache)
+          ),
+          state = deck.cards[card2Id(card)]
         return nextInterval(state.stability, ret) / 3600 / 24 //invertRetr(ret, state.stability * 3600 * 24)
       }),
       sortedStabilities = _.sortBy(stabilityValues),
@@ -217,8 +220,9 @@ export function ProgressDist({ deck }: DeckStatProps) {
 
 export function DifficultyDist({ deck, options }: DeckStatProps) {
   const data = useMemo(() => {
-    const difficultyValues = Object.values(deck.cards).map(
-        (card) => card.difficulty ?? 0
+    const allCards = getAllCards(deck.elements).filter((c) => !!deck.cards[card2Id(c)]),
+      difficultyValues = allCards.map(
+        (card) => deck.cards[card2Id(card)]?.difficulty ?? 0
       ),
       minDiff = 1,
       maxDiff = 9,
