@@ -164,8 +164,8 @@ export function getLearningCardDiff(
         state && flearnings.length > 1 ? (1 - successProb) / (1 - totalSuccessProb) : 1,
       ret = offsetRetention(baseRet, offsets[i])
 
-    const delayM = (learning.time - (state?.lastSeen ?? 0)) / 60,
-      delayPenalty = state?.lastSeen ? delayM / (delayM + 1) : 1
+    const delayM = (learning.time - (state?.lastSeen ?? 0)) / 3600,
+      delayPenalty = state?.stability < 1 && state?.lastSeen ? delayM / (delayM + 1) : 1
     //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability)
 
     stateChanges[flearning.cardId] = nextCardState(
