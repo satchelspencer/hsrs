@@ -211,7 +211,7 @@ function logit(p: number) {
 export function offsetRetention(baseRetention: number, offset?: number) {
   baseRetention = Math.min(Math.max(baseRetention, 0), 1)
   if (!_.isNumber(offset) || baseRetention === 1) return baseRetention
-  return logistic(logit(baseRetention) + offset * 0.25)
+  return logistic(logit(baseRetention) + offset * 0.5)
 }
 
 export function getELRetrOffset(

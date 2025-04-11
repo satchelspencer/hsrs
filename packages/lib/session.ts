@@ -455,7 +455,7 @@ function sampleAndAdd(
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
     targetStability =
       getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-      (Math.pow(cache.depths[element], 1.5) + 1)
+      (Math.pow(cache.depths[element], 1.4) + 1)
 
   let i = 0
   while (i < SAMPLE_TRIES) {
