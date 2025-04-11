@@ -357,6 +357,7 @@ function getDue(
 ) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
+    now = getTime(),
     nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
@@ -414,7 +415,7 @@ function getDue(
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId]
 
-    if (state.due && state.due < endOfDay) {
+    if (state.due && state.due < now) {
       const added = sampleAndAdd(dueCards, cardId, deck, filter, cache)
       if (!added) sampleFailures++
       else if (!nonSameDays[cardId]) sameDays++
@@ -422,7 +423,10 @@ function getDue(
   }
 
   const progress: t.DayProgress = {
-    goal: Math.max(Math.floor(dailyGoal - sampleFailures + chipper + doneCount), 1), //goal discounts sample failures
+    goal: Math.max(
+      Math.floor((dailyGoal - sampleFailures + chipper + doneCount) * 0.95),
+      1
+    ), //goal discounts sample failures
     done: doneCount,
     new: newCount,
     next: dueCards.length - sameDays, //next discounts same day reviews
