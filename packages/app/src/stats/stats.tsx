@@ -42,7 +42,7 @@ export function HoursSpent(props: TimeStatProps) {
         datasets: scoresArr.map((score) => ({
           label: score + '',
           data: sortedKeys.map(
-            (bucketKey) => (grouped[bucketKey].scores[score]?.took ?? 0) / 3600 / 24
+            (bucketKey) => (grouped[bucketKey].scores[score]?.took ?? 0) / 3600
           ),
         })),
       }

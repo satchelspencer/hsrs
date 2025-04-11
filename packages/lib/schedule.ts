@@ -164,12 +164,14 @@ export function getLearningCardDiff(
         state && flearnings.length > 1 ? (1 - successProb) / (1 - totalSuccessProb) : 1,
       ret = offsetRetention(baseRet, offsets[i])
 
+    const delayM = (learning.time - (state?.lastSeen ?? 0)) / 60,
+      delayPenalty = state?.lastSeen ? delayM / (delayM + 1) : 1
     //console.log(deck.elements[id2Card(flearning.cardId).element].name, probability)
 
     stateChanges[flearning.cardId] = nextCardState(
       state,
       flearning.score,
-      probability,
+      probability * delayPenalty,
       learning.time,
       ret,
       deck.settings.fsrsParams ?? defaultParams,
@@ -209,7 +211,7 @@ function logit(p: number) {
 export function offsetRetention(baseRetention: number, offset?: number) {
   baseRetention = Math.min(Math.max(baseRetention, 0), 1)
   if (!_.isNumber(offset) || baseRetention === 1) return baseRetention
-  return logistic(logit(baseRetention) + offset * 0.5)
+  return logistic(logit(baseRetention) + offset * 0.25)
 }
 
 export function getELRetrOffset(
