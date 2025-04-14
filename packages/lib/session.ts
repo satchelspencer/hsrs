@@ -408,7 +408,7 @@ function getDue(
   const dcvs = Object.values(dayCounts),
     dailyGoal = _.max(dcvs) ?? 0,
     backlog = _.sum(dcvs) - dailyGoal,
-    chipper = backlog ? backlog / dcvs.length / 2 : 0 //half avg of backlog days
+    chipper = Math.min(backlog, dailyGoal) //backlog cant exceed single day due
 
   let sameDays = 0,
     sampleFailures = 0
