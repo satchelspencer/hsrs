@@ -1,4 +1,5 @@
 import { getCache } from './cache'
+import _ from 'lodash'
 import * as t from './types'
 import { uid } from './uid'
 import Worker from './worker?worker'
@@ -41,17 +42,31 @@ export type WorkerResponseMessage = {
   response: Exclude<WorkerMessage['result'], undefined>
 } & WorkerMessageMeta
 
-const worker = new Worker()
+const workerPool = [new Worker(), new Worker()],
+  pending: number[] = []
 
 function callWorker<T extends WorkerMessage>(
   message: T
 ): Promise<Exclude<T['result'], undefined>> {
+  let workerIndex = 0,
+    minPending = pending[0] ?? 0
+  for (let i = 0; i < workerPool.length; i++) {
+    const wp = pending[i] ?? 0
+    if (wp < minPending) {
+      workerIndex = i
+      minPending = wp
+    }
+  }
+  const worker = workerPool[workerIndex]
+
+  pending[workerIndex] = (pending[workerIndex] ?? 0) + 1
   return new Promise((res) => {
     const id = uid()
     const handleMessage = (e) => {
       const data = e.data as WorkerResponseMessage
       if (data.messageId === id) {
         worker.removeEventListener('message', handleMessage)
+        pending[workerIndex] -= 1
         res(data.response as any)
       }
     }
