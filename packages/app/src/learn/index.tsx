@@ -439,7 +439,7 @@ export function Learn() {
               />
               <div
                 className={cx(
-                  dprogressItem((cardsDue + nextDue) / dayProgress.goal),
+                  dprogressItem(dayProgress.next / dayProgress.goal),
                   fadeInOut
                 )}
               />

@@ -357,7 +357,6 @@ function getDue(
 ) {
   const dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    now = getTime(),
     nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
@@ -368,7 +367,8 @@ function getDue(
       }),
       [
         (cardId) => {
-          return (deck.cards[cardId].due ?? Infinity) < endOfDay ? 0 : 1
+          const state = deck.cards[cardId]
+          return state.due && state.due < endOfDay ? 0 : 1
         },
         (cardId) => {
           const state = deck.cards[cardId],
@@ -384,23 +384,24 @@ function getDue(
 
   let doneCount = 0,
     newCount = 0
-  const dayCounts: { [day: number]: number } = {},
-    nonSameDays: { [cardId: string]: true } = {}
+  const dayCounts: { [day: number]: number } = {}
+
   for (const cardId of cardsIds) {
     const state = deck.cards[cardId]
 
-    if ((state.firstSeen ?? Infinity) > startOfDay) newCount++
-    else if ((state.lastRoot ?? Infinity) > startOfDay) doneCount++
+    if (state.firstSeen && state.firstSeen > startOfDay) newCount++
+    else if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
     else if (
-      (state.due ?? Infinity) < endOfDay &&
-      (state.lastSeen ?? Infinity) < startOfDay
+      state.due &&
+      state.lastSeen &&
+      state.due < endOfDay &&
+      state.lastSeen < startOfDay
     ) {
       const day = DateTime.fromSeconds(state.due!)
         .minus({ hours: 4 })
         .startOf('day')
         .toSeconds()
       dayCounts[day] = (dayCounts[day] ?? 0) + 1
-      nonSameDays[cardId] = true
     }
   }
 
@@ -411,26 +412,35 @@ function getDue(
 
   let sameDays = 0,
     sampleFailures = 0
+
   while (dueCards.length + nextCards.length < limit && cardsIds.length) {
     const cardId = cardsIds.shift()!,
-      state = deck.cards[cardId]
+      state = deck.cards[cardId],
+      dueToday = state.due && state.due < endOfDay,
+      seenToday = state.lastSeen && state.lastSeen > startOfDay,
+      isDue = dueToday && !seenToday,
+      isSameDay = dueToday && seenToday
 
-    if (state.due && state.due < now) {
-      const added = sampleAndAdd(dueCards, cardId, deck, filter, cache)
-      if (!added) sampleFailures++
-      else if (!nonSameDays[cardId]) sameDays++
-    } else sampleAndAdd(nextCards, cardId, deck, filter, cache)
+    if (isSameDay && sameDays > limit / 8) continue //prevent same days from keeping progress back
+
+    const added = sampleAndAdd(isDue ? dueCards : nextCards, cardId, deck, filter, cache)
+    if (!added && isDue) sampleFailures++
+    if (added && isSameDay) sameDays++
   }
 
   const progress: t.DayProgress = {
-    goal: Math.max(
-      Math.floor((dailyGoal - sampleFailures + chipper + doneCount) * 0.95),
-      1
-    ), //goal discounts sample failures
+    goal: Math.max(Math.floor(dailyGoal - sampleFailures + chipper + doneCount), 1), //goal discounts sample failures
     done: doneCount,
     new: newCount,
     next: dueCards.length - sameDays, //next discounts same day reviews
   }
+
+  // console.log(dcvs, progress, dueCards.length, 'sames:', sameDays)
+  // console.log('days', dcvs)
+  // console.log('progress', progress)
+  // console.log('dueCards.length', dueCards.length)
+  // console.log('sames', sameDays)
+  // console.log('sample fail', sampleFailures)
 
   return { dueCards, nextCards, progress }
 }
