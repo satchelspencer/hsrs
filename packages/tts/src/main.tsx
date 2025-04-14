@@ -18,26 +18,41 @@ interface CardProps extends CardState {
 
 const aliasDelim = RUBY_DELIM + ', '
 
+type PropMap = { [name: string]: string }
+
+function getKeys(value: PropMap, vars: PropMap) {
+  const keys = Object.keys(value),
+    ttsKey = vars['tts'] && keys.find((k) => eqk(vars['tts'], k)),
+    txtKey = vars['txt'] && keys.find((k) => eqk(vars['txt'], k))
+
+  return { ttsKey, txtKey }
+}
+
+function getAudioTxt(value: PropMap, vars: PropMap) {
+  const { txtKey, ttsKey } = getKeys(value, vars),
+    audioRaw = txtKey && value[txtKey],
+    audioTxt = ttsKey && ttsKey[0] !== '_' ? value[ttsKey] : audioRaw
+
+  return dedupeAudio(audioTxt || '', audioRaw)
+}
+
 export function useTtsState(state: CardProps) {
   const modeKeys = state.vars['modes']?.split('.').map((c) => c.split('-')) ?? [],
     value = state.value ?? {},
     mode = state.mode ?? '',
     keys = Object.keys(value),
-    ttsKey = state.vars['tts'] && keys.find((k) => eqk(state.vars['tts'], k)),
-    txtKey = state.vars['txt'] && keys.find((k) => eqk(state.vars['txt'], k)),
+    { txtKey, ttsKey } = getKeys(value, state.vars),
     shownKeys = (state.revealed ? keys : state.property ? [state.property] : []).filter(
       (k) => typeof value[k] === 'string' && (state.revealed || k !== ttsKey)
     ),
-    valueWithALiases = state.revealed
-      ? Object.fromEntries(
-          Object.entries(state.value).map(([key, value]) => [
-            key,
-            typeof value === 'string'
-              ? [value, ...state.aliases.map((a) => a[key])].join(aliasDelim)
-              : value,
-          ])
-        )
-      : state.value
+    valueWithALiases = Object.fromEntries(
+      Object.entries(state.value).map(([key, value]) => [
+        key,
+        typeof value === 'string'
+          ? [value, ...state.aliases.map((a) => a[key])].join(aliasDelim)
+          : value,
+      ])
+    )
 
   const aref = useRef<HTMLAudioElement>(null),
     cardHasAudio =
@@ -45,14 +60,40 @@ export function useTtsState(state: CardProps) {
       value[ttsKey]?.length &&
       (state.property === ttsKey || shownKeys.includes(ttsKey)),
     [loaded, setLoaded] = useState(false),
-    audioRaw = txtKey && valueWithALiases[txtKey],
-    audioTxt = cardHasAudio && (ttsKey[0] !== '_' ? valueWithALiases[ttsKey] : audioRaw),
-    dedupedAudio = dedupeAudio(audioTxt || '', audioRaw),
+    dedupedAudio = getAudioTxt(valueWithALiases, state.vars),
+    dedupedNextAudio = getAudioTxt(state.next ?? {}, state.vars),
     modeText = (mode + '')
       .split('')
       .map((c, i) => modeKeys[i]?.find((v) => v[0] === c))
       .filter((v) => !!v)
       .join(', ')
+
+  const pendingRef = useRef<{ [txt: string]: ((v?: string) => void)[] }>({})
+
+  const fetchAudio = async (audio: { text: string; raw?: string }) => {
+    const cached = ttsCache.get(audio.text)
+    if (cached) return cached
+    else if (pendingRef.current[audio.text])
+      return new Promise<string | undefined>((res) =>
+        pendingRef.current[audio.text].push(res)
+      )
+    else {
+      pendingRef.current[audio.text] = []
+      const res = await state.tts(audio.text, audio.raw)
+      ttsCache.set(audio.text, res)
+      for (const p of pendingRef.current[audio.text]) p(res)
+      delete pendingRef.current[audio.text]
+      return res
+    }
+  }
+
+  useEffect(() => {
+    if (dedupedAudio.text) fetchAudio(dedupedAudio)
+  }, [dedupedAudio.text])
+
+  useEffect(() => {
+    if (dedupedNextAudio.text) fetchAudio(dedupedNextAudio)
+  }, [dedupedNextAudio.text])
 
   const playSrc = () => {
     if (!dedupedAudio.text) return
@@ -71,23 +112,20 @@ export function useTtsState(state: CardProps) {
     }
   }
 
-  const reqId = useRef(0)
   useEffect(() => {
-    const nid = ++reqId.current
+    let canceled = false
     setLoaded(false)
     if (aref.current) aref.current.pause()
     speechSynthesis.pause()
     speechSynthesis.cancel()
-    if (cardHasAudio && aref.current && dedupedAudio.text) {
-      if (ttsCache.get(dedupedAudio.text)) {
+
+    if (cardHasAudio && aref.current && dedupedAudio.text)
+      fetchAudio(dedupedAudio).then(() => {
+        if (canceled) return
         playSrc()
-      } else {
-        state.tts(dedupedAudio.text, dedupedAudio.raw).then((audioSrc) => {
-          ttsCache.set(dedupedAudio.text, audioSrc)
-          if (reqId.current !== nid) return
-          playSrc()
-        })
-      }
+      })
+    return () => {
+      canceled = true
     }
   }, [dedupedAudio.text, aref.current, state.id, cardHasAudio])
 
@@ -114,7 +152,7 @@ export function useTtsState(state: CardProps) {
     shownKeys,
     shownStyles,
     modeText,
-    valueWithALiases,
+    valueWithALiases: state.revealed ? valueWithALiases : state.value,
     cardHasAudio,
     playSrc,
     loaded,

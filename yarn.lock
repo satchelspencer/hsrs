@@ -1237,10 +1237,10 @@ hierarchical-clustering@^1.1.0:
   resolved "https://registry.yarnpkg.com/hierarchical-clustering/-/hierarchical-clustering-1.1.0.tgz#316fca0005ed45fe310f40b2ce024851bf8157b2"
   integrity sha512-JRWUyY8ttyyNMKM/7W/Kf+Xx+xU2zKHQ3JJskNP0yeszAbEbY2RiT9TXX5unPGEpMuqZ0kZQrb8s/O+pfPzo2Q==
 
-hsrs-plugin@^0.0.6:
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.0.6.tgz#ab25fed30c2f2221a9838456745af22cadbf66b7"
-  integrity sha512-njofGZEAQCxDkPNzyLCzr2TKdg9x3jYg1bzztiz4OuLfpwPYk5asA0Q5RuifI+YotryErV3fWlDmlA+wPqylHg==
+hsrs-plugin@^0.0.7:
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.0.7.tgz#225342a2a74836cb917554d52302235690a861e6"
+  integrity sha512-HEfosgE4fF/HP/glPhHwYtn6NZ9wM+atgRkopzLwqI/WUon3J7xEngEjpSSRr7NdZDLeovfr/L2m2NVzWZQZQA==
 
 html-encoding-sniffer@^4.0.0:
   version "4.0.0"

@@ -61,7 +61,7 @@ export function Learn() {
       () => getSessionState(session, elements, revealed),
       [session, elements, revealed]
     ),
-    { progress, card, value, mode, shownValue } = sessionState,
+    { progress, card, value, mode, shownValue, next } = sessionState,
     plugin =
       card &&
       getElementAndParents(card.element, elements)
@@ -206,6 +206,7 @@ export function Learn() {
           type: 'state',
           state: {
             value,
+            next,
             aliases,
             vars: settings.vars,
             revealed,

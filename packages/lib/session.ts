@@ -266,7 +266,9 @@ export function getSessionState(
 ) {
   const estReviews = session ? estimateReviewsRemaining(session) : 0,
     card = session?.stack[0],
-    value = card && computeElementInstance(card, elements)
+    value = card && computeElementInstance(card, elements),
+    nextCard = session?.stack[1],
+    next = nextCard && computeElementInstance(nextCard, elements)
 
   return {
     progress: {
@@ -280,6 +282,7 @@ export function getSessionState(
     },
     card,
     value,
+    next,
     mode: card && computeElementMode(card, elements),
     shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
   }
