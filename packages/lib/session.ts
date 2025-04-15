@@ -424,7 +424,7 @@ function getDue(
       isDue = dueToday && !seenToday,
       isSameDay = dueToday && seenToday
 
-    if (isSameDay && sameDays > limit / 8) continue //prevent same days from keeping progress back
+    if (isSameDay && sameDays > limit / 8 && dueCards.length) continue //prevent same days from keeping progress back
 
     const added = sampleAndAdd(isDue ? dueCards : nextCards, cardId, deck, filter, cache)
     if (!added && isDue) sampleFailures++
