@@ -422,7 +422,13 @@ function getDue(
 
     if (isSameDay && sameDays > limit / 8 && dueCards.length) continue //prevent same days from keeping progress back
 
-    const added = sampleAndAdd(isDue ? dueCards : nextCards, cardId, deck, filter, cache)
+    const added = sampleAndAdd(
+      dueToday ? dueCards : nextCards,
+      cardId,
+      deck,
+      filter,
+      cache
+    )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
   }
@@ -439,7 +445,7 @@ function getDue(
         : {
             tz: cz!,
             date: startOfDay,
-            count: dailyGoal + doneCount - sampleFailures + chipper,
+            count: Math.min(dailyGoal + chipper, dueCount) + doneCount - sampleFailures,
           }
 
   const progress: t.DayProgress = {
