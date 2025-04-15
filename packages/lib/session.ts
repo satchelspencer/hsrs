@@ -388,6 +388,7 @@ function getDue(
   let doneCount = 0,
     newCount = 0,
     dueCount = 0
+  const dayCounts: { [day: number]: number } = {}
   for (const cardId of cardsIds) {
     const state = deck.cards[cardId]
 
@@ -398,8 +399,14 @@ function getDue(
       state.lastSeen &&
       state.due < endOfDay &&
       state.lastSeen < startOfDay
-    )
+    ) {
+      const day = DateTime.fromSeconds(state.due!)
+        .minus({ hours: 4 })
+        .startOf('day')
+        .toSeconds()
+      dayCounts[day] = (dayCounts[day] ?? 0) + 1
       dueCount++
+    }
   }
 
   let sameDays = 0,
@@ -420,8 +427,24 @@ function getDue(
     if (added && isSameDay) sameDays++
   }
 
+  const dcvs = Object.values(dayCounts),
+    dailyGoal = _.max(dcvs) ?? 0,
+    backlog = _.sum(dcvs) - dailyGoal,
+    chipper = Math.min(backlog, dailyGoal) //backlog cant exceed single day due
+
+  const cz = nowTz.zoneName,
+    nextGoal: t.GoalState =
+      deck.goal && deck.goal.tz === cz && deck.goal.date === startOfDay
+        ? deck.goal
+        : {
+            tz: cz!,
+            date: startOfDay,
+            count: dailyGoal + doneCount - sampleFailures + chipper,
+          }
+
   const progress: t.DayProgress = {
-    goal: Math.max(dueCount - sampleFailures + doneCount, doneCount),
+    goal: nextGoal,
+    due: Math.max(dueCount - sampleFailures + doneCount, doneCount),
     done: doneCount,
     new: newCount,
     next: dueCards.length - sameDays, //next discounts same day reviews

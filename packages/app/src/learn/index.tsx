@@ -435,12 +435,12 @@ export function Learn() {
           {!!dayProgress.goal && (
             <div className={dprogress}>
               <div
-                className={dprogressItem(dayProgress.done / dayProgress.goal, true)}
+                className={dprogressItem(dayProgress.done / dayProgress.goal.count, true)}
                 style={{ zIndex: 1 }}
               />
               <div
                 className={cx(
-                  dprogressItem(dayProgress.next / dayProgress.goal),
+                  dprogressItem(dayProgress.next / dayProgress.goal.count),
                   fadeInOut
                 )}
               />

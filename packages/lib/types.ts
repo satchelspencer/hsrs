@@ -39,14 +39,7 @@ export interface Deck {
   session: LearningSession | null
   settings: DeckSettings
   working?: boolean
-}
-
-export interface Daily {
-  day: string
-  goal: number
-  pgoal: number
-  done: number
-  new: number
+  goal?: GoalState
 }
 
 export type FSRSParams = number[] | undefined
@@ -143,4 +136,16 @@ export interface SessionAndProgress {
   progress: DayProgress
 }
 
-export type DayProgress = { goal: number; done: number; new: number; next: number }
+export type DayProgress = {
+  goal: GoalState
+  due: number
+  done: number
+  new: number
+  next: number
+}
+
+export interface GoalState {
+  tz: string
+  date: number
+  count: number
+}
