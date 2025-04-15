@@ -131,6 +131,7 @@ export function useTtsState(state: CardProps) {
 
   const [styles, setStyles] = useState<React.CSSProperties>({})
   useEffect(() => {
+    if (!state.revealed) return
     const newStyles: React.CSSProperties = {}
     for (const varName in state.vars) {
       if (varName.indexOf('style:') === 0) {
@@ -141,7 +142,7 @@ export function useTtsState(state: CardProps) {
       }
     }
     setStyles(newStyles)
-  }, [state.id])
+  }, [state.revealed])
   const shownStyles =
     (shownKeys.includes(ttsKey ?? '') || shownKeys.includes(txtKey ?? '')) &&
     !state.revealed

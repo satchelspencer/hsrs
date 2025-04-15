@@ -386,9 +386,8 @@ function getDue(
     )
 
   let doneCount = 0,
-    newCount = 0
-  const dayCounts: { [day: number]: number } = {}
-
+    newCount = 0,
+    dueCount = 0
   for (const cardId of cardsIds) {
     const state = deck.cards[cardId]
 
@@ -399,19 +398,9 @@ function getDue(
       state.lastSeen &&
       state.due < endOfDay &&
       state.lastSeen < startOfDay
-    ) {
-      const day = DateTime.fromSeconds(state.due!)
-        .minus({ hours: 4 })
-        .startOf('day')
-        .toSeconds()
-      dayCounts[day] = (dayCounts[day] ?? 0) + 1
-    }
+    )
+      dueCount++
   }
-
-  const dcvs = Object.values(dayCounts),
-    dailyGoal = _.max(dcvs) ?? 0,
-    backlog = _.sum(dcvs) - dailyGoal,
-    chipper = Math.min(backlog, dailyGoal) //backlog cant exceed single day due
 
   let sameDays = 0,
     sampleFailures = 0
@@ -432,18 +421,11 @@ function getDue(
   }
 
   const progress: t.DayProgress = {
-    goal: Math.max(Math.floor(dailyGoal - sampleFailures + chipper + doneCount), 1), //goal discounts sample failures
+    goal: Math.max(dueCount - sampleFailures + doneCount, doneCount),
     done: doneCount,
     new: newCount,
     next: dueCards.length - sameDays, //next discounts same day reviews
   }
-
-  // console.log(dcvs, progress, dueCards.length, 'sames:', sameDays)
-  // console.log('days', dcvs)
-  // console.log('progress', progress)
-  // console.log('dueCards.length', dueCards.length)
-  // console.log('sames', sameDays)
-  // console.log('sample fail', sampleFailures)
 
   return { dueCards, nextCards, progress }
 }
