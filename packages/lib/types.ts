@@ -145,7 +145,6 @@ export type DayProgress = {
 }
 
 export interface GoalState {
-  tz: string
   date: number
   count: number
 }

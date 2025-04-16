@@ -438,15 +438,13 @@ function getDue(
     backlog = _.sum(dcvs) - dailyGoal,
     chipper = Math.min(backlog, dailyGoal) //backlog cant exceed single day due
 
-  const cz = nowTz.zoneName,
-    nextGoal: t.GoalState =
-      deck.goal && deck.goal.tz === cz && deck.goal.date === startOfDay
-        ? deck.goal
-        : {
-            tz: cz!,
-            date: startOfDay,
-            count: Math.min(dailyGoal + chipper, dueCount) + doneCount - sampleFailures,
-          }
+  const nextGoal: t.GoalState =
+    deck.goal && deck.goal.date === startOfDay
+      ? deck.goal
+      : {
+          date: startOfDay,
+          count: Math.min(dailyGoal + chipper, dueCount) + doneCount - sampleFailures,
+        }
 
   const progress: t.DayProgress = {
     goal: nextGoal,
