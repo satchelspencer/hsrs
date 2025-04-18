@@ -38,7 +38,6 @@ export interface Deck {
   cards: CardStates
   session: LearningSession | null
   settings: DeckSettings
-  working?: boolean
   goal?: GoalState
 }
 

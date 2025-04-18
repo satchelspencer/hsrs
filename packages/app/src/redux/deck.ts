@@ -79,12 +79,8 @@ export const deck = createSlice({
       state.session = null
     })
 
-    builder.addCase(deckThunks.recomputeCards.pending, (state, action) => {
-      state.working = true
-    })
     builder.addCase(deckThunks.recomputeCards.fulfilled, (state, action) => {
       state.cards = action.payload
-      delete state.working
     })
 
     builder.addCase(deckThunks.clearHistory.fulfilled, (state, action) => {
@@ -92,12 +88,8 @@ export const deck = createSlice({
       state.session = null
     })
 
-    builder.addCase(deckThunks.computeParams.pending, (state, action) => {
-      state.working = true
-    })
     builder.addCase(deckThunks.computeParams.fulfilled, (state, action) => {
       state.settings.fsrsParams = action.payload
-      delete state.working
     })
   },
 })

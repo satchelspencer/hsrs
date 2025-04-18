@@ -26,7 +26,7 @@ const downloadJSON = (data: object, filename: string) => {
 }
 
 export function ImportExport() {
-  const { elements, settings: deckSettings, working } = r.useSelector((s) => s.deck),
+  const { elements, settings: deckSettings } = r.useSelector((s) => s.deck),
     dispatch = r.useDispatch()
 
   const [loading, setLoading] = useState(false)
@@ -100,7 +100,14 @@ export function ImportExport() {
         ],
         [
           'Schedule',
-          <Button disabled={working} onClick={() => dispatch(r.actions.recomputeCards())}>
+          <Button
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true)
+              await dispatch(r.actions.recomputeCards())
+              setLoading(false)
+            }}
+          >
             Re-schedule
           </Button>,
         ],
@@ -108,8 +115,12 @@ export function ImportExport() {
           'Parameters',
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <Button
-              disabled={working}
-              onClick={() => dispatch(r.actions.computeParams())}
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true)
+                await dispatch(r.actions.computeParams())
+                setLoading(false)
+              }}
             >
               Optimize
             </Button>
