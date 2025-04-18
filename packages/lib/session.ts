@@ -2,8 +2,8 @@ import { getCache } from './cache'
 import { DateTime } from 'luxon'
 import {
   getAllCards,
-  getElementOrder,
   getInheritedElement,
+  getLearnOrder,
   sampleElementIstance,
 } from './props'
 import {
@@ -324,9 +324,17 @@ function getNew(
   cache: t.DeckCache
 ): t.CardInstance[] {
   const res: t.CardInstance[] = [],
-    cards = _.sortBy(
-      getAllCards(deck.elements),
-      (c) => getElementOrder(c.element, deck.elements) + '.0.' + Math.random()
+    cards = _.orderBy(
+      getAllCards(deck.elements).filter((c) => !deck.cards[card2Id(c)]),
+      [
+        (c) => getLearnOrder(c.element, deck).order,
+        (c) => {
+          return getLearnOrder(c.element, deck).pre
+            ? -Math.floor(cache.depths[c.element])
+            : Math.random()
+        },
+        () => Math.random(),
+      ]
     ),
     usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor()
@@ -480,7 +488,7 @@ function sampleAndAdd(
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
     targetStability =
       getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-      (Math.pow(cache.depths[element], 1.5) + 1)
+      (getLearnOrder(element, deck).pre ? 1 : Math.pow(cache.depths[element], 1.5) + 1) //prelearned have no target stability bias...
 
   let i = 0
   while (i < SAMPLE_TRIES) {

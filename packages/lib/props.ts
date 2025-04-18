@@ -546,3 +546,10 @@ export function findCommonAncestors(
   }
   return common
 }
+
+export function getLearnOrder(element: string, deck: t.Deck) {
+  const startOrder = deck.settings.startOrder,
+    order = getElementOrder(element, deck.elements),
+    pre = !!startOrder && order <= startOrder
+  return { order: pre ? startOrder : order, pre }
+}

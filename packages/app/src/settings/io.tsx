@@ -153,6 +153,19 @@ export function ImportExport() {
             />
           </div>,
         ],
+        [
+          'Init order',
+          <div className={inputWrapper}>
+            <CodeInput
+              placeholder="0.0"
+              value={deckSettings.startOrder}
+              throttle
+              onChange={(order) => {
+                dispatch(r.actions.setDeckSettings({ startOrder: order }))
+              }}
+            />
+          </div>,
+        ],
       ]}
     />
   )

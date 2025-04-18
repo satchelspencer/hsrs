@@ -48,6 +48,7 @@ export interface DeckSettings {
   fsrsParams?: FSRSParams
   retention?: number
   filter?: string[]
+  startOrder?: string
 }
 
 export interface MemoryState {
