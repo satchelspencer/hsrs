@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getElementAndParents, generateElementInstanceSamples } from './props'
+import { generateElementInstanceSamples } from './props'
 import { Element, ElementInstance, IdMap } from './types'
 import _ from 'lodash'
 
@@ -16,20 +16,6 @@ const renderInstance = (instance: ElementInstance, depth = 0) => {
           .join(',\n')}\n${pad})`
   }`
 }
-
-describe('getElementAndParents', () => {
-  it('should resolve deep parents with circular refz', async () => {
-    expect(
-      getElementAndParents('a', {
-        a: { name: 'a', parents: ['b'], props: {} },
-        b: { name: 'b', parents: ['c', 'd'], props: {} },
-        c: { name: 'c', parents: [], props: {} },
-        d: { name: 'd', parents: ['a'], props: {} },
-        e: { name: 'e', parents: [], props: {} },
-      })
-    ).toEqual(['a', 'b', 'd', 'c'])
-  })
-})
 
 describe('elementInstances', () => {
   it('should resolve deep props ', async () => {

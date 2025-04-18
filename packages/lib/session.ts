@@ -4,7 +4,6 @@ import {
   getAllCards,
   getElementOrder,
   getInheritedElement,
-  isParent,
   sampleElementIstance,
 } from './props'
 import {
@@ -473,7 +472,7 @@ function sampleAndAdd(
   if (!deck.elements[element]) return
   if (
     filter.length &&
-    !_.some(filter, (f) => f === element || isParent(element, f, deck.elements))
+    !_.some(filter, (f) => f === element || cache.tree.ancestors[element]?.includes(f))
   )
     return
 

@@ -9,8 +9,6 @@ import { Icon } from '../components/icon'
 import * as t from '@hsrs/lib/types'
 import {
   findCommonAncestors,
-  getElementAndParents,
-  getElementChildren,
   getInheritedElement,
   getNonVirtualDescendents,
 } from '@hsrs/lib/props'
@@ -41,7 +39,7 @@ function expandNodes(
     res.push(node)
     const childCtxt = getNodeCtxt(node),
       children = opened.includes(childCtxt)
-        ? getElementChildren(node.id, elements)
+        ? cache.tree.children?.[node.id] ?? []
         : flatOpened.includes(childCtxt)
         ? getNonVirtualDescendents(node.id, elements, cache)
         : []
@@ -87,7 +85,8 @@ function inRelation(
   elements: t.IdMap<t.Element>
 ): [boolean, string | null] {
   const nonVirtuals = getNonVirtualDescendents(relationId, elements, getCache(elements)),
-    paramParentLists = _.mapValues(params, (p) => getElementAndParents(p, elements))
+    cache = getCache(elements),
+    paramParentLists = _.mapValues(params, (p) => cache.tree.ancestors[p] ?? [])
 
   let indirectMatch = false,
     directMatch: string | null = null

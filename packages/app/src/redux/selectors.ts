@@ -2,7 +2,6 @@ import {
   getElementParamsAndProps,
   getVariables,
   getNonVirtualDescendents,
-  getElementChildren,
   generateElementInstanceSamples,
   getInheritedElement,
 } from '@hsrs/lib/props'
@@ -66,7 +65,8 @@ export const selectElementInstanceGenerator = createSelector(
 export const selectElementIdsByParent = createSelector(
   [(state) => state.deck.elements, (state, parentId?: string) => parentId],
   (elements, parentId) => {
-    return getElementChildren(parentId, elements)
+    const cache = getCache(elements)
+    return (parentId && cache.tree.children?.[parentId]) ?? []
   }
 )
 

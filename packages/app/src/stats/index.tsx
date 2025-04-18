@@ -25,7 +25,7 @@ import {
   StabilityDist,
 } from './stats'
 import { getCache } from '@hsrs/lib/cache'
-import { getNonVirtualDescendents, isParent } from '@hsrs/lib/props'
+import { getNonVirtualDescendents } from '@hsrs/lib/props'
 import { id2Card } from '@hsrs/lib/session'
 
 interface StatsEditorProps {
@@ -56,14 +56,11 @@ export function Stats(props: StatsEditorProps) {
   }, [props.id, options])
 
   const subDeck = useMemo<Deck>(() => {
-    const children = getNonVirtualDescendents(
-        props.id,
-        deck.elements,
-        getCache(deck.elements)
-      ),
+    const cache = getCache(deck.elements),
+      children = getNonVirtualDescendents(props.id, deck.elements, cache),
       elements = _.pickBy(
         _.pickBy(deck.elements, (e, id) =>
-          children.find((cid) => cid === id || isParent(cid, id, deck.elements))
+          children.find((cid) => cid === id || cache.tree.ancestors[cid]?.includes(id))
         )
       )
     return {

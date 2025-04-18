@@ -14,7 +14,6 @@ import {
   id2Card,
   nextSessionState,
 } from '@hsrs/lib/session'
-import { getElementAndParents } from '@hsrs/lib/props'
 import {
   defaultretention,
   getELRetrOffset,
@@ -62,9 +61,10 @@ export function Learn() {
       [session, elements, revealed]
     ),
     { progress, card, value, mode, shownValue, next } = sessionState,
+    cache = getCache(elements),
     plugin =
       card &&
-      getElementAndParents(card.element, elements)
+      (cache.tree.ancestors[card.element] ?? [])
         .map((e) => elements[e].name)
         .find((e) => settings.plugins[e]),
     pluginUrl = plugin && settings.plugins[plugin]

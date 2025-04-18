@@ -6,57 +6,6 @@ import { card2Id } from './session'
 import { getCache } from './cache'
 import { cleanRuby } from './ruby'
 
-export function getElementAndParents(elementId: string, elements: t.IdMap<t.Element>) {
-  const res: string[] = [],
-    stack: string[] = [..._.castArray(elementId)]
-
-  while (stack.length) {
-    const id = stack.pop()!,
-      element = elements[id]
-    if (!element) continue
-    res.push(id)
-    for (const etype of element.parents ?? []) {
-      if (!res.includes(etype)) stack.push(etype)
-    }
-  }
-
-  return res
-}
-
-export function isParent(
-  elementId: string,
-  parent: string,
-  elements: t.IdMap<t.Element>
-) {
-  const stack: string[] = [..._.castArray(elementId)]
-
-  while (stack.length) {
-    const id = stack.pop()!,
-      element = elements[id]
-    if (!element) continue
-
-    if (id === parent) return true
-    for (const etype of element.parents ?? []) {
-      stack.push(etype)
-    }
-  }
-
-  return false
-}
-
-export function getElementChildren(
-  parentId: string | undefined,
-  elements: t.IdMap<t.Element>
-) {
-  const keys: string[] = []
-  for (const key in elements) {
-    const element = elements[key]
-    if (parentId ? element.parents.includes(parentId) : !element.parents.length)
-      keys.push(key)
-  }
-  return keys
-}
-
 export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
   const res: string[] = []
   for (const key in instance) {
@@ -320,7 +269,7 @@ function failsConstraint(insts: MetaInstance[], constraint?: string): boolean {
   return failed
 }
 
-export function getInstanceId(instance: t.ElementInstance): string {
+function getInstanceId(instance: t.ElementInstance): string {
   const res: string[] = [instance.element],
     queue: t.ElementInstance[] = [instance]
 
@@ -566,57 +515,6 @@ export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Car
     if (prop) cards.push({ element: id, property: propId })
   }
   return cards
-}
-
-function getResolvedElements(
-  id: string,
-  elements: t.IdMap<t.Element>,
-  paramName: string
-): string[] {
-  const { params: paramValue = {} } = getInheritedElement(id, elements)
-  const element = elements[id]
-  if (!element.virtual) return paramValue[paramName] ? [paramValue[paramName]] : []
-  const res: string[] = []
-  for (const cid in elements) {
-    const cel = elements[cid]
-    if (cel.parents.includes(id)) {
-      res.push(...getResolvedElements(cid, elements, paramName))
-    }
-  }
-  return _.uniq(res)
-}
-
-function findMissingElements(
-  id: string,
-  elements: t.IdMap<t.Element>,
-  resolved: string[]
-): string[] {
-  const element = elements[id],
-    cache = getCache(elements),
-    parents = cache.tree.ancestors[id]
-  if (!element.virtual) return _.intersection(resolved, parents).length ? [] : [id]
-  const res: string[] = []
-  let whollyMissing = true
-  for (const cid in elements) {
-    const cel = elements[cid]
-    if (cel.parents.includes(id)) {
-      const missing = findMissingElements(cid, elements, resolved)
-      if (missing.length !== 1 || missing[0] !== cid) whollyMissing = false
-      res.push(...missing)
-    }
-  }
-  return whollyMissing && res.length ? [id] : res
-}
-
-export function findMissingInstances(id: string, elements: t.IdMap<t.Element>) {
-  const { params = {} } = getInheritedElement(id, elements)
-  const res: { [n: string]: string[] } = {}
-  for (const paramName in params) {
-    const resolved = getResolvedElements(id, elements, paramName),
-      missing = findMissingElements(params[paramName], elements, resolved)
-    res[paramName] = missing
-  }
-  return res
 }
 
 export function findCommonAncestors(
