@@ -467,7 +467,7 @@ function getDue(
 const SAMPLE_TRIES = 20,
   jitterScale = 1
 
-function sampleAndAdd(
+export function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
   deck: t.Deck,
