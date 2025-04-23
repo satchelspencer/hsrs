@@ -66,7 +66,9 @@ export const selectElementIdsByParent = createSelector(
   [(state) => state.deck.elements, (state, parentId?: string) => parentId],
   (elements, parentId) => {
     const cache = getCache(elements)
-    return (parentId && cache.tree.children?.[parentId]) ?? []
+    return parentId
+      ? cache.tree.children?.[parentId] ?? []
+      : _.takeRightWhile(cache.tree.topo, (e) => !elements[e].parents.length)
   }
 )
 
