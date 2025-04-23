@@ -258,11 +258,25 @@ export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   return cardReviewsRemaning
 }
 
+export interface SessionState {
+  card?: t.CardInstance
+  value?: t.PropsInstance
+  next?: t.PropsInstance
+  mode?: string
+  progress: {
+    completion: number
+    count: number
+    sessionSeconds: number
+    accuracy: number | null
+  }
+  shownValue?: Partial<t.PropsInstance>
+}
+
 export function getSessionState(
   session: t.LearningSession | null,
   elements: t.IdMap<t.Element>,
   revealed: boolean
-) {
+): SessionState {
   const estReviews = session ? estimateReviewsRemaining(session) : 0,
     card = session?.stack[0],
     value = card && computeElementInstance(card, elements),
@@ -272,6 +286,7 @@ export function getSessionState(
   return {
     progress: {
       sessionSeconds: _.sumBy(session?.history, (h) => h.took),
+      count: session?.history.length ?? 0,
       accuracy:
         session &&
         session.history.filter((h) => h.score !== 1).length / session.history.length,
