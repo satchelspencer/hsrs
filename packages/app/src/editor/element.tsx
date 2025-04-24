@@ -281,6 +281,15 @@ export function ElementEditor(props: ElementEditorProps) {
                 <Button onClick={() => setExampleSeed(Math.random())}>
                   <Icon name="refresh" />
                 </Button>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      JSON.stringify(computeElementInstance(exampleInstance, elements))
+                    )
+                  }}
+                >
+                  <Icon name="copy" />
+                </Button>
               </div>,
               <>
                 <LabelGroup
@@ -309,18 +318,6 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
           ]}
         />
-        {/* <Button
-          onClick={() => {
-            console.log(
-              exampleInstance,
-              findAliases(exampleInstance, 'en', elements, cards).map((c) =>
-                computeElementInstance(c, elements)
-              )
-            )
-          }}
-        >
-          <Icon name="test" />
-        </Button> */}
         {canShowRelation && (
           <Button
             onClick={() =>
