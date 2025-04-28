@@ -14,6 +14,7 @@ const ttsCache = new Map<string, string | undefined>()
 
 interface CardProps extends CardState {
   tts: (text: string, raw?: string) => Promise<string | undefined>
+  noAuto?: boolean
 }
 
 const aliasDelim = RUBY_DELIM + ', '
@@ -88,7 +89,7 @@ export function useTtsState(state: CardProps) {
   }
 
   useEffect(() => {
-    if (dedupedAudio.text) fetchAudio(dedupedAudio)
+    if (dedupedAudio.text && !state.noAuto) fetchAudio(dedupedAudio)
   }, [dedupedAudio.text])
 
   useEffect(() => {
@@ -119,7 +120,7 @@ export function useTtsState(state: CardProps) {
     speechSynthesis.pause()
     speechSynthesis.cancel()
 
-    if (cardHasAudio && aref.current && dedupedAudio.text)
+    if (cardHasAudio && aref.current && dedupedAudio.text && !state.noAuto)
       fetchAudio(dedupedAudio).then(() => {
         if (canceled) return
         playSrc()

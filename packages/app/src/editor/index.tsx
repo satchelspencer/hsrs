@@ -15,6 +15,42 @@ export function Editor() {
   const selections = r.useSelector((s) => r.selectors.selectSelections(s)),
     selDepth = selections.length
 
+  const selectionKeys = useMemo(() => {
+    const usedKeys: { [key: string]: number } = {},
+      keys: string[] = []
+    selections.forEach((selection, index) => {
+      const key = selection?.[0] ? getSelectionKey(selection[0]) : index
+      usedKeys[key] = (usedKeys[key] ?? 0) + 1
+      keys.push(key + ':' + usedKeys[key])
+    })
+    return keys
+  }, [selections])
+
+  const { wrapperRef, innerRef, containerWidth } = useMiller(selDepth)
+
+  return (
+    <div ref={wrapperRef} className={editorWrapper}>
+      <div
+        ref={innerRef}
+        className={editorInner}
+        style={{ width: containerWidth || 'auto' }}
+      >
+        {new Array(selDepth + 1).fill(0).map((_, index) => {
+          const realIndex = selDepth - index - 1
+          return (
+            <Column
+              key={selectionKeys[realIndex] ?? 'root'}
+              index={realIndex}
+              last={!index}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function useMiller(selDepth: number) {
   const wrapperRef = useRef<HTMLDivElement>(null),
     innerRef = useRef<HTMLDivElement>(null),
     [containerWidth, setContainerWidth] = useState<number>(0)
@@ -53,37 +89,12 @@ export function Editor() {
     return () => wrapperRef.current?.removeEventListener('scroll', handleScroll)
   }, [containerWidth, innerRef.current])
 
-  const selectionKeys = useMemo(() => {
-    const usedKeys: { [key: string]: number } = {},
-      keys: string[] = []
-    selections.forEach((selection, index) => {
-      const key = selection?.[0] ? getSelectionKey(selection[0]) : index
-      usedKeys[key] = (usedKeys[key] ?? 0) + 1
-      keys.push(key + ':' + usedKeys[key])
-    })
-    return keys
-  }, [selections])
+  useEffect(() => {
+    if (containerWidth && wrapperRef.current)
+      wrapperRef.current.scrollLeft = wrapperRef.current.scrollWidth
+  }, [!!containerWidth])
 
-  return (
-    <div ref={wrapperRef} className={editorWrapper}>
-      <div
-        ref={innerRef}
-        className={editorInner}
-        style={{ width: containerWidth || 'auto' }}
-      >
-        {new Array(selDepth + 1).fill(0).map((_, index) => {
-          const realIndex = selDepth - index - 1
-          return (
-            <Column
-              key={selectionKeys[realIndex] ?? 'root'}
-              index={realIndex}
-              last={!index}
-            />
-          )
-        })}
-      </div>
-    </div>
-  )
+  return { wrapperRef, innerRef, containerWidth }
 }
 
 const editorWrapper = cx(
