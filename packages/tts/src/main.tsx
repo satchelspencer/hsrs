@@ -96,9 +96,12 @@ export function useTtsState(state: CardProps) {
     if (dedupedNextAudio.text) fetchAudio(dedupedNextAudio)
   }, [dedupedNextAudio.text])
 
-  const playSrc = () => {
+  const playSrc = async () => {
     if (!dedupedAudio.text) return
-    const src = ttsCache.get(dedupedAudio.text)
+    let src = ttsCache.get(dedupedAudio.text)
+
+    if (!src && state.noAuto) src = await fetchAudio(dedupedAudio)
+
     if (src && aref.current) {
       aref.current.src = src
       setLoaded(true)
