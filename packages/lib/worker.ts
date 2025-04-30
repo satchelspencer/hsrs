@@ -1,4 +1,5 @@
 import { WorkerMessage, WorkerMetaMessage, WorkerResponseMessage } from './async'
+import { setLogLevel } from './log'
 import { findAliases } from './props'
 import { createLearningSession } from './session'
 
@@ -23,6 +24,10 @@ function handleMessage(
       message.tz,
       message.cache
     )
+  }
+  if (message.type === 'setLogLevel') {
+    setLogLevel(message.filter, message.level)
+    return true
   }
   throw 'unhandled message'
 }

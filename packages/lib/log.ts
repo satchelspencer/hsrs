@@ -9,29 +9,37 @@ let currentLevel: number = 0,
 
 const LSKEY = 'loglevel'
 
-function resetLogLevel() {
-  currentLevel = process.env.NODE_ENV === 'development' ? 1 : 0
-  currentFilter = ''
-  localStorage.removeItem(LSKEY)
+export function setLogLevel(f?: string, n?: number) {
+  currentLevel = n ?? (process.env.NODE_ENV === 'development' ? 1 : 0)
+  currentFilter = f ?? ''
+  pushLogLevel()
+}
+
+export function pushLogLevel() {
+  try {
+    localStorage.setItem(LSKEY, JSON.stringify([currentLevel, currentFilter]))
+    window['workerPool']?.forEach((p) => {
+      p.postMessage({
+        type: 'setLogLevel',
+        level: currentLevel,
+        filter: currentFilter,
+        messageId: '',
+      })
+    })
+  } catch {}
 }
 
 try {
   const w = window as any
-  w.setLogLevel = (f: string, n: number) => {
-    currentLevel = n ?? currentLevel
-    currentFilter = f ?? ''
-    localStorage.setItem(LSKEY, JSON.stringify([currentLevel, currentFilter]))
-  }
+  w.setLogLevel = setLogLevel
   w.getLogLevel = () => [currentLevel, currentFilter]
-  w.resetLogLevel = resetLogLevel
 
   const p = localStorage.getItem(LSKEY)
   if (p) {
     const [l, f] = JSON.parse(p)
-    currentLevel = l
-    currentFilter = f
+    setLogLevel(f, l)
   } else {
-    resetLogLevel()
+    setLogLevel()
   }
 } catch {}
 

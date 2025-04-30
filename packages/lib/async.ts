@@ -3,6 +3,7 @@ import _ from 'lodash'
 import * as t from './types'
 import { uid } from './uid'
 import Worker from './worker?worker'
+import { pushLogLevel } from './log'
 
 export interface WorkerMessageBase<O> {
   type: string
@@ -32,7 +33,17 @@ interface PingMessage extends WorkerMessageBase<true> {
   type: 'ping'
 }
 
-export type WorkerMessage = FindAliasesMessage | CreateSessionMessage | PingMessage
+interface SetLogLevelMessage extends WorkerMessageBase<true> {
+  type: 'setLogLevel'
+  level?: number
+  filter?: string
+}
+
+export type WorkerMessage =
+  | FindAliasesMessage
+  | CreateSessionMessage
+  | PingMessage
+  | SetLogLevelMessage
 
 type WorkerMessageMeta = { messageId: string }
 
@@ -44,6 +55,12 @@ export type WorkerResponseMessage = {
 
 const workerPool = [new Worker(), new Worker()],
   pending: number[] = []
+
+try {
+  const w = window as any
+  w.workerPool = workerPool
+  pushLogLevel()
+} catch {}
 
 function callWorker<T extends WorkerMessage>(
   message: T
