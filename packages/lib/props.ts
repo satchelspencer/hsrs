@@ -380,14 +380,17 @@ export function sampleElementIstance(
   commonMode?: { mode: string }[],
   filter?: (elId: string) => boolean,
   hardSample?: boolean,
-  leaves?: { [id: string]: boolean }
+  leaves?: { [id: string]: boolean },
+  parentConstrained?: boolean,
+  depth = 1
 ): t.ElementInstance {
-  const rootElement = getInheritedElement(id, elements, cache)
+  const log = logger(3, 'sample', new Array(depth).join('   ')),
+    rootElement = getInheritedElement(id, elements, cache)
   commonMode ??= new Array(8).fill(0).map((_, i) => {
     const rootm = rootElement.mode?.[i] ?? ''
     return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
   })
-  leaves ??= {}
+  if (!leaves || !cache.hasProps[id]) leaves = {}
 
   const nonVR = getNonVirtualDescendents(id, elements, cache),
     nonV = filter ? nonVR.filter(filter) : nonVR,
@@ -398,11 +401,16 @@ export function sampleElementIstance(
     maxOrder = orders[orders.length - 1] ?? -Infinity,
     normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
-  // console.log(
-  //   elements[id].name,
-  //   descendents.map((d, i) => elements[d].name + ' ' + normed[i])
-  // )
-
+  log('sampling', () => [
+    rootElement.name,
+    Object.keys(fixedParams ?? {})
+      .map((k) => `${k}=${elements[fixedParams![k]].name}`)
+      .join(','),
+    'leaves',
+    Object.keys(leaves)
+      .map((l) => elements[l].name)
+      .join(','),
+  ])
   while (normed.length) {
     const sum = _.sumBy(normed),
       sample = Math.random() * sum
@@ -418,6 +426,13 @@ export function sampleElementIstance(
     if (Math.random() > 0.99) normed.splice(index, 1)
     const [descendent] = descendents.splice(index, 1)
     if (!descendent) continue
+
+    log('-trying', elements[descendent].name)
+
+    if (leaves[descendent]) {
+      log('-is leaf', parentConstrained ? 'parent-constrained' : 'SKIP')
+      if (!parentConstrained) continue
+    }
 
     const {
       params = {},
@@ -447,11 +462,6 @@ export function sampleElementIstance(
     }
     if (failed) continue
 
-    for (const param in params) {
-      if (!fixedParams?.[param] && leaves[params[param]]) failed = true
-    }
-    if (failed) continue
-
     const inst: t.ElementInstance = {
       element: descendent,
       params: {},
@@ -469,6 +479,8 @@ export function sampleElementIstance(
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
+      const isConstrained = !!fixedParams?.[param]
+      log('-param', param, isConstrained ? '**constrained' : 'nc')
       const pinst = sampleElementIstance(
         params[param],
         elements,
@@ -478,15 +490,19 @@ export function sampleElementIstance(
         childCommonMode,
         filter,
         hardSample,
-        leaves
+        leaves,
+        isConstrained,
+        depth + 1
       )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
-        if (!_.keys(el.params).length) leaves[el.element] = true
       })
       inst.params![param] = pinst
     }
-
+    if (!cache.depths[inst.element] && !leaves[inst.element]) {
+      leaves[inst.element] = true
+      log('-adding leaf')
+    }
     return inst
   }
   throw 'sample not found'
