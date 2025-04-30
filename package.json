@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "yarn workspace @hsrs/app dev",
-    "build": "yarn workspace @hsrs/app build",
+    "dev": "concurrently -p name --names \"hsrs,tts\" \"yarn workspace @hsrs/app dev\" \"yarn workspace @hsrs/tts dev\"",
+    "build": "yarn workspace @hsrs/app build && yarn workspace @hsrs/tts build",
     "tsc": "tsc --noEmit",
     "test": "vitest"
   },
@@ -20,6 +20,7 @@
     "vitest": "^2.1.4"
   },
   "dependencies": {
+    "concurrently": "^9.1.2",
     "jsdom": "^26.0.0",
     "vite": "^5.4.10"
   },
