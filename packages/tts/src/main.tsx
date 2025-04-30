@@ -17,7 +17,7 @@ interface CardProps extends CardState {
   noAuto?: boolean
 }
 
-const aliasDelim = RUBY_DELIM + ', '
+export const aliasDelim = RUBY_DELIM + '‚ '
 
 type PropMap = { [name: string]: string }
 
@@ -179,8 +179,8 @@ function dedupeAudio(txt: string, raw?: string) {
   const outTxt: string[] = [],
     outRaw: (string | undefined)[] = []
   for (const t in tset) {
-    outTxt.push(t)
-    outRaw.push(tset[t])
+    outTxt.unshift(t)
+    outRaw.unshift(tset[t])
   }
 
   return { text: outTxt.join(', '), raw: raw && outRaw.join(', ') }
@@ -219,7 +219,9 @@ function Card(props: CardProps) {
               &nbsp;({state.modeText})&nbsp;
             </span>
           )}
-          {[...new Set(cleanRuby(state.valueWithALiases[k]).split(', '))].join(', ')}
+          {[...new Set(cleanRuby(state.valueWithALiases[k]).split(aliasDelim))].join(
+            aliasDelim
+          )}
         </div>
       ))}
       <audio hidden ref={state.aref} controls />
