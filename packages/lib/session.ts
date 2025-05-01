@@ -268,6 +268,7 @@ export interface SessionState {
     count: number
     sessionSeconds: number
     accuracy: number | null
+    graduation: number
   }
   shownValue?: Partial<t.PropsInstance>
 }
@@ -293,6 +294,7 @@ export function getSessionState(
       completion: session
         ? session.history.length / (estReviews + session.history.length)
         : 0,
+      graduation: getGraduation(session),
     },
     card,
     value,
@@ -300,6 +302,13 @@ export function getSessionState(
     mode: card && computeElementMode(card, elements),
     shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
   }
+}
+
+function getGraduation(session: t.LearningSession | null) {
+  const keys = Object.keys(session?.cards ?? {})
+  return !keys.length
+    ? 0
+    : keys.filter((k) => session!.cards![k].stability >= 1).length / session!.stack.length
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
