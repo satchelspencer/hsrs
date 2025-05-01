@@ -390,7 +390,7 @@ export function sampleElementIstance(
     const rootm = rootElement.mode?.[i] ?? ''
     return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
   })
-  if (!leaves || !cache.hasProps[id]) leaves = {}
+  leaves ??= {}
 
   const nonVR = getNonVirtualDescendents(id, elements, cache),
     nonV = filter ? nonVR.filter(filter) : nonVR,
