@@ -144,6 +144,8 @@ export function findAliases(
     sampleTestedInstances: { [iid: string]: boolean } = {},
     targetMode = computeElementMode(instance, elements, cache) ?? ''
 
+  log(target)
+
   for (let i = 0; i < 4; i++) {
     for (const elId in elements) {
       if (elements[elId].virtual) continue
