@@ -2,7 +2,17 @@
 
 # HSRS
 
-a hierarchical spaced-repetition system for learning structurally related materials.
+_a hierarchical spaced-repetition system for learning structurally related materials._
+
+## motivation
+
+japanese grammar, though the concept generalizes well beyond japanese... and grammar.
+
+existing spaced-repetition tools work incredibly well for learning _atomic_ pieces of information. however, learning grammar _atomically_ either means memorizing descriptions of the grammar, or individual instances of its use.
+
+hsrs is _non-atomic_, in that a single review may include many (deeply) nested concepts. applied to grammar, the result is you get fresh example for every review, with its component parts tailored to your current knowledge.
+
+read more about [how it works](./docs/dev/card-graph.md)
 
 ## run locally
 
