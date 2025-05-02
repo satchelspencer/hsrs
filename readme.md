@@ -12,7 +12,7 @@ existing spaced-repetition tools work incredibly well for learning _atomic_ piec
 
 hsrs is _non-atomic_, in that a single review may include many (deeply) nested concepts. applied to grammar, the result is you get fresh example for every review, with its component parts tailored to your current knowledge.
 
-read more about [how it works](./docs/dev/card-graph.md)
+read more about [how it works](./docs/overview.md)
 
 ## run locally
 
@@ -26,19 +26,3 @@ read more about [how it works](./docs/dev/card-graph.md)
 - [hsrs client](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
 - [tts plugin](https://elldev.com/hsrs-tts/): text-to-speech plugin for listening cards
 - [grsly](https://grsly.com/): consumer implementation for en-jp
-
-## usage
-
-- [getting started](./docs/user/getting-started.md)
-- [making cards](./docs/user/making-cards.md)
-- [expressions](./docs/user/expressions.md)
-- [plugins](./docs/user/plugins.md)
-
-## documentation
-
-- [introduction](./docs/dev/introduction.md)
-- [the card graph](./docs/dev/card-graph.md)
-- [card sampling](./docs/dev/sampling.md)
-- [scheduling](./docs/dev/scheduling.md)
-- [alias detection](./docs/dev/aliasing.md)
-- [learning sessions](./docs/dev/sessions.md)
