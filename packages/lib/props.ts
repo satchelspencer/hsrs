@@ -136,7 +136,7 @@ export function findAliases(
   cards: t.CardStates,
   cache: t.DeckCache
 ) {
-  const log = logger(3, 'alias'),
+  const log = logger(2, 'alias'),
     tv = computeElementInstance(instance, elements, cache),
     target = tv[propName] as string,
     matchingInstances: { [iid: string]: MetaInstance } = {},

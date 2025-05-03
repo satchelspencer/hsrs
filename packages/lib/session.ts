@@ -18,6 +18,7 @@ import * as t from './types'
 import _ from 'lodash'
 import { computeElementInstance, computeElementMode } from './expr'
 import { cleanRuby } from './ruby'
+import { logger } from './log'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -27,23 +28,27 @@ export function createLearningSession(
   tz: string,
   cache = getCache(deck.elements)
 ): t.SessionAndProgress {
-  //const t = new Date().getTime()
-  const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
+  const log = logger(2, 'session'),
+    t = new Date().getTime(),
+    { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
     newCards = allowNew
-      ? _.shuffle(getNew(deck, size - dueCards.length, filter, cache))
+      ? cardShuffle(getNew(deck, size - dueCards.length, filter, cache))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
-      stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
+      stack: [...newCards, ...cardShuffle([...dueCards, ...previewCards])],
     })
 
-  // console.log(
-  //   'sess',
-  //   new Date().getTime() - t,
-  //   '\n\n',
-  //   stack.map((s) => cleanRuby(computeElementInstance(s, deck.elements).jp)).join('\n'),
-  //   stack
-  // )
+  log(`took ${new Date().getTime() - t}ms\n`, () =>
+    stack
+      .map((s) => {
+        return `${s.new ? '****' : '    '} ${s.property} ${
+          deck.elements[s.element].name
+        } - ${cleanRuby(computeElementInstance(s, deck.elements).jp)}`
+      })
+      .join('\n')
+  )
+
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
@@ -59,6 +64,22 @@ export function createLearningSession(
     maxp: Math.max(0, ...previewCards.map((card) => deck.cards[card2Id(card)].due ?? 0)),
     progress,
   }
+}
+
+function cardShuffle(vals: t.CardInstance[]) {
+  const byId = _.groupBy(_.shuffle(vals), (c) => c.element),
+    bucketOrder = _.shuffle(Object.keys(byId)),
+    res: t.CardInstance[] = []
+
+  while (Object.keys(byId).length) {
+    for (const bucketId of bucketOrder) {
+      const value = byId[bucketId]?.pop()
+      if (value) res.push(value)
+      else delete byId[bucketId]
+    }
+  }
+
+  return res
 }
 
 function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
@@ -79,7 +100,7 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
 
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (sessionStack.length - firstUnseenIndex) / actual,
+    gapFactor = (sessionStack.length * 0.75 - firstUnseenIndex) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
