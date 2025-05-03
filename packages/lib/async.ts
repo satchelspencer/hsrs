@@ -3,11 +3,15 @@ import _ from 'lodash'
 import * as t from './types'
 import { uid } from './uid'
 import Worker from './worker?worker'
-import { pushLogLevel } from './log'
+import { logger, getLogLevel } from './log'
 
 export interface WorkerMessageBase<O> {
   type: string
   result?: O
+  logLevel?: {
+    level: number
+    filter: string
+  }
 }
 
 interface FindAliasesMessage extends WorkerMessageBase<t.ElementInstance[]> {
@@ -33,17 +37,7 @@ interface PingMessage extends WorkerMessageBase<true> {
   type: 'ping'
 }
 
-interface SetLogLevelMessage extends WorkerMessageBase<true> {
-  type: 'setLogLevel'
-  level?: number
-  filter?: string
-}
-
-export type WorkerMessage =
-  | FindAliasesMessage
-  | CreateSessionMessage
-  | PingMessage
-  | SetLogLevelMessage
+export type WorkerMessage = FindAliasesMessage | CreateSessionMessage | PingMessage
 
 type WorkerMessageMeta = { messageId: string }
 
@@ -53,43 +47,64 @@ export type WorkerResponseMessage = {
   response: Exclude<WorkerMessage['result'], undefined>
 } & WorkerMessageMeta
 
-const workerPool = [new Worker(), new Worker()],
-  pending: number[] = []
+const workerPool: Worker[] = [new Worker(), new Worker()]
+let index: number = 0
 
-try {
-  const w = window as any
-  w.workerPool = workerPool
-  pushLogLevel()
-} catch {}
+const log = logger(3, 'worker')
 
-function callWorker<T extends WorkerMessage>(
-  message: T
+async function callWorkerBase<T extends WorkerMessage>(
+  message: T,
+  worker: Worker,
+  id: string
 ): Promise<Exclude<T['result'], undefined>> {
-  let workerIndex = 0,
-    minPending = pending[0] ?? 0
-  for (let i = 0; i < workerPool.length; i++) {
-    const wp = pending[i] ?? 0
-    if (wp < minPending) {
-      workerIndex = i
-      minPending = wp
-    }
-  }
-  const worker = workerPool[workerIndex]
+  log(id, 'call', message)
 
-  pending[workerIndex] = (pending[workerIndex] ?? 0) + 1
   return new Promise((res) => {
-    const id = uid()
     const handleMessage = (e) => {
       const data = e.data as WorkerResponseMessage
+      log(id, 'message?', data)
       if (data.messageId === id) {
         worker.removeEventListener('message', handleMessage)
-        pending[workerIndex] -= 1
         res(data.response as any)
       }
     }
     worker.addEventListener('message', handleMessage)
-    worker.postMessage({ ...message, messageId: id })
+    log(id, 'sending')
+    const metaMessage: WorkerMetaMessage = {
+      ...message,
+      logLevel: getLogLevel(),
+      messageId: id,
+    }
+    worker.postMessage(metaMessage)
   })
+}
+
+async function callWorker<T extends WorkerMessage>(
+  message: T,
+  timeout = 3000,
+  id = uid(),
+  depth = 0
+): Promise<Exclude<T['result'], undefined>> {
+  const thisIndex = index++ % workerPool.length,
+    worker = workerPool[thisIndex]
+
+  log(id, 'selected worker', thisIndex)
+
+  const res = await Promise.race([
+    callWorkerBase(message, worker, id),
+    new Promise<false>((res) => setTimeout(() => res(false), timeout)),
+  ])
+
+  if (res === false) {
+    log(id, 'timed out')
+    worker.terminate()
+    if (workerPool[thisIndex] === worker) {
+      workerPool[thisIndex] = new Worker()
+      worker.terminate()
+    }
+    if (depth < 3) return callWorker(message, timeout, id, depth + 1)
+    else throw 'max depth exceeded'
+  } else return res
 }
 
 export async function findAliasesAync(

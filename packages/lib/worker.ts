@@ -6,6 +6,8 @@ import { createLearningSession } from './session'
 function handleMessage(
   message: WorkerMessage
 ): Exclude<WorkerMessage['result'], undefined> {
+  if (message.logLevel) setLogLevel(message.logLevel.filter, message.logLevel.level)
+
   if (message.type === 'findAliases') {
     return findAliases(
       message.instance,
@@ -25,10 +27,7 @@ function handleMessage(
       message.cache
     )
   }
-  if (message.type === 'setLogLevel') {
-    setLogLevel(message.filter, message.level)
-    return true
-  }
+  if (message.type === 'ping') return true
   throw 'unhandled message'
 }
 

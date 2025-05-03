@@ -12,21 +12,16 @@ const LSKEY = 'loglevel'
 export function setLogLevel(f?: string, n?: number) {
   currentLevel = n ?? (process.env.NODE_ENV === 'development' ? 1 : 0)
   currentFilter = f ?? ''
-  pushLogLevel()
-}
-
-export function pushLogLevel() {
   try {
     localStorage.setItem(LSKEY, JSON.stringify([currentLevel, currentFilter]))
-    window['workerPool']?.forEach((p) => {
-      p.postMessage({
-        type: 'setLogLevel',
-        level: currentLevel,
-        filter: currentFilter,
-        messageId: '',
-      })
-    })
   } catch {}
+}
+
+export function getLogLevel() {
+  return {
+    level: currentLevel,
+    filter: currentFilter,
+  }
 }
 
 try {
