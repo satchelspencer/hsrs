@@ -183,7 +183,7 @@ export function findAliases(
           : [{ element: elId, params: {} }]
 
       for (const oinstance of instances) {
-        const key = getInstanceId(oinstance)
+        const key = propName + ':' + getInstanceId(oinstance)
         if (!instanceCache[key]) {
           const iv = computeElementInstance(oinstance, elements, cache)
           instanceCache[key] = {
