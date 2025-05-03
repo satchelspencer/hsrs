@@ -133,6 +133,7 @@ export function nextSessionState(
       initSessionStabs[0]
     ),
     difficulty: 0,
+    lastMiss: grade > 2 ? state?.lastMiss : getTime(),
   }
 }
 
@@ -145,7 +146,7 @@ export function applySessionHistoryToCards(
   }
 }
 
-export function gradeCard(deck: t.Deck, grade: number, took: number): t.LearningSession {
+export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.LearningSession {
   const { session } = deck
   if (!session) throw 'no session'
 
@@ -154,6 +155,13 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
 
   const cardId = card2Id(currentCard),
     now = getTime()
+
+  const missedSibling =
+      !session.cards[cardId] &&
+      Object.keys(session.cards).find(
+        (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
+      ),
+    grade = missedSibling ? Math.min(rgrade, 2) : rgrade
 
   session.history.push({
     cardId,
@@ -184,7 +192,7 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
     learningIndex = Math.min(
-      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) + jitter
+      1 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) + jitter
     ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
