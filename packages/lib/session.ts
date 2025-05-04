@@ -198,7 +198,9 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
     learningIndex = Math.min(
-      1 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) + jitter
+      (currentCard.new ? 1 : 2) +
+        Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
+        jitter
     ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
