@@ -447,7 +447,7 @@ function getDue(
             dueIn = (state.due ?? Infinity) - endOfDay,
             lastOpenMissAgo =
               state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-                ? (endOfDay - state.lastMiss) / 8
+                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
                 : Infinity
           return Math.min(dueIn, lastOpenMissAgo)
         },
@@ -486,10 +486,11 @@ function getDue(
       state = deck.cards[cardId],
       dueToday = state.due && state.due < endOfDay,
       seenToday = state.lastSeen && state.lastSeen > startOfDay,
+      firstSeenToday = state.firstSeen && state.firstSeen > startOfDay,
       isDue = dueToday && !seenToday,
       isSameDay = dueToday && seenToday
 
-    if (isSameDay && sameDays > limit / 8 && dueCards.length) continue //prevent same days from keeping progress back
+    if (!firstSeenToday && isSameDay && sameDays > limit / 8 && dueCards.length) continue
 
     const added = sampleAndAdd(
       dueToday ? dueCards : nextCards,
