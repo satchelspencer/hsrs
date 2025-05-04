@@ -82,11 +82,15 @@ function cardShuffle(vals: t.CardInstance[]) {
   return res
 }
 
-function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
+function distributeNewUnseenCards(
+  session: Partial<t.LearningSession>,
+  maxIndex = Infinity
+) {
   const sessionStack = session.stack ?? [],
     stack: t.CardInstance[] = [],
     newUnseen: t.CardInstance[] = []
 
+  //need firstUnseenIndex for when mid way through session
   let firstUnseenIndex = -1
   for (let i = 0; i < sessionStack.length; i++) {
     const card = sessionStack[i]
@@ -100,7 +104,8 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
 
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (sessionStack.length * 0.75 - firstUnseenIndex) / actual,
+    gapFactor =
+      (Math.min(maxIndex, sessionStack.length * 0.75) - firstUnseenIndex) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -263,7 +268,18 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
     }
   }
 
-  if (redist) session.stack = distributeNewUnseenCards(session)
+  if (redist) session.stack = distributeNewUnseenCards(session, minGraduatedIndex)
+
+  const nextFirst = session.stack[0],
+    nextSiblingIndex = session.stack.findIndex(
+      (c) => c.element === nextFirst.element && c.property !== nextFirst.property
+    ),
+    minSpacing = 5
+
+  if (nextSiblingIndex !== -1 && nextSiblingIndex < minSpacing) {
+    const [card] = session.stack.splice(nextSiblingIndex, 1)
+    session.stack.splice(minSpacing + jitter, 0, card)
+  }
 
   return session
 }
