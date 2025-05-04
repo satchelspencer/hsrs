@@ -92,11 +92,11 @@ each element has a list of `parents` referred to as `types` in the editor. they 
 
 ### data
 
-each element has a set of _props_ where data intrinsic to the element is defined. props are typically the information to be learned by the user.
+each element has a set of _props_ where data intrinsic to the element is defined. props are typically the information to be learned by the user. each prop is scheduled separately and acts its own sibling card.
 
 elements also have _params_ which are references to other elements used in creating the final value for the props. for a simple grammar element representing `[noun] is [adjective].` you'd have two params. parameters can represent categories of elements: `adjective`, or even other other parameterized elements like `[adverb] [adjective]`.
 
-given a set of parameters, elements need a way to build their final property values based of their parameters. for basic computation hsrs uses [jexl](https://github.com/TomFrost/Jexl), which handles basic string manipulation and parameter value accessing: `noun.en+' is '+adjective.en`
+given a set of parameters, elements need a way to build their final property values based of their parameters. for basic computation hsrs uses [jexl](https://github.com/TomFrost/Jexl), which handles string manipulation and parameter value accessing: `noun.en+' is '+adjective.en`
 
 ### constraints
 
