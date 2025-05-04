@@ -163,6 +163,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   const missedSibling =
       !session.cards[cardId] &&
+      !deck.cards[cardId] && //only first time cards
       Object.keys(session.cards).find(
         (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
       ),
