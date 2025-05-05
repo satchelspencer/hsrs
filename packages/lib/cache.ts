@@ -88,7 +88,10 @@ export function getCache(relements: t.IdMap<t.Element>) {
   for (const id in elements) {
     for (const aid of cache.tree.ancestors[id]) {
       const ancestor = elements[aid]
-      if (!cache.hasProps[id] && Object.keys(ancestor.props).length)
+      if (
+        !cache.hasProps[id] &&
+        Object.keys(ancestor.props).find((c) => !!ancestor.props[c])
+      )
         cache.hasProps[id] = true
     }
   }
