@@ -1,4 +1,4 @@
-[start here](./docs/user/en-jp-quickstart.md) if you just want to use the Japanese deck
+[start here](./docs/en-jp-quickstart.md) if you just want to use the Japanese deck
 
 # HSRS
 

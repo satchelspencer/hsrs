@@ -20,7 +20,7 @@ this client has the exact same learning functionality as [grsly](https://grsly.c
 
 ## google tts setup _(optional)_
 
-*without these steps the tts plugin will fall back to your device's builtin text-to-speech which is generally pretty bad, and lacks SSML control so you may end up with, for example, は particles not sounding like わ.*
+*without these steps the tts plugin will fall back to your device's builtin text-to-speech which is generally pretty bad, and lacks [SSML](https://www.w3.org/TR/speech-synthesis11/) control so its a damn coin toss what you'll hear for something like 生*
 
 1. go to https://cloud.google.com/ and create an account.
 2. setup billing at https://console.cloud.google.com/billing _any hsrs usage will fall well within google's monthly free tier_
