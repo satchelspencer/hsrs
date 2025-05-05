@@ -18,6 +18,7 @@ import * as t from './types'
 import _ from 'lodash'
 import { computeElementInstance, computeElementMode } from './expr'
 import { cleanRuby } from './ruby'
+import { logger } from './log'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -27,23 +28,27 @@ export function createLearningSession(
   tz: string,
   cache = getCache(deck.elements)
 ): t.SessionAndProgress {
-  //const t = new Date().getTime()
-  const { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
+  const log = logger(2, 'session'),
+    t = new Date().getTime(),
+    { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
     newCards = allowNew
-      ? _.shuffle(getNew(deck, size - dueCards.length, filter, cache))
+      ? cardShuffle(getNew(deck, size - dueCards.length, filter, cache))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
-      stack: [...newCards, ..._.shuffle([...dueCards, ...previewCards])],
+      stack: [...newCards, ...cardShuffle([...dueCards, ...previewCards])],
     })
 
-  // console.log(
-  //   'sess',
-  //   new Date().getTime() - t,
-  //   '\n\n',
-  //   stack.map((s) => cleanRuby(computeElementInstance(s, deck.elements).jp)).join('\n'),
-  //   stack
-  // )
+  log(`took ${new Date().getTime() - t}ms\n`, () =>
+    stack
+      .map((s) => {
+        return `${s.new ? '****' : '    '} ${s.property} ${
+          deck.elements[s.element].name
+        } - ${cleanRuby(computeElementInstance(s, deck.elements).jp)}`
+      })
+      .join('\n')
+  )
+
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
@@ -61,11 +66,31 @@ export function createLearningSession(
   }
 }
 
-function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
+function cardShuffle(vals: t.CardInstance[]) {
+  const byId = _.groupBy(_.shuffle(vals), (c) => c.element),
+    bucketOrder = _.shuffle(Object.keys(byId)),
+    res: t.CardInstance[] = []
+
+  while (Object.keys(byId).length) {
+    for (const bucketId of bucketOrder) {
+      const value = byId[bucketId]?.pop()
+      if (value) res.push(value)
+      else delete byId[bucketId]
+    }
+  }
+
+  return res
+}
+
+function distributeNewUnseenCards(
+  session: Partial<t.LearningSession>,
+  maxIndex = Infinity
+) {
   const sessionStack = session.stack ?? [],
     stack: t.CardInstance[] = [],
     newUnseen: t.CardInstance[] = []
 
+  //need firstUnseenIndex for when mid way through session
   let firstUnseenIndex = -1
   for (let i = 0; i < sessionStack.length; i++) {
     const card = sessionStack[i]
@@ -79,7 +104,8 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
 
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (sessionStack.length - firstUnseenIndex) / actual,
+    gapFactor =
+      (Math.min(maxIndex, sessionStack.length * 0.75) - firstUnseenIndex) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -112,6 +138,7 @@ export function nextSessionState(
       initSessionStabs[0]
     ),
     difficulty: 0,
+    lastMiss: grade > 2 ? state?.lastMiss : getTime(),
   }
 }
 
@@ -124,7 +151,7 @@ export function applySessionHistoryToCards(
   }
 }
 
-export function gradeCard(deck: t.Deck, grade: number, took: number): t.LearningSession {
+export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.LearningSession {
   const { session } = deck
   if (!session) throw 'no session'
 
@@ -133,6 +160,14 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
 
   const cardId = card2Id(currentCard),
     now = getTime()
+
+  const missedSibling =
+      !session.cards[cardId] &&
+      !deck.cards[cardId] && //only first time cards
+      Object.keys(session.cards).find(
+        (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
+      ),
+    grade = missedSibling ? Math.min(rgrade, 2) : rgrade
 
   session.history.push({
     cardId,
@@ -163,7 +198,9 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
     learningIndex = Math.min(
-      2 + Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) + jitter
+      (currentCard.new ? 1 : 2) +
+        Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
+        jitter
     ), // if learning reinsert proportional to stability/target
     newIndex = Math.max(
       Math.min(
@@ -234,7 +271,18 @@ export function gradeCard(deck: t.Deck, grade: number, took: number): t.Learning
     }
   }
 
-  if (redist) session.stack = distributeNewUnseenCards(session)
+  if (redist) session.stack = distributeNewUnseenCards(session, minGraduatedIndex)
+
+  const nextFirst = session.stack[0],
+    nextSiblingIndex = session.stack.findIndex(
+      (c) => c.element === nextFirst.element && c.property !== nextFirst.property
+    ),
+    minSpacing = 5
+
+  if (nextSiblingIndex !== -1 && nextSiblingIndex < minSpacing) {
+    const [card] = session.stack.splice(nextSiblingIndex, 1)
+    session.stack.splice(minSpacing + jitter, 0, card)
+  }
 
   return session
 }
@@ -268,6 +316,7 @@ export interface SessionState {
     count: number
     sessionSeconds: number
     accuracy: number | null
+    graduation: number
   }
   shownValue?: Partial<t.PropsInstance>
 }
@@ -293,6 +342,7 @@ export function getSessionState(
       completion: session
         ? session.history.length / (estReviews + session.history.length)
         : 0,
+      graduation: getGraduation(session),
     },
     card,
     value,
@@ -300,6 +350,13 @@ export function getSessionState(
     mode: card && computeElementMode(card, elements),
     shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
   }
+}
+
+function getGraduation(session: t.LearningSession | null) {
+  const keys = Object.keys(session?.cards ?? {})
+  return !keys.length
+    ? 0
+    : keys.filter((k) => session!.cards![k].stability >= 1).length / session!.stack.length
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
@@ -392,7 +449,7 @@ function getDue(
             dueIn = (state.due ?? Infinity) - endOfDay,
             lastOpenMissAgo =
               state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
-                ? (endOfDay - state.lastMiss) / 8
+                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
                 : Infinity
           return Math.min(dueIn, lastOpenMissAgo)
         },
@@ -431,10 +488,11 @@ function getDue(
       state = deck.cards[cardId],
       dueToday = state.due && state.due < endOfDay,
       seenToday = state.lastSeen && state.lastSeen > startOfDay,
+      firstSeenToday = state.firstSeen && state.firstSeen > startOfDay,
       isDue = dueToday && !seenToday,
       isSameDay = dueToday && seenToday
 
-    if (isSameDay && sameDays > limit / 8 && dueCards.length) continue //prevent same days from keeping progress back
+    if (!firstSeenToday && isSameDay && sameDays > limit / 8 && dueCards.length) continue
 
     const added = sampleAndAdd(
       dueToday ? dueCards : nextCards,

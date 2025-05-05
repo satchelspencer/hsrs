@@ -5,6 +5,7 @@ import lcs from 'node-lcs'
 import { card2Id } from './session'
 import { getCache } from './cache'
 import { cleanRuby } from './ruby'
+import { logger } from './log'
 
 export function getVariables(instance: t.PropsInstance, prefix = ''): string[] {
   const res: string[] = []
@@ -135,12 +136,15 @@ export function findAliases(
   cards: t.CardStates,
   cache: t.DeckCache
 ) {
-  const tv = computeElementInstance(instance, elements, cache),
+  const log = logger(2, 'alias'),
+    tv = computeElementInstance(instance, elements, cache),
     target = tv[propName] as string,
     matchingInstances: { [iid: string]: MetaInstance } = {},
     exactInstances: { [iid: string]: t.ElementInstance } = {},
     sampleTestedInstances: { [iid: string]: boolean } = {},
     targetMode = computeElementMode(instance, elements, cache) ?? ''
+
+  log(target)
 
   for (let i = 0; i < 4; i++) {
     for (const elId in elements) {
@@ -170,7 +174,7 @@ export function findAliases(
         instances: t.ElementInstance[] = paramNames.length
           ? _.compact(
               permute(paramValues).map((perm) => {
-                if (failsConstraint(perm, constraint)) return false
+                if (failsConstraint(paramNames, perm, constraint)) return false
                 const oinstance: t.ElementInstance = { element: elId, params: {} }
                 for (const i in paramNames) oinstance.params![paramNames[i]] = perm[i]
                 return oinstance
@@ -179,7 +183,7 @@ export function findAliases(
           : [{ element: elId, params: {} }]
 
       for (const oinstance of instances) {
-        const key = getInstanceId(oinstance)
+        const key = propName + ':' + getInstanceId(oinstance)
         if (!instanceCache[key]) {
           const iv = computeElementInstance(oinstance, elements, cache)
           instanceCache[key] = {
@@ -204,36 +208,60 @@ export function findAliases(
         )
           continue
         if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: value }
-        if (
-          cleanRuby(iv[propName]) === cleanRuby(target) &&
-          !_.isEqual(_.pick(iv, propNames), _.pick(tv, propNames)) &&
-          targetMode === omode
-        ) {
+        if (isEqualAtProp(iv, tv, propName, propNames) && targetMode === omode) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {
+            log('possible ', () => tv, ' = ', iv)
             sampleTestedInstances[matchId] = true
             const instanceEls = _.uniq(_.reverse(getInstanceEls(oinstance)))
-            try {
-              const inst = sampleElementIstance(
-                  oinstance.element,
-                  elements,
-                  cache,
-                  undefined,
-                  (id) => -instanceEls.indexOf(id),
-                  undefined,
-                  (id) => instanceEls.includes(id),
-                  true
-                ),
-                computed = computeElementInstance(inst, elements, cache)
-              if (computed[propName] === iv[propName])
-                exactInstances[propNames.map((n) => iv[n]).join('.')] = oinstance
-            } catch {}
+            log(' - insance els ', () => instanceEls.map((c) => elements[c].name))
+            for (let i = 0; i < 5; i++) {
+              try {
+                const inst = sampleElementIstance(
+                    oinstance.element,
+                    elements,
+                    cache,
+                    undefined,
+                    (id) => -instanceEls.indexOf(id),
+                    undefined,
+                    (id) => instanceEls.includes(id),
+                    true
+                  ),
+                  computed = computeElementInstance(inst, elements, cache)
+
+                log(' - resampled ', () => propNames.map((n) => computed[n]).join(', '))
+                if (isEqualAtProp(computed, tv, propName, propNames)) {
+                  exactInstances[matchId] = inst
+                  log(' - exact*****')
+                  break
+                }
+              } catch (e) {
+                log(' - sample err', e)
+              }
+            }
           }
         }
       }
     }
   }
   return Object.values(exactInstances)
+}
+
+function isEqualAtProp(
+  a: t.PropsInstance,
+  b: t.PropsInstance,
+  propName: string,
+  propNames: string[]
+) {
+  let diffed = false,
+    equaled = false
+  for (const name of propNames) {
+    const av = cleanRuby(a[name]),
+      bv = cleanRuby(b[name])
+    if (name === propName && av === bv) equaled = true
+    else if (av !== bv) diffed = true
+  }
+  return diffed && equaled
 }
 
 function getInstanceEls(instance: t.ElementInstance): string[] {
@@ -245,23 +273,34 @@ function getInstanceEls(instance: t.ElementInstance): string[] {
   ]
 }
 
-function failsConstraint(insts: MetaInstance[], constraint?: string): boolean {
+/* failures like 上げています is be cause this is isn't deep */
+function failsConstraint(
+  paramNames: string[],
+  insts: MetaInstance[],
+  constraint?: string
+): boolean {
   const constraints: { [paramName: string]: string } = {}
   let failed = false
-  for (const inst of insts) {
+  for (let i = 0; i < insts.length; i++) {
+    const inst = insts[i]
+    const instParamName = paramNames[i]
+
+    if (constraint?.includes(instParamName)) {
+      if (constraints[instParamName] && constraints[instParamName] !== inst.element) {
+        failed = true
+        break
+      } else constraints[instParamName] = inst.element
+    }
+
     for (const paramName in inst.params) {
       const paramValue = inst.params?.[paramName]
       if (!paramValue) continue
 
-      if (
-        constraint?.includes(paramName) &&
-        constraints[paramName] &&
-        constraints[paramName] !== paramValue.element
-      ) {
-        failed = true
-        break
-      } else {
-        constraints[paramName] = paramValue?.element
+      if (constraint?.includes(paramName)) {
+        if (constraints[paramName] && constraints[paramName] !== paramValue.element) {
+          failed = true
+          break
+        } else constraints[paramName] = paramValue?.element
       }
     }
     if (failed) break
@@ -343,9 +382,12 @@ export function sampleElementIstance(
   commonMode?: { mode: string }[],
   filter?: (elId: string) => boolean,
   hardSample?: boolean,
-  leaves?: { [id: string]: boolean }
+  leaves?: { [id: string]: boolean },
+  parentConstrained?: boolean,
+  depth = 1
 ): t.ElementInstance {
-  const rootElement = getInheritedElement(id, elements, cache)
+  const log = logger(3, 'sample', new Array(depth).join('   ')),
+    rootElement = getInheritedElement(id, elements, cache)
   commonMode ??= new Array(8).fill(0).map((_, i) => {
     const rootm = rootElement.mode?.[i] ?? ''
     return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
@@ -361,11 +403,16 @@ export function sampleElementIstance(
     maxOrder = orders[orders.length - 1] ?? -Infinity,
     normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
-  // console.log(
-  //   elements[id].name,
-  //   descendents.map((d, i) => elements[d].name + ' ' + normed[i])
-  // )
-
+  log('sampling', () => [
+    rootElement.name,
+    Object.keys(fixedParams ?? {})
+      .map((k) => `${k}=${elements[fixedParams![k]].name}`)
+      .join(','),
+    'leaves',
+    Object.keys(leaves)
+      .map((l) => elements[l].name)
+      .join(','),
+  ])
   while (normed.length) {
     const sum = _.sumBy(normed),
       sample = Math.random() * sum
@@ -381,6 +428,13 @@ export function sampleElementIstance(
     if (Math.random() > 0.99) normed.splice(index, 1)
     const [descendent] = descendents.splice(index, 1)
     if (!descendent) continue
+
+    log('-trying', elements[descendent].name)
+
+    if (leaves[descendent]) {
+      log('-is leaf', parentConstrained ? 'parent-constrained' : 'SKIP')
+      if (!parentConstrained) continue
+    }
 
     const {
       params = {},
@@ -410,11 +464,6 @@ export function sampleElementIstance(
     }
     if (failed) continue
 
-    for (const param in params) {
-      if (!fixedParams?.[param] && leaves[params[param]]) failed = true
-    }
-    if (failed) continue
-
     const inst: t.ElementInstance = {
       element: descendent,
       params: {},
@@ -432,6 +481,8 @@ export function sampleElementIstance(
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
+      const isConstrained = !!fixedParams?.[param]
+      log('-param', param, isConstrained ? '**constrained' : 'nc')
       const pinst = sampleElementIstance(
         params[param],
         elements,
@@ -441,15 +492,19 @@ export function sampleElementIstance(
         childCommonMode,
         filter,
         hardSample,
-        leaves
+        leaves,
+        isConstrained,
+        depth + 1
       )
       walkParamsDeep({ [param]: pinst }, (childParam, el) => {
         if (constraint.includes(childParam)) constraints[childParam] = el.element
-        if (!_.keys(el.params).length) leaves[el.element] = true
       })
       inst.params![param] = pinst
     }
-
+    if (!cache.depths[inst.element] && !leaves[inst.element]) {
+      leaves[inst.element] = true
+      log('-adding leaf')
+    }
     return inst
   }
   throw 'sample not found'
