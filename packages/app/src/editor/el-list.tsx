@@ -285,7 +285,10 @@ function ElListActions(props: ElListActionsProps) {
                 id: selection.id,
                 element: {
                   ...el,
-                  parents: _.uniq([...el.parents, dest]),
+                  parents: _.uniq([
+                    ...el.parents.filter((p) => p !== props.parentId),
+                    dest,
+                  ]),
                 },
               })
             )
