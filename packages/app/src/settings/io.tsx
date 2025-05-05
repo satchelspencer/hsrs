@@ -10,6 +10,8 @@ import * as r from '../redux'
 import { historyVersionable, deckVersionable } from '@hsrs/lib/versions'
 import { defaultretention, getTime } from '@hsrs/lib/schedule'
 import CodeInput from '../components/code'
+import { ElListPicker } from '../editor/element'
+import { getCache } from '@hsrs/lib/cache'
 
 const downloadJSON = (data: object, filename: string) => {
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }),
@@ -31,18 +33,32 @@ export function ImportExport() {
 
   const [loading, setLoading] = useState(false)
 
+  const [exportFilter, setExportFilter] = useState<string[]>([]),
+    cache = getCache(elements)
+
   const handleExport = async () => {
     const now = getTime()
     setLoading(true)
+    const filterName = exportFilter.map((c) => elements[c].name).join('-')
 
     const e = historyVersionable.create({ type: 'history', history: [] })
     await db.cardLearning.orderBy('id').each((learning) => {
-      e.history.push(db2learning(learning))
+      if (
+        !exportFilter ||
+        exportFilter.includes(cache.tree.roots[learning.elIds[0]] ?? '')
+      )
+        e.history.push(db2learning(learning))
     })
-    downloadJSON(e, now + 'history.json')
+    downloadJSON(e, filterName + now + 'history.json')
 
-    const deckExport = deckVersionable.create({ type: 'deck', elements })
-    downloadJSON(deckExport, now + 'deck.json')
+    const deckExport = deckVersionable.create({
+      type: 'deck',
+      elements: _.pickBy(
+        elements,
+        (e, id) => !exportFilter || exportFilter.includes(cache.tree.roots[id] ?? '')
+      ),
+    })
+    downloadJSON(deckExport, filterName + now + 'deck.json')
 
     setLoading(false)
   }
@@ -77,10 +93,18 @@ export function ImportExport() {
       items={[
         [
           'Export',
-          <SolidButton disabled={loading} onClick={handleExport}>
-            <Icon name="download" />
-            &nbsp; Download
-          </SolidButton>,
+          <div style={{ display: 'flex', gap: 8 }}>
+            <SolidButton disabled={loading} onClick={handleExport}>
+              <Icon name="download" />
+              &nbsp; Download
+            </SolidButton>
+            <ElListPicker
+              multiline={false}
+              placeholder="All decks..."
+              value={exportFilter}
+              onChange={(value) => setExportFilter(value)}
+            />
+          </div>,
         ],
         [
           'Import',
