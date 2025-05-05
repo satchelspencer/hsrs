@@ -214,7 +214,7 @@ function ElListActions(props: ElListActionsProps) {
     dispatch = r.useDispatch(),
     elements = r.useSelector((s) => s.deck.elements),
     cache = r.useSelector((state) => getCache(state.deck.elements)),
-    rootId = props.parentId && _.last(cache.tree.ancestors[props.parentId]),
+    rootId = props.parentId && cache.tree.roots[props.parentId],
     vars = useElVarList({ rootId }),
     folderVars = useElVarList({ rootId, filter: (e) => !!e.virtual })
 
@@ -224,6 +224,7 @@ function ElListActions(props: ElListActionsProps) {
         ...(copy ? elements[copy] : {}),
         parents: props.parentId ? [props.parentId] : [],
         name: copy ? elements[copy].name + '-copy' : name,
+        virtual: props.parentId ? undefined : true,
       }
     if (virtual) element.virtual = true
     dispatch(r.actions.createElement({ id, element }))
@@ -330,12 +331,16 @@ function ElListActions(props: ElListActionsProps) {
           <Button doubleClick onClick={() => handleAction('del')}>
             <Icon name="delete" />
           </Button>
-          <Button onClick={() => handleAction('move')}>
-            <Icon name="move" />
-          </Button>
-          <Button onClick={() => handleAction('copy')}>
-            <Icon name="copy" />
-          </Button>
+          {props.parentId && (
+            <>
+              <Button onClick={() => handleAction('move')}>
+                <Icon name="move" />
+              </Button>
+              <Button onClick={() => handleAction('copy')}>
+                <Icon name="copy" />
+              </Button>
+            </>
+          )}
         </>
       )}
       <Button onClick={() => handleAction('addNew')}>

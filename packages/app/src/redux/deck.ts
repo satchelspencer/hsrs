@@ -45,7 +45,7 @@ export const deck = createSlice({
       deleteElementDeep(state.elements, action.payload.id, action.payload.fromParentId)
     },
     createSession: (state, action: PayloadAction<{ size: number }>) => {
-      const { session, progress } = createLearningSession(
+      const { session } = createLearningSession(
         state,
         action.payload.size,
         state.settings.allowNew,
@@ -53,7 +53,7 @@ export const deck = createSlice({
         'local'
       )
       state.session = session
-      state.goal = progress.goal
+      state.goal = undefined //need per-deck goals
     },
     cancelSession: (state, action: PayloadAction<{}>) => {
       state.session = null

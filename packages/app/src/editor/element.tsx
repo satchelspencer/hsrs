@@ -181,7 +181,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 </div>
               </div>,
             ],
-            [
+            !!rootId && [
               'Types',
               <ElListPicker
                 rootId={rootId}
