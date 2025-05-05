@@ -58,7 +58,8 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
 
   for (const id in tree.ancestors) {
     tree.ancestors[id].sort((a, b) => topoOrderIndexes[b] - topoOrderIndexes[a])
-    tree.roots[id] = _.last(tree.ancestors[id])
+    tree.roots[id] =
+      tree.ancestors[id].length > 1 ? _.last(tree.ancestors[id]) : undefined
     for (const aid of tree.ancestors[id]) tree.leaves[aid] = (tree.leaves[aid] ?? 0) + 1
   }
   tree.topo = topoOrder.reverse()
@@ -96,12 +97,10 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   for (const id in elements) {
     const element = elements[id],
-      root = cache.tree.roots[id]
+      root = cache.tree.roots[id] ?? '$'
 
-    if (root) {
-      cache.names[root] ??= {}
-      cache.names[root][element.name] = id
-    }
+    cache.names[root] ??= {}
+    cache.names[root][element.name] = id
 
     for (const aid of cache.tree.ancestors[id]) {
       const ancestor = elements[aid]

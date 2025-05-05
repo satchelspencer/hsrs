@@ -12,6 +12,7 @@ import { Element } from '@hsrs/lib/types'
 import CodeInput from '../components/code'
 import { getElementOrder } from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
+import { useElVarList } from './element'
 
 interface ElementsListProps {
   parentId?: string
@@ -211,7 +212,11 @@ function ElListActions(props: ElListActionsProps) {
       r.selectors.selectLastJumpSelectionByIndex(s, props.index + 1)
     ),
     dispatch = r.useDispatch(),
-    elements = r.useSelector((s) => s.deck.elements)
+    elements = r.useSelector((s) => s.deck.elements),
+    cache = r.useSelector((state) => getCache(state.deck.elements)),
+    rootId = props.parentId && _.last(cache.tree.ancestors[props.parentId]),
+    vars = useElVarList({ rootId }),
+    folderVars = useElVarList({ rootId, filter: (e) => !!e.virtual })
 
   const handleAdd = (virtual: boolean, name: string, copy?: string) => {
     const id = uid(),
@@ -253,7 +258,7 @@ function ElListActions(props: ElListActionsProps) {
     },
     addNew: {
       callback: (name) => {
-        const existing = Object.keys(elements).find((id) => elements[id].name === name)
+        const existing = rootId && cache.names[rootId][name]
         if (existing) {
           dispatch(
             r.actions.updateElement({
@@ -270,12 +275,12 @@ function ElListActions(props: ElListActionsProps) {
       },
       string: {
         placeholder: 'Element name...',
-        variables: Object.keys(elements).map((id) => elements[id].name),
+        variables: vars,
       },
     },
     move: {
       callback: (name) => {
-        const dest = Object.keys(elements).find((id) => elements[id].name === name)
+        const dest = rootId && cache.names[rootId][name]
         if (!dest) return
         for (const selection of nextSelection) {
           const el = elements[selection.id]
@@ -297,9 +302,7 @@ function ElListActions(props: ElListActionsProps) {
       string: {
         default: lastJumpSelection ? elements[lastJumpSelection[0].id].name : undefined,
         placeholder: 'Move to...',
-        variables: Object.keys(elements)
-          .filter((e) => elements[e].virtual)
-          .map((id) => elements[id].name),
+        variables: folderVars,
       },
     },
   }
