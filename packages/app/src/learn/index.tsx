@@ -6,48 +6,15 @@ import * as styles from '../styles'
 import * as r from '../redux'
 import { Button, RadioGroup } from '../components/button'
 import { computeElementInstance } from '@hsrs/lib/expr'
-import {
-  applySessionHistoryToCards,
-  card2Id,
-  createLearningSession,
-  getSessionState,
-  id2Card,
-  nextSessionState,
-} from '@hsrs/lib/session'
-import {
-  defaultretention,
-  getELRetrOffset,
-  getLearningCardDiff,
-  offsetRetention,
-  getRetr,
-  getTime,
-  grades,
-  nextInterval,
-} from '@hsrs/lib/schedule'
+import { card2Id, createLearningSession, getSessionState } from '@hsrs/lib/session'
+import { getTime, grades } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
 import { findAliasesAync } from '@hsrs/lib/async'
 import * as t from '@hsrs/lib/types'
 import { ElListPicker } from '../editor/element'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
-
-type CardStat =
-  | {
-      cardId: string
-      gradf: number
-      graduated: boolean
-    }
-  | {
-      cardId: string
-      s: number
-      intdiff: number
-      duediff: number
-      seendiff: number
-      retr: number
-      nextDueDiff: number
-    }
-
-const round = (n: number) => Math.floor(n * 100) / 100
+import { SessionStats } from './stats'
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
@@ -85,79 +52,11 @@ export function Learn() {
     }
   }, [card])
 
-  // useEffect(() => {
-  //   console.log(plugin, sessionDone)
-  //   console.log(
-  //     session?.stack
-  //       .map((s) =>
-  //         [
-  //           s.new && !session.cards[card2Id(s)] ? '****' : '    ',
-  //           elements[s.element].name,
-  //           s?.property,
-  //           //s.element,
-  //           //s?.params
-  //           session.cards[card2Id(s)]?.stability,
-  //         ].join(' ')
-  //       )
-  //       .join('\n')
-  //   )
-  // }, [card])
-
   const [time, setTime] = useState<number>(getTime())
 
   useEffect(() => {
     setTime(getTime())
   }, [card])
-
-  const stats = useMemo<CardStat[]>(() => {
-    const learning = _.last(session?.history)
-    if (!learning || !session || settings.vars['debug'] !== 'true') return []
-
-    const nextStats: CardStat[] = [],
-      retention = deck.settings.retention ?? defaultretention,
-      { cardId, score } = learning,
-      lastHistory = _.dropRight(session.history, 1),
-      lastCards = {},
-      now = getTime(),
-      cache = getCache(deck.elements)
-
-    applySessionHistoryToCards(lastCards, lastHistory)
-
-    if (deck.cards[cardId] && !lastCards[cardId]) {
-      const diff = getLearningCardDiff(deck.cards, learning, deck)
-      for (const key in diff) {
-        const eretention = offsetRetention(
-            retention,
-            getELRetrOffset(id2Card(key).element, elements, cache)
-          ),
-          v = diff[key],
-          current = deck.cards[key],
-          currentInt = nextInterval(current?.stability, eretention),
-          nextInt = nextInterval(v.stability, eretention),
-          currentVal = currentInt / 24 / 3600,
-          nextVal = nextInt / 24 / 3600
-
-        nextStats.push({
-          cardId: key,
-          s: nextVal,
-          intdiff: current ? ((nextVal - currentVal) / currentVal) * 100 : 0,
-          duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
-          seendiff: current?.lastSeen ? (now - current.lastSeen) / 24 / 3600 : 0,
-          retr: current?.lastSeen ? getRetr(current, now - current.lastSeen) : 0,
-          nextDueDiff: current?.due && v?.due ? (v.due - current.due) / 24 / 3600 : 0,
-        })
-      }
-    } else {
-      const nextState = nextSessionState(lastCards[cardId], score)
-      nextStats.push({
-        cardId,
-        gradf: Math.min(nextState.stability, 1),
-        graduated: nextState.stability >= 1,
-        duediff: 0,
-      })
-    }
-    return _.sortBy(nextStats, (s) => ('intdiff' in s ? -Math.abs(s.intdiff) : Infinity))
-  }, [session?.history, settings.vars])
 
   const setGrade = (grade: number) => {
       setRevealed(false)
@@ -281,7 +180,9 @@ export function Learn() {
                   return (
                     value &&
                     typeof value === 'string' && (
-                      <div className={cardValue}>{cleanRuby(value)}</div>
+                      <div key={id} className={cardValue}>
+                        {cleanRuby(value)}
+                      </div>
                     )
                   )
                 })
@@ -289,89 +190,7 @@ export function Learn() {
               <div className={sessionActions}>
                 <Icon onClick={() => dispatch(r.actions.endSession())} name="close" />
               </div>
-              <div className={sessionStats}>
-                {stats.map((stat, i) => {
-                  const card = id2Card(stat.cardId)
-                  return (
-                    <div key={i}>
-                      <b
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => {
-                          dispatch(
-                            r.actions.setSelection({
-                              selection: [
-                                { type: 'element', jump: true, id: card.element },
-                              ],
-                              index: 0,
-                            })
-                          )
-                          dispatch(r.actions.setRoute({ route: 'lib' }))
-                        }}
-                      >
-                        {deck.elements[card.element].name} {card.property}
-                      </b>
-                      &nbsp;
-                      {'s' in stat ? (
-                        <>
-                          {stat.retr === 0 ? null : (
-                            <span style={{ opacity: 0.7 }}>
-                              {round(stat.retr * 100)}%&nbsp;
-                            </span>
-                          )}
-                          {stat.seendiff === 0 ? null : (
-                            <span style={{ opacity: 0.7, color: 'blue' }}>
-                              {round(Math.abs(stat.seendiff))}d ago&nbsp;
-                            </span>
-                          )}
-                          {stat.duediff === 0 ? null : (
-                            <span style={{ opacity: 0.7 }}>
-                              {round(Math.abs(stat.duediff))}d{' '}
-                              {stat.duediff < 0 ? 'early' : 'late'}&nbsp;
-                            </span>
-                          )}
-                          <span>now {round(stat.s)}d&nbsp;</span>
-                          {stat.intdiff === 0 ? null : (
-                            <span
-                              style={{
-                                color:
-                                  Math.round(stat.intdiff) === 0
-                                    ? 'gray'
-                                    : stat.intdiff >= 0
-                                    ? 'green'
-                                    : 'red',
-                              }}
-                            >
-                              {stat.intdiff > 0 ? '+' : ''}
-                              {Math.round(stat.intdiff)}%
-                            </span>
-                          )}
-                          {stat.nextDueDiff === 0 ? null : (
-                            <span style={{ opacity: 0.7 }}>
-                              {stat.nextDueDiff > 0 ? ' +' : ' -'}
-                              {round(Math.abs(stat.nextDueDiff))}d
-                            </span>
-                          )}
-                        </>
-                      ) : stat.graduated ? (
-                        <span style={{ color: 'green' }}>graduated!</span>
-                      ) : (
-                        <span
-                          style={{
-                            color:
-                              stat.gradf >= 1
-                                ? 'green'
-                                : stat.gradf > 0.55
-                                ? '#a19100'
-                                : 'red',
-                          }}
-                        >
-                          {round(stat.gradf * 100)}%
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <SessionStats />
             </div>
             <div className={cardActions}>
               <div
@@ -627,19 +446,6 @@ const sessionActions = cx(css`
   font-size: 0.8em;
   opacity: 0.4;
   cursor: pointer;
-`)
-
-const sessionStats = cx(css`
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 8px;
-  font-size: 0.5em;
-  opacity: 0.5;
 `)
 
 const frame = cx(
