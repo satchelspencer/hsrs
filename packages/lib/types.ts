@@ -103,6 +103,7 @@ export type TreeCache = {
   ancestors: ListMap
   topo: string[]
   leaves: { [elId: string]: number }
+  roots: { [elId: string]: string | undefined }
 }
 
 export type DeckCache = {
@@ -112,6 +113,7 @@ export type DeckCache = {
   pdepths: { [elId: string]: number }
   hasProps: { [elId: string]: boolean }
   nvds: { [elId: string]: number }
+  names: { [rootId: string]: { [name: string]: string } }
 }
 
 export type HourlyStats = {
