@@ -35,7 +35,7 @@ export function Learn() {
         <Card />
       ) : (
         <>
-          {!!dayProgress.goal && (
+          {!!dayProgress.goal.count && (
             <div className={dprogress}>
               <div
                 className={dprogressItem(dayProgress.done / dayProgress.goal.count, true)}
@@ -91,6 +91,7 @@ export function Learn() {
           </div>
           <Button
             className={mainAction}
+            disabled={!(cardsAvailable || cardsDue || nextDue)}
             onClick={() => dispatch(r.actions.createSession({ size: actualSessionSize }))}
           >
             <Icon size={1.2} name="plus" />

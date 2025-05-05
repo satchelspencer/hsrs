@@ -55,7 +55,7 @@ export function ImportExport() {
       type: 'deck',
       elements: _.pickBy(
         elements,
-        (e, id) => !exportFilter || exportFilter.includes(cache.tree.roots[id] ?? '')
+        (e, id) => !exportFilter || exportFilter.includes(cache.tree.roots[id] ?? id)
       ),
     })
     downloadJSON(deckExport, filterName + now + 'deck.json')
