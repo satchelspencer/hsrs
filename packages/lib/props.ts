@@ -134,7 +134,8 @@ export function findAliases(
   propName: string,
   elements: t.IdMap<t.Element>,
   cards: t.CardStates,
-  cache: t.DeckCache
+  cache: t.DeckCache,
+  filter?: string[]
 ) {
   const log = logger(2, 'alias'),
     tv = computeElementInstance(instance, elements, cache),
@@ -148,7 +149,11 @@ export function findAliases(
 
   for (let i = 0; i < 4; i++) {
     for (const elId in elements) {
-      if (elements[elId].virtual) continue
+      if (
+        elements[elId].virtual ||
+        (filter && !filter.includes(cache.tree.roots[elId] ?? ''))
+      )
+        continue
       const {
           props,
           params = {},

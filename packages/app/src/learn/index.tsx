@@ -29,6 +29,7 @@ import { findAliasesAync } from '@hsrs/lib/async'
 import * as t from '@hsrs/lib/types'
 import { ElListPicker } from '../editor/element'
 import { getCache } from '@hsrs/lib/cache'
+import { cleanRuby } from '@hsrs/lib/ruby'
 
 type CardStat =
   | {
@@ -69,13 +70,15 @@ export function Learn() {
         .find((e) => settings.plugins[e]),
     pluginUrl = plugin && settings.plugins[plugin]
 
+  const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings)
+
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
   const reqId = useRef(0)
   useEffect(() => {
     setAliases([])
     if (card) {
       const nid = ++reqId.current
-      findAliasesAync(card, card?.property, deck).then((aliases) => {
+      findAliasesAync(card, card?.property, deck, filter).then((aliases) => {
         if (nid === reqId.current)
           setAliases(aliases.map((d) => computeElementInstance(d, elements)))
       })
@@ -220,8 +223,7 @@ export function Learn() {
     }
   }, [shownValue, settings.vars, revealed, pluginLoaded, aliases])
 
-  const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings),
-    actualSessionSize = Math.pow(2, newSessionSize) * 30,
+  const actualSessionSize = Math.pow(2, newSessionSize) * 30,
     {
       new: cardsAvailable,
       due: cardsDue,
@@ -274,9 +276,15 @@ export function Learn() {
                   src={pluginUrl}
                 />
               ) : (
-                Object.keys(shownValue ?? {}).map((id) => (
-                  <div>{shownValue?.[id] + ''}</div>
-                ))
+                Object.keys(shownValue ?? {}).map((id) => {
+                  const value = shownValue?.[id]
+                  return (
+                    value &&
+                    typeof value === 'string' && (
+                      <div className={cardValue}>{cleanRuby(value)}</div>
+                    )
+                  )
+                })
               )}
               <div className={sessionActions}>
                 <Icon onClick={() => dispatch(r.actions.endSession())} name="close" />
@@ -464,7 +472,7 @@ export function Learn() {
             <div style={{ minWidth: 150 }}>
               <ElListPicker
                 multiline={false}
-                placeholder="All cards..."
+                placeholder="All decks..."
                 value={filter ?? []}
                 onChange={(value) =>
                   dispatch(r.actions.setDeckSettings({ filter: value }))
@@ -498,6 +506,10 @@ export function Learn() {
     </div>
   )
 }
+
+const cardValue = css`
+  padding: 8px;
+`
 
 const dprogress = cx(
   css`

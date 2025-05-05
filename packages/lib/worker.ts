@@ -14,7 +14,8 @@ function handleMessage(
       message.propName,
       message.elements,
       message.cards,
-      message.cache
+      message.cache,
+      message.filter
     )
   }
   if (message.type === 'createSession') {

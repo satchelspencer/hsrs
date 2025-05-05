@@ -21,6 +21,7 @@ interface FindAliasesMessage extends WorkerMessageBase<t.ElementInstance[]> {
   elements: t.IdMap<t.Element>
   cards: t.CardStates
   cache: t.DeckCache
+  filter?: string[]
 }
 
 interface CreateSessionMessage extends WorkerMessageBase<t.SessionAndProgress> {
@@ -110,7 +111,8 @@ async function callWorker<T extends WorkerMessage>(
 export async function findAliasesAync(
   instance: t.ElementInstance,
   propName: string,
-  deck: t.Deck
+  deck: t.Deck,
+  filter?: string[]
 ) {
   const message: FindAliasesMessage = {
     type: 'findAliases',
@@ -119,6 +121,7 @@ export async function findAliasesAync(
     elements: deck.elements,
     cards: deck.cards,
     cache: getCache(deck.elements),
+    filter,
   }
   return callWorker(message)
 }
