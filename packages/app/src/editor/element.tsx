@@ -309,8 +309,7 @@ export function ElementEditor(props: ElementEditorProps) {
                       <div>{cleanRuby(example[id])}</div>,
                     ])}
                 />
-                {!Object.keys(_.omit(example, Object.keys(exampleInstance.params ?? {})))
-                  .length && (
+                {!cache.hasProps[exampleInstance.element] && (
                   <LabelGroup
                     items={Object.keys(exampleInstance.params ?? {}).map((id) => [
                       <div className={propName}>{id}</div>,
