@@ -68,11 +68,10 @@ export function createLearningSession(
 
 function cardShuffle(vals: t.CardInstance[]) {
   const byId = _.groupBy(_.shuffle(vals), (c) => c.element),
-    bucketOrder = _.shuffle(Object.keys(byId)),
     res: t.CardInstance[] = []
 
   while (Object.keys(byId).length) {
-    for (const bucketId of bucketOrder) {
+    for (const bucketId of _.shuffle(Object.keys(byId))) {
       const value = byId[bucketId]?.pop()
       if (value) res.push(value)
       else delete byId[bucketId]
@@ -105,7 +104,7 @@ function distributeNewUnseenCards(
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
     gapFactor =
-      (Math.min(maxIndex, sessionStack.length * 0.75) - firstUnseenIndex) / actual,
+      Math.min(maxIndex - firstUnseenIndex, sessionStack.length * 0.75) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -197,11 +196,12 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
             midPoint
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
-    learningIndex = Math.min(
-      (currentCard.new ? 1 : 2) +
+    canSpace = session.stack.length >= gradDistance,
+    learningIndex = canSpace
+      ? (currentCard.new ? 1 : 2) +
         Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
         jitter
-    ), // if learning reinsert proportional to stability/target
+      : Math.floor(cardState.stability * 7) + jitter,
     newIndex = Math.max(
       Math.min(
         Math.floor(!graduated ? learningIndex : graduatedIndex),
@@ -237,7 +237,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       //console.log('removing', deck.elements[toRemove?.element!].name)
       redist = true
     }
-  } else if (delta < -2 && session.allowNew) {
+  } else if (delta < -2 && session.allowNew && minGraduatedIndex > 10) {
     const newCards = getNew(
       {
         ...deck,
@@ -273,15 +273,21 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   if (redist) session.stack = distributeNewUnseenCards(session, minGraduatedIndex)
 
-  const nextFirst = session.stack[0],
-    nextSiblingIndex = session.stack.findIndex(
-      (c) => c.element === nextFirst.element && c.property !== nextFirst.property
-    ),
-    minSpacing = 5
+  const MIN_SPACING = 5
+  for (let i = 0; i < MIN_SPACING; i++) {
+    const nextFirst = session.stack[0],
+      lastSeenHistoryIndex = session.history.findLastIndex((c) => {
+        const card = id2Card(c.cardId)
+        return card.element === nextFirst.element && card.property !== nextFirst.property
+      })
 
-  if (nextSiblingIndex !== -1 && nextSiblingIndex < minSpacing) {
-    const [card] = session.stack.splice(nextSiblingIndex, 1)
-    session.stack.splice(minSpacing + jitter, 0, card)
+    if (
+      lastSeenHistoryIndex !== -1 &&
+      session.history.length - lastSeenHistoryIndex < MIN_SPACING
+    ) {
+      const [card] = session.stack.splice(0, 1)
+      session.stack.splice(MIN_SPACING + Math.abs(jitter), 0, card)
+    } else break
   }
 
   return session
@@ -386,7 +392,7 @@ export function id2Card(id: string): t.Card {
 }
 
 function getNewCardFactor() {
-  return 4 //TODO
+  return 4
 }
 
 function getNew(
