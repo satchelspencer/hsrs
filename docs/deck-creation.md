@@ -46,7 +46,7 @@ as a change of pace we'll be setting up a toy example of some basic french vocab
 
 first make a new element with the `+` at the top of the root element list. let's name it `french`. hit enter to make the new element
 
-you'll now get a fresh column opening to the right with our new `french` element. click the `folder` checkbox, since this will simply be an organizational container for our other elements.
+you'll now get a fresh column opening to the right with our new `french` element, it will act as the container for our deck.
 
 now let's add some properties to the french element, to define the structure of what we'll be learning. under `properties` click the `+` then enter the name of the property you want to create and hit enter. let's make two properties:
 
