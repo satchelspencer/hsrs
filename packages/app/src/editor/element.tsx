@@ -85,7 +85,7 @@ export function ElementEditor(props: ElementEditorProps) {
             {searching ? (
               <div style={{ minWidth: 150, display: 'flex' }}>
                 <ElPicker
-                  rootId={rootId}
+                  rootId={rootId ?? props.id}
                   value={undefined}
                   autoFocus
                   onChange={(value) => {
