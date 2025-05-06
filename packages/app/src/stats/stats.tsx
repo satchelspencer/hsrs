@@ -55,7 +55,7 @@ export function HoursSpent(props: TimeStatProps) {
         labels: data.labels,
         datasets: data.datasets.map((ds) => ({
           ...ds,
-          backgroundColor: scoreColors[ds.label] + '50',
+          backgroundColor: scoreColors[ds.label] + 'a0',
           borderColor: scoreColors[ds.label],
           borderWidth: 1,
         })),
@@ -139,7 +139,7 @@ export function StabilityDist({ deck, options }: DeckStatProps) {
           {
             label: 'Card Count',
             data: data.data,
-            backgroundColor: '#518bc150',
+            backgroundColor: '#518bc1a0',
             borderColor: '#518bc1',
             borderWidth: 1,
           },
@@ -202,7 +202,7 @@ export function ProgressDist({ deck }: DeckStatProps) {
         labels: data.labels,
         datasets: data.datasets.map((ds, i) => ({
           ...ds,
-          backgroundColor: colors[i] + '50',
+          backgroundColor: colors[i] + 'a0',
           borderColor: colors[i],
           borderWidth: 1,
         })),
@@ -249,7 +249,7 @@ export function DifficultyDist({ deck, options }: DeckStatProps) {
       r = Math.round(230 * t),
       g = Math.round(230 * (1 - t))
     return {
-      background: `rgba(${r}, ${g}, 0, 0.3)`,
+      background: `rgba(${r}, ${g}, 0, 0.5)`,
       border: `rgb(${r}, ${g}, 0,0.7)`,
     }
   }
@@ -315,7 +315,7 @@ export function NewCards(props: TimeStatProps) {
             ? {
                 ...ds,
                 borderColor: '#50bf68',
-                backgroundColor: '#50bf6850',
+                backgroundColor: '#50bf68a0',
                 borderWidth: 1,
                 type: 'bar',
                 yAxisID: 'y1',

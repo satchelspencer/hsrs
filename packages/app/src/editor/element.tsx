@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
-import { css, cx } from '@emotion/css'
+import { cache, css, cx } from '@emotion/css'
 
 import * as t from '@hsrs/lib/types'
 import * as styles from '../styles'
@@ -12,7 +12,6 @@ import { Button } from '../components/button'
 import { ElementsList } from './el-list'
 import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
-import { findAliases } from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
 
@@ -51,7 +50,6 @@ export function ElementEditor(props: ElementEditorProps) {
       )
 
   const elements = r.useSelector((state) => state.deck.elements),
-    cards = r.useSelector((state) => state.deck.cards),
     [exampleSeed, setExampleSeed] = useState(0),
     { example, mode, exampleInstance } = useMemo(() => {
       const next = elementInstanceGenerator.next().value
@@ -61,7 +59,8 @@ export function ElementEditor(props: ElementEditorProps) {
         exampleInstance: next,
       }
     }, [element.params, exampleSeed, element.virtual]),
-    cache = r.useSelector((state) => getCache(state.deck.elements))
+    cache = r.useSelector((state) => getCache(state.deck.elements)),
+    rootId = cache.tree.roots[props.id]
 
   const [searching, setSearching] = useState(false)
 
@@ -86,6 +85,7 @@ export function ElementEditor(props: ElementEditorProps) {
             {searching ? (
               <div style={{ minWidth: 150, display: 'flex' }}>
                 <ElPicker
+                  rootId={rootId ?? props.id}
                   value={undefined}
                   autoFocus
                   onChange={(value) => {
@@ -133,7 +133,12 @@ export function ElementEditor(props: ElementEditorProps) {
                 <CodeInput
                   value={element.name}
                   throttle
-                  onChange={(elname) => handleChange({ ...element, name: elname ?? '' })}
+                  onChange={(elname) => {
+                    if (!elname) return
+                    const takenId = rootId && cache.names[rootId][elname]
+                    if (!takenId || takenId === props.id)
+                      handleChange({ ...element, name: elname ?? '' })
+                  }}
                 />
                 <div className={hWrapper} style={{ minWidth: 42 }}>
                   R
@@ -176,11 +181,14 @@ export function ElementEditor(props: ElementEditorProps) {
                 </div>
               </div>,
             ],
-            [
+            !!rootId && [
               'Types',
               <ElListPicker
+                rootId={rootId}
                 value={element.parents}
-                onChange={(value) => handleChange({ ...element, parents: value })}
+                onChange={(value) =>
+                  value.length && handleChange({ ...element, parents: value })
+                }
                 filter={(e) => !!e.virtual}
               />,
             ],
@@ -226,6 +234,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 />
               </div>,
               <ElementParamsEditor
+                rootId={rootId}
                 value={element}
                 onChange={handleChange}
                 fixed={elementParams}
@@ -300,8 +309,7 @@ export function ElementEditor(props: ElementEditorProps) {
                       <div>{cleanRuby(example[id])}</div>,
                     ])}
                 />
-                {!Object.keys(_.omit(example, Object.keys(exampleInstance.params ?? {})))
-                  .length && (
+                {!cache.hasProps[exampleInstance.element] && (
                   <LabelGroup
                     items={Object.keys(exampleInstance.params ?? {}).map((id) => [
                       <div className={propName}>{id}</div>,
@@ -401,23 +409,25 @@ interface ElListPickerProps {
   onClear?: () => void
   placeholder?: string
   multiline?: boolean
-  filter?: (e: t.Element) => boolean
+  filter?: (e: t.Element, id: string) => boolean
+  rootId?: string
 }
 
 const els2raw = (els: string[], elements: t.IdMap<t.Element>) =>
     els.map((t) => elements[t]?.name).join(','),
-  raw2els = (str: string, elements: t.IdMap<t.Element>) =>
-    _.compact(
-      (str?.split(',') ?? []).map((name) =>
-        Object.keys(elements).find((id) => elements[id]?.name === name.trim())
-      )
+  raw2els = (str: string, elements: t.IdMap<t.Element>, rootId?: string) => {
+    const cache = getCache(elements)
+    return _.compact(
+      (str?.split(',') ?? []).map((name) => cache.names[rootId ?? '$'][name])
     )
+  }
 
 export function ElListPicker(props: ElListPickerProps) {
   const elements = r.useSelector((s) => s.deck.elements),
     [raw, setRaw] = useState(''),
     [focused, setFocused] = useState(false),
-    trueRaw = els2raw(props.value, elements)
+    trueRaw = els2raw(props.value, elements),
+    variables = useElVarList(props)
 
   useEffect(() => {
     if (!focused) setRaw(trueRaw)
@@ -428,9 +438,7 @@ export function ElListPicker(props: ElListPickerProps) {
       value={raw}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      variables={Object.values(elements)
-        .filter(props.filter ?? (() => true))
-        .map((e) => e.name)}
+      variables={variables}
       onClear={props.onClear}
       varColor="#689d6a"
       throttle
@@ -438,7 +446,7 @@ export function ElListPicker(props: ElListPickerProps) {
       placeholder={props.placeholder}
       onChange={(str) => {
         setRaw(str ?? '')
-        props.onChange(raw2els(str ?? '', elements))
+        props.onChange(raw2els(str ?? '', elements, props.rootId))
       }}
     />
   )
@@ -451,26 +459,48 @@ interface ElPickerProps {
   onBlur?: () => void
   placeholder?: string
   autoFocus?: boolean
+  rootId?: string
 }
 
 function ElPicker(props: ElPickerProps) {
-  const elements = r.useSelector((s) => s.deck.elements)
+  const elements = r.useSelector((s) => s.deck.elements),
+    vars = useElVarList(props),
+    cache = getCache(elements)
 
   return (
     <CodeInput
       autoFocus={props.autoFocus}
       value={elements[props.value ?? '']?.name}
-      variables={Object.values(elements).map((e) => e.name)}
+      variables={vars}
       onClear={props.onClear}
       onBlur={props.onBlur}
       varColor="#689d6a"
       placeholder={elements[props.placeholder ?? '']?.name ?? props.placeholder}
       onChange={(str) => {
-        props.onChange(Object.keys(elements).find((e) => elements[e]?.name === str))
+        props.onChange(props.rootId && str && cache.names[props.rootId][str])
       }}
       throttle
     />
   )
+}
+
+export function useElVarList(props: {
+  rootId?: string
+  filter?: (e: t.Element, id: string) => boolean
+}) {
+  const elements = r.useSelector((s) => s.deck.elements),
+    vars = useMemo(() => {
+      const cache = getCache(elements),
+        elIds = Object.keys(elements),
+        matching = elIds.filter(
+          (e) =>
+            cache.tree.roots[e] == props.rootId &&
+            (!props.filter || props.filter(elements[e], e))
+        )
+
+      return matching.map((e) => elements[e].name)
+    }, [elements])
+  return vars
 }
 
 interface PropsEditorProps {
@@ -535,6 +565,7 @@ interface ElementParamsEditorProps {
   onChange: (props: t.Element) => void
   onOpenElement?: (id: string) => void
   fixed?: t.Params
+  rootId?: string
 }
 
 function ElementParamsEditor(props: ElementParamsEditorProps) {
@@ -553,6 +584,7 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
       renderInput={({ value, onChange, onDelete, placeholder, key }) => (
         <div className={paramInnerWrapper}>
           <ElPicker
+            rootId={props.rootId}
             value={value}
             onChange={(value) => onChange(value ?? '')}
             onClear={onDelete}

@@ -202,5 +202,3 @@ function moveit(string: string) {
 
   return string
 }
-
-//console.log(moveit('hello what( not aok>) the fuck|( is>) this( amsa<) shit'))
