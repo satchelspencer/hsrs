@@ -6,13 +6,25 @@ _a hierarchical spaced-repetition system for learning structurally related mater
 
 ## motivation
 
-japanese grammar, though the concept generalizes well beyond japanese... and grammar.
+japanese grammar, i know... though the concept generalizes well beyond japanese and grammar.
 
 existing spaced-repetition tools work incredibly well for learning _atomic_ pieces of information. however, learning grammar _atomically_ either means memorizing descriptions of the grammar, or individual instances of its use.
 
 hsrs is _non-atomic_, in that a single review may include many (deeply) nested concepts. applied to grammar, the result is you get fresh example for every review, with its component parts tailored to your current knowledge.
 
 read more about [how it works](./docs/overview.md)
+
+**table of contents**
+
+- for learners
+  - [en-jp quickstart](./docs/en-jp-quickstart.md)
+  - [learning guide](./docs/learning.md)
+- deck building
+  - [editor](./docs/editor.md)
+  - [deck creation](./docs/deck-creation.md)
+- technical docs
+  - [overview](./docs/overview.md)
+  - [plugins](./docs/plugins.md)
 
 ## run locally
 
