@@ -180,7 +180,7 @@ export function computeElementMode(
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode?.toLowerCase()
 }
 
-function moveit(string: string) {
+export function moveit(string: string) {
   const dests: { [index: number]: { index: number; content: string } } = {}
   for (const match of string.matchAll(/\(([^)]+)([><])\)/g)) {
     const [full, content, dir] = match,
