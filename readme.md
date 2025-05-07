@@ -14,7 +14,7 @@ hsrs is _non-atomic_, in that a single review may include many (deeply) nested c
 
 read more about [how it works](./docs/overview.md)
 
-**table of contents**
+## table of contents
 
 - for learners
   - [en-jp quickstart](./docs/en-jp-quickstart.md)
