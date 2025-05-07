@@ -196,12 +196,12 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
             midPoint
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
-    canSpace = session.stack.length >= gradDistance,
+    canSpace = session.stack.length >= 20,
     learningIndex = canSpace
-      ? (currentCard.new ? 1 : 2) +
+      ? (currentCard.new ? 0  : 2) +
         Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
         jitter
-      : Math.floor(cardState.stability * 7) + jitter,
+      : Math.floor(cardState.stability * Math.max(7, session.stack.length / 2)) + jitter,
     newIndex = Math.max(
       Math.min(
         Math.floor(!graduated ? learningIndex : graduatedIndex),
@@ -273,7 +273,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   if (redist) session.stack = distributeNewUnseenCards(session, minGraduatedIndex)
 
-  const MIN_SPACING = 5
+  const MIN_SPACING = 4
   for (let i = 0; i < MIN_SPACING; i++) {
     const nextFirst = session.stack[0],
       lastSeenHistoryIndex = session.history.findLastIndex((c) => {
