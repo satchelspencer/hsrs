@@ -520,11 +520,22 @@ export function* generateElementInstanceSamples(
   elements: t.IdMap<t.Element>
 ): Generator<t.ElementInstance> {
   const cache = getCache(elements)
-  let fails = 0
-  while (fails < 1000) {
+  let fails = 0,
+    dupes = 0,
+    lastValue: t.ElementInstance | undefined = undefined
+
+  while (fails < 100) {
     try {
-      yield sampleElementIstance(id, elements, cache)
+      const val = sampleElementIstance(id, elements, cache)
       fails = 0
+      if (_.isEqual(lastValue, val) && dupes < 5) {
+        dupes++
+        continue
+      } else {
+        lastValue = val
+        dupes = 0
+        yield val
+      }
     } catch {
       fails++
     }
