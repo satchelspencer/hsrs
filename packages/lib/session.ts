@@ -89,28 +89,21 @@ function distributeNewUnseenCards(
     stack: t.CardInstance[] = [],
     newUnseen: t.CardInstance[] = []
 
-  //need firstUnseenIndex for when mid way through session
-  let firstUnseenIndex = -1
   for (let i = 0; i < sessionStack.length; i++) {
     const card = sessionStack[i]
-    if (card.new && !session.cards?.[card2Id(card)]) {
-      if (firstUnseenIndex === -1) firstUnseenIndex = i
-      newUnseen.push(card)
-    } else {
-      stack.push(card)
-    }
+    if (card.new && !session.cards?.[card2Id(card)]) newUnseen.push(card)
+    else stack.push(card)
   }
 
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor =
-      Math.min(maxIndex - firstUnseenIndex, sessionStack.length * 0.75) / actual,
+    gapFactor = Math.min(maxIndex, sessionStack.length * 0.75) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
     ]
 
-  let d = firstUnseenIndex
+  let d = 0
   for (const gap of sumSpac) {
     d += gap
     const nc = newUnseen.shift()
@@ -198,7 +191,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
     gradDistance = deck.cards[cardId] ? 20 : 30,
     canSpace = session.stack.length >= 20,
     learningIndex = canSpace
-      ? (currentCard.new ? 0  : 2) +
+      ? (currentCard.new ? 0 : 2) +
         Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
         jitter
       : Math.floor(cardState.stability * Math.max(7, session.stack.length / 2)) + jitter,
