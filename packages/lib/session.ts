@@ -159,7 +159,13 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       Object.keys(session.cards).find(
         (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
       ),
-    grade = missedSibling ? Math.min(rgrade, 2) : rgrade
+    cardReviewsRemaning = estimateReviewsRemaining(session),
+    estReviews = session.history.length + cardReviewsRemaning,
+    isEnding = session.history.length / estReviews >= 0.75,
+    grade = Math.min(
+      (missedSibling ? Math.min(rgrade, 2) : rgrade) + (isEnding ? 1 : 0),
+      4
+    )
 
   session.history.push({
     cardId,
@@ -205,9 +211,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   session.stack.splice(newIndex, 0, currentCard)
 
-  const cardReviewsRemaning = estimateReviewsRemaining(session),
-    ncFactor = getNewCardFactor(),
-    estReviews = session.history.length + cardReviewsRemaning,
+  const ncFactor = getNewCardFactor(),
     delta = Math.floor((estReviews - session.reviews) / ncFactor)
 
   const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element),
