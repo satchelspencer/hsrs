@@ -12,15 +12,15 @@ this client has the exact same learning functionality as [grsly](https://grsly.c
 
 ## basic setup
 
-1.  download the grsly Japanese deck from [here](https://app.grsly.com/jp.deck.json) _(right click > save link as, may be helpful)_
+1.  download the grsly Japanese deck from [here](https://github.com/satchelspencer/hsrs-deck-jp) (get `deck-jp.json`)
 2.  open the hsrs client at https://elldev.com/hsrs/
 3.  open the settings page
-4.  click the **upload** button next to import and select the Japanese deck
+4.  click the **upload** button next to import and select the deck `deck-jp.json`
 5.  under **plugins** add a new one for `jp` with the url `https://elldev.com/hsrs-tts/?lang=ja-JP&voice=ja-JP-Standard-C&tts=tl&txt=jp&modes=polite-casual.male-female.subbordinate-rude.spoken-written`
 
 ## google tts setup _(optional)_
 
-*without these steps the tts plugin will fall back to your device's built in text-to-speech which is generally pretty bad, and lacks [SSML](https://www.w3.org/TR/speech-synthesis11/) control so its a damn coin toss what you'll hear for something like 生*
+_without these steps the tts plugin will fall back to your device's built in text-to-speech which is generally pretty bad, and lacks [SSML](https://www.w3.org/TR/speech-synthesis11/) control so its a damn coin toss what you'll hear for something like 生_
 
 1. go to https://cloud.google.com/ and create an account.
 2. setup billing at https://console.cloud.google.com/billing _any hsrs usage will fall well within google's monthly free tier_

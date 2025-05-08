@@ -135,3 +135,24 @@ if you want to test learning this, the clause card won't be learnable for at lea
 ## NOTE
 
 _please don't take this example as gospel. in a real french deck, you'd likely want to have cards for pronouns and their pairings as well, likewise not all verbs may be commonly used with all conjugations. clever categorization and constraint can get you there. there is no one correct way to tackle every language pattern, it depends on how you want to learn it, and how generalizable you want your elements to be. there is a three-way tradeoff between ease of setup, strict accuracy and end user learning efficiency._
+
+# parameterization tradeoffs
+
+when designing a deck, you need to decide where on the _spectrum of parameterization_ you want to fall:
+
+- at one end you have `zero parameterization`: lots of flat, hand-picked sentences drawn from real world usage.
+- at the other you have `full parameterization`: few, more complex grammars that capture some real world usage, but may yield unnatural examples.
+
+each of these have tradeoffs:
+
+ - `zero` requires *exponentially* more examples for the same coverage of material compared with `full`.
+ - `zero` can't take advantage of shared material between different examples when scheduling, making it drastically less efficient for learning.
+ - `zero` is prone to memorization of individual sentences without understanding.
+ - `full` yields unnatural sayings, implausible word combinations, and confusing grammar.
+
+the best solution lies somewhere in between, and depends on your preferences and goals. you can use the following approaches to move along the spectrum:
+
+ - the [relationship](#relationship-pattern) pattern can **decrease** the space of possibilities for your grammars, restricting it to only known combinations of verb-nouns or other param pairings.
+ - rather than monolithic folders like `nouns`, parameterizing on sub-categories like `living things` can prune unnatural examples.
+ - [modes](./overview.md#modes) can prevent use of context-specific words or grammars in places where they don't make sense.
+ - mixing parameters into common fixed phrases can avoid having to break them fully down into their grammar while still getting some learning benefit.
