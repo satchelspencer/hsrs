@@ -12,7 +12,7 @@ hsrs plugins allow custom ways of viewing/interacting with card content. current
 
 plugins are simply web pages that get embedded inside the hsrs client and pass messages back and forth. you can use the framework agnostic package [hsrs-plugin](#https://github.com/satchelspencer/hsrs-plugin) to handle the finer details and get some nice typings.
 
-as of now they are limited only to managing the display and interaction with a card, and don't support changing card scheduling, or user settings, or ui outside of learning. they also don't currently support overriding the grading/reveal ui but i'm open to this possibility.
+as of now, plugins are limited only to managing the display and interaction with a card, and don't support changing card scheduling, or user settings, or ui outside of learning. they also don't currently support overriding the grading/reveal ui but i'm open to this possibility.
 
 ### example
 

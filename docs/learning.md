@@ -16,11 +16,11 @@ _if you want to get into the weeds, you can read more about [sessions](./overvie
 
 ## card order
 
-each deck defines order sections for its content, when learning new cards they'll be drawn random from the sections you're currently in. once you learn all the cards in a sections you'll starting getting new cards from the next.
+each deck defines order sections for its content. when learning, new cards will be drawn random from the sections you're currently in. once you learn all the cards in a section you'll start getting new cards from the next.
 
 you can 'skip ahead' and start drawing from more advanced sections with the **init order** setting. if you set your init order to say 2.2, you'll start getting cards from all sections up to and including 2.2, right from the outset.
 
-complex cards (i.e grammar), rely on you having already seen cards that can 'fit' into their fields. you'll only get them once you've learned their pre-requisites, _even if you set your init order_
+complex cards (i.e grammar), rely on you having already seen cards that can 'fit' into their fields. you'll only get them once you've learned their prerequisites, _even if you set your init order_
 
 ## falling behind, or ahead
 

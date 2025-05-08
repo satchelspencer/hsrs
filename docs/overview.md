@@ -23,11 +23,11 @@ _this assumes you're already somewhat familiar with [fsrs](https://github.com/op
 
 ### memory updates
 
-unlike typical spaced-repetition systems, an individual review contains a deep tree of elements and their parameter values that need to be scheduled individually. during learning one _could_ ask the user for a grade on each element in the tree, but this would be slow to use, and difficult to decide. to get around this, _hsrs uses one grade for the whole tree_. if the grade is passing, then we can safely assume that all the elements were known and schedule them normally with fsrs. however in the case of failure, we can't make the same assumption since the lapse _may_ have been caused by a single element.
+unlike typical spaced-repetition systems, an individual review contains a deep tree of elements and their parameter values that need to be scheduled individually. during learning one _could_ ask the user for a grade on each element in the tree, but this would be slow to use, and difficult to decide. to get around this, _hsrs uses one grade for the whole tree_. if the grade is passing, then we can safely assume that all the elements were known and schedule them (mostly) normally with fsrs. however, in the case of failure, we can't make the same assumption since the lapse _may_ have been caused by a single element.
 
-to handle this, we compute the likelihood that each each element was the cause the failure given its current memory state with [bayes theorem](https://en.wikipedia.org/wiki/Bayes%27_theorem). given this probability, we can then reschedule the element with a _probabilistic_ version of fsrs that takes in both a grade and a likelihood when estimating a new memory state.
+thankfully fsrs already gives us a probability of recall at any given time for each card, so we compute the likelihood that each element was the cause the failure given its current memory state with [bayes theorem](https://en.wikipedia.org/wiki/Bayes%27_theorem). given this probability, we can then reschedule the element with a _probabilistic_ version of fsrs that takes in both a grade and a likelihood when estimating a new memory state.
 
-to arrive at a probabilistic memory state, we first compute the a memory state given the grade with fsrs as normal. then, we non-linearly interpolate the new stability in _retrievability space_ to arrive at a final memory state.
+to arrive at a probabilistic memory state, we first compute the new memory state with fsrs as normal. then, we non-linearly interpolate the new stability in _retrievability space_ to arrive at a final memory state.
 
 without individual grades these partial probabilities are always an estimation, so as a ground truth we need to ensure that leaf elements are also reviewed individually. this means we need to bias the scheduler's _dates_ to avoid incorrect failure estimations never being updated by an individual review.
 
@@ -49,13 +49,13 @@ hsrs breaks down daily reviews into fixed size sessions. this has a number of be
 - since cards are deeply nested, grades from one session can have meaningful influence the scheduling of other cards due on the same day
 - arguably better user experience, if duo does one thing well it may be this :|
 
-when creating a session, we simply draw from the elements in order of due date and attempt to sample them and add them to the _session stack_ until the session meets the desired size. when we exhaust elements currently due, we select cards as follows:
+when creating a session, we simply draw from the elements in order of due date and attempt to [sample](#sampling) and add them to the _session stack_ until the session meets the desired size. when we exhaust elements currently due, we select cards as follows:
 
 1.  if learning is enabled, we add new cards according to their [order](#ordering). (new cards contribute more to the session size than reviews)
 2.  draw from recent lapses in reverse order. this has little effect on scheduling but works well to space out new cards.
 3.  draw from cards due in the future. to reduce scheduling impact these are handled [probabilistically](#scheduling) like child cards.
 
-finally we shuffle the review cards, and distribute any new cards from the top down with fibonacci spacing. this evens out the proportion of new/review cards as the new cards are reviewed multiple times while learning them.
+finally, we shuffle the review cards, and distribute any new cards from the top down with fibonacci spacing. this evens out the proportion of new/review cards as the new cards are reviewed multiple times while learning them.
 
 during a learning session, each card has its own session-specific learning state. when the stability of a card reaches 1, the card is considered graduated from the session. the session finishes when all cards are graduated. the learning loop is:
 
@@ -74,11 +74,11 @@ _this does mean re-reviewing cards from earlier if a lapse occurs at the end of 
 since sessions are of a relatively small fixed size, they won't usually bring a user up to date with their reviews in one shot. hsrs computes a separate daily goal with a few purposes:
 
 - rather than in fixed quantities, new cards are only added once the daily goal is met. this, and dynamically changing the number of new cards mid-session, naturally regulates the 'learning rate'
-- if a user has a backlog, rather than making them all due up a fixed limit, hsrs uses the backlog size and future review counts to estimate a daily goal that will work through the backlog in roughly the same number of days that were skipped.
+- if a user has a backlog, rather than making them all due up to a fixed limit, hsrs uses the backlog size and future review counts to estimate a daily goal that will work through the backlog in roughly the same number of days that were skipped.
 
 ## elements
 
-hsrs needs on a robust way of defining the structure of your content so that meaningful and valid card instances can be created for each review. this requires:
+hsrs needs a robust way of defining the structure of your content so that meaningful and valid card instances can be created for each review. this requires:
 
 - flexible categorization
 - fields for data
@@ -96,13 +96,13 @@ each element has a set of _props_ where data intrinsic to the element is defined
 
 elements also have _params_ which are references to other elements used in creating the final value for the props. for a simple grammar element representing `[noun] is [adjective].` you'd have two params. parameters can represent categories of elements: `adjective`, or even other other parameterized elements like `[adverb] [adjective]`.
 
-given a set of parameters, elements need a way to build their final property values based of their parameters. for basic computation hsrs uses [jexl](https://github.com/TomFrost/Jexl), which handles string manipulation and parameter value accessing: `noun.en+' is '+adjective.en`
+given a set of parameters, elements need a way to build their final property values based on their parameters. for basic computation hsrs uses [jexl](https://github.com/TomFrost/Jexl), which handles string manipulation and parameter value accessing: `noun.en+' is '+adjective.en`
 
 ### constraints
 
 in the context of language learning, we often need ways during [sampling](#sampling) to restrict parameters across multiple sibling elements for the final output to still make sense.
 
-a common example is preserving a specific parameter by name across multiple elements. lets say we have the following elements:
+a common example is preserving a specific parameter by name across multiple elements. let's say we have the following elements:
 
 - _noun-adjective-statement_ `'the '+noun+' is '+adjective`
 - _noun-and-adjective_ `statementA+' and '+statementB.adjective`
@@ -113,7 +113,7 @@ however, if we specify `noun` as a constraint on _noun-and-adjective_, when samp
 
 to allow more complex constructions, _constraints are shallow_. they are only enforced one level deep in the parameter tree, but you can pass them down explicitly at each level if needed. global constraints are often better handled by [modes](#modes)
 
-constraints are especially useful when using the [relationship elements]() pattern.
+constraints are especially useful when using the [relationship elements](./deck-creation.md#relationship-pattern) pattern.
 
 ### modes
 
@@ -135,7 +135,7 @@ elements inherit data from their parents that will be used as the default if the
 
 ### sampling
 
-when learning, we need to create specific instances of elements as cards to test a users knowledge through a process called sampling. at its simplest, sampling is starting at a root element, then searching deeply through possible values of its parameters and repeating the sampling process for each of them.
+when learning, we need to create specific instances of elements as cards to test a user's knowledge through a process called sampling. at it's simplest, sampling is starting at a root element, then searching deeply through possible values of its parameters and repeating the sampling process for each of them.
 
 when sampling, [constraints](#constraints) are built and enforced to maintain consistency within a particular card. this means many possible parameters for any given element are often discarded.
 
@@ -147,7 +147,7 @@ the _search order_ largely determines what parameters will be sampled at any giv
 
 ### aliasing
 
-a key issue in spaced-repetition for language learning is words with multiple meanings, sounds with multiple words, etc. displaying these helps to with ambiguity for the learner. in a flat list of words, finding aliases is trivial, just search for matching properties. however this is extremely challenging in the context of grammar.
+a key issue in spaced-repetition for language learning is words with multiple meanings, sounds with multiple words, etc. displaying these helps with ambiguity for the learner. in a flat list of words, finding aliases is trivial, just search for matching properties. however, this is extremely challenging in the context of grammar.
 
 take this oddly-specific japanese example to illustrate the difficulty, where the parameters of two aliases may not share many commonalities yet their combination is identical. say you hear "うちにいった". it could be:
 

@@ -44,7 +44,7 @@ repeat the same process, moving the other nouns to `feminine`. with our nouns no
 
 now make a new element called `le-noun` (the masculine article). unlike our other elements so far, `le-noun` will have have [parameters](./overview.md#data). create a parameter called `noun` and set its value to `masculine` (the folder we just created). now, whenever an instance of `le-noun` is created it will select a masculine noun at random that we can use in creating the properties for `le-noun`.
 
-since we have properties defined, we can use [jexl expressions](https://github.com/TomFrost/Jexl) to create property vales from our parameters. in this case we simply want add 'le' to the noun. enter the properties as follows
+since we have properties defined, we can use [jexl expressions](https://github.com/TomFrost/Jexl) to create property vales from our parameters. in this case we simply want to add 'le' to the noun. enter the properties as follows
 
 - fr: `'le '+noun.fr`
 - en: `'the '+noun.en`
@@ -55,7 +55,7 @@ at this point we can simply duplicate the process for the `la-noun`, changing le
 
 ### learning grammar cards
 
-again if you like, you can go to the learn page and see what its like to learn them. if you haven't already learned the nouns from the previous section you won't get the article cards until you've learned nouns. the nouns also have to have a certain stability in order to be learned in grammar cards, _otherwise the grammar cards get much too difficult._ if you really want to see how they look being learned make sure to mark all the vocab words as good or easy, otherwise it may take a day or two for them to be sampled. _this is why the 'example' feature in the editor exists_
+again if you like, you can go to the learn page and see what it's like to learn them. if you haven't already learned the nouns from the previous section you won't get the article cards until you've learned nouns. the nouns also have to have a certain stability in order to be learned in grammar cards, _otherwise the grammar cards get much too difficult._ if you really want to see how they look being learned make sure to mark all the vocab words as good or easy, otherwise it may take a day or two for them to be sampled. _this is why the 'example' feature in the editor exists_
 
 cards with parameters behave differently in that they have new parameters sampled each time you review them, and they are due much more frequently than an individual vocab card.
 
@@ -93,9 +93,11 @@ now if you refresh the example you'll see two different instances: `choisit` and
 
 see the implementation for `third-person-singular-past` in [the example](./french-example.json), same idea.
 
+_NOTE: irregular verbs are treated in much the same way. think of them as a verb category with only one example_
+
 ## clause construction
 
-now lets apply both our definite articles and verb conjugations to make a simple sentence element! as a starting point let's just smash together a definite article/noun combination and a verb conjugation.
+now let's apply both our definite articles and verb conjugations to make a simple sentence element! as a starting point let's just smash together a definite article/noun combination and a verb conjugation.
 if you haven't already put `le-noun` and `la-noun` into a folder called `definite-article-noun`. then make an element for the clause:
 
 - `definite-article-verb`
@@ -118,7 +120,7 @@ to solve this we can create elements for representing _the subject-verb pairings
   - verb = `verbs`
 - **no properties**
 
-now, you can add individual pairings one by one, or click on `view relationships >` to enter the **relationship editor**. this gives you a grid of possible pairings. when you check and uncheck the boxes, individual pairing elements are created automatically. related groups of elements are also clustered, so you can easier create semantic folders to avoid having to individually add relationship pairs for every new noun and verb.
+now, you can add individual pairings one by one, or click on `view relationships >` to enter the **relationship editor**. this gives you a grid of possible pairings. when you check and uncheck the boxes, individual pairing elements are created automatically. related groups of elements are also clustered, so you can easily create semantic folders to avoid having to individually add relationship pairs for every new noun and verb.
 
 for our case lets add pairings for boy/woman can eat/choose and pen/window can shine/fade.
 
@@ -128,8 +130,8 @@ next, we have to actually use these parings in our clause. element. returning to
 
 and set the [constraint](./overview.md#constraints) to be the params in common between the rel and the other params: `noun verb`. now under examples, we only see clauses that match these pairings!
 
-if you want to test learning this, the clause card won't be learnable for at least a couple days, as you need a certain stability with it's dependents before you can learn it, and that stability threshold increases with depth. if you want to circumvent this you can assign a learning order, say '1', to the whole deck, then set your init order setting to be the same.
+if you want to test learning this, the clause card won't be learnable for at least a couple days, as you need a certain stability with its dependents before you can learn it, and that stability threshold increases with depth. if you want to circumvent this you can assign a learning order, say '1', to the whole deck, then set your init order setting to be the same.
 
 ## NOTE
 
-please don't take this example as gospel. in a real french deck, you'd likely want to have cards for pronouns and their pairings as well, likewise not all verbs may be commonly used with all conjugations. clever categorization and constraint can get you there. there is no one correct way to tackle every language pattern, it depends on how you want to learn it, and how generalizable you want your elements to be. there is a three-way tradeoff between ease of setup, strict accuracy and end user learning efficiency.\_
+_please don't take this example as gospel. in a real french deck, you'd likely want to have cards for pronouns and their pairings as well, likewise not all verbs may be commonly used with all conjugations. clever categorization and constraint can get you there. there is no one correct way to tackle every language pattern, it depends on how you want to learn it, and how generalizable you want your elements to be. there is a three-way tradeoff between ease of setup, strict accuracy and end user learning efficiency._
