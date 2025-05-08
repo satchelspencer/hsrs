@@ -84,7 +84,6 @@ export function run(expr: string, context: any, root?: boolean): any {
     const res = cacheJexl(expr, context) ?? expr
     return _.isNaN(res) ? expr : root ? moveit(res) : res
   } catch (e) {
-    console.log()
     return expr
   }
 }

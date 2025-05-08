@@ -28,6 +28,19 @@ if you fall behind, your daily goals will adjust to catch up on your backlog wit
 
 if you exceed your daily goal, you'll first get reviews of cards you recently missed / learned. then, you'll get 'pre-reviews' from future days. _these aren't the most efficient use of your time, but won't otherwise impact your learning negatively._
 
+## stats
+
+you can access the builtin review stats by clicking the `bar-graph` icon at the top of any element in the editor. results are restricted to children of that element so you can view stats for your whole deck, a certain type of element, or a single element. the following stats are available:
+
+- `Hours spent` shows the time spent learning your cards over time. Each bar is broken down by grade with _again_ as red, _hard_ as yellow, _good_ as green and _easy_ as bright green
+- `Reviews` the total number of cards reviewed over the selected time period, and the average time spent per card.
+- `Stability` the distribution of your card's stabilities: a card with a 10 day stability is scheduled to be reviewed every 10 days.
+- `Progress` what portion of the total possible cards have been seen.
+- `Progress distribution` how much of each [section](#card-order) you've seen up to this point.
+- `Difficulty distribution` an arbitrary, relative metric for how difficult your cards are.
+- `Total new cards seen` how many new cards you've added during the selected time period. Also shows the cumulative sum.
+- `Accuracy` the percentage of cards you mark hard or above over the selected time period.
+
 ## advanced settings (optional)
 
 - **plugins**: specify which [custom plugins](./plugins.md) you want to use for learning what groups of cards.
