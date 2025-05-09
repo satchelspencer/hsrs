@@ -97,10 +97,12 @@ export const deck = createSlice({
 export const deckThunks = {
   endSession: createAsyncThunk<t.CardLearning[], void, { state: { deck: t.Deck } }>(
     'deck/endSession',
-    async (_, { getState }) => {
+    async (x, { getState }) => {
       const state = getState().deck
       if (!state.session) throw 'no session'
-      await db.cardLearning.bulkAdd(state.session.history.map(learning2db))
+      await db.cardLearning.bulkAdd(
+        state.session.history.map((l) => learning2db(_.omit(l, 'vscore')))
+      )
       return state.session.history
     }
   ),

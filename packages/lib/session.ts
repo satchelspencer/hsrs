@@ -136,10 +136,13 @@ export function nextSessionState(
 
 export function applySessionHistoryToCards(
   cards: t.CardStates,
-  history: t.CardLearning[]
+  history: t.SessionCardLearning[]
 ) {
   for (const learning of history) {
-    cards[learning.cardId] = nextSessionState(cards[learning.cardId], learning.score)
+    cards[learning.cardId] = nextSessionState(
+      cards[learning.cardId],
+      learning.vscore ?? learning.score
+    )
   }
 }
 
@@ -162,20 +165,19 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
     cardReviewsRemaning = estimateReviewsRemaining(session),
     estReviews = session.history.length + cardReviewsRemaning,
     isEnding = session.history.length / estReviews >= 0.75,
-    grade = Math.min(
-      (missedSibling ? Math.min(rgrade, 2) : rgrade) + (isEnding ? 1 : 0),
-      4
-    )
+    grade = missedSibling ? Math.min(rgrade, 2) : rgrade,
+    virtualGrade = Math.min(grade + (isEnding ? 1 : 0), 4)
 
   session.history.push({
     cardId,
     ..._.pick(currentCard, 'params'),
     score: grade,
+    vscore: grade === virtualGrade ? undefined : virtualGrade,
     time: now,
     took,
   })
 
-  const cardState = nextSessionState(session.cards[cardId], grade)
+  const cardState = nextSessionState(session.cards[cardId], virtualGrade)
   session.cards[cardId] = cardState
 
   const jitter = Math.floor(Math.random() * 3 - 1),

@@ -76,10 +76,14 @@ export interface CardLearning {
   took: number
 }
 
+export interface SessionCardLearning extends CardLearning {
+  vscore?: number
+}
+
 export interface LearningSession {
   stack: CardInstance[]
   cards: CardStates
-  history: CardLearning[]
+  history: SessionCardLearning[]
   reviews: number
   filter: string[]
   allowNew: boolean
