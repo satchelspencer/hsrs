@@ -1,15 +1,13 @@
 import { getCache } from './cache'
+import { nextIntervalFSRS, nextStateFSRS } from './fsrs'
 import { getInheritedElement } from './props'
 import { card2Id, id2Card } from './session'
 import * as t from './types'
 import _ from 'lodash'
 
 export const defaultParams = [
-  0.7707539200782776, 1.4344240427017212, 3.467081308364868, 16.19120979309082,
-  7.254122257232666, 0.3811998963356018, 1.7041410207748413, 0.014886749908328056,
-  1.3656686544418335, 0.22190921008586884, 0.8670082092285156, 1.9588409662246704,
-  0.08125182241201401, 0.3044493794441223, 2.29744815826416, 0.11656399071216583,
-  3.339834451675415, 0.3628292679786682, 0.34700527787208557,
+  0.77, 1.434, 3.467, 16.191, 7.254, 0.381, 1.704, 0.0148, 1.365, 0.221, 0.867, 1.958,
+  0.081, 0.304, 2.297, 0.116, 3.339, 0.362, 0.347,
 ]
 export const defaultretention = 0.965
 export const grades = ['again', 'hard', 'good', 'easy']
@@ -225,92 +223,4 @@ export function getELRetrOffset(
       // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
       3 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
   return offset
-}
-
-/* fsrs in js */
-function nextIntervalFSRS(stability: number, retention: number) {
-  return (stability / (19 / 81)) * (Math.pow(retention, 1 / -0.5) - 1)
-}
-
-function retrFSRS(stability: number, daysElapsed: number) {
-  return Math.pow(1 + (19 / 81) * (daysElapsed / stability), -0.5)
-}
-
-function d0(grade: number, w: number[]) {
-  return w[4] - Math.exp(w[5] * (grade - 1)) + 1
-}
-
-type FsrsCache = {
-  ew8: number
-  d0Map: { [grade: number]: number }
-  e1718: number
-}
-
-let lastw: number[] | null = null,
-  lastCache: FsrsCache | null = null
-function getFSRSCache(w: number[]) {
-  if (w === lastw && lastCache) return lastCache
-  else {
-    lastw = w
-    lastCache = {
-      ew8: Math.exp(w[8]),
-      d0Map: {},
-      e1718: Math.exp(w[17] * w[18]),
-    }
-    for (let i = 1; i < 5; i++) lastCache.d0Map[i] = d0(i, w)
-    return lastCache
-  }
-}
-
-export function nextStateFSRS(
-  memoryState: t.MemoryState | undefined,
-  daysElapsed: number,
-  grade: number,
-  w: number[]
-): t.MemoryState {
-  const cache = getFSRSCache(w)
-  if (!memoryState) {
-    return { stability: w[grade - 1], difficulty: cache.d0Map[grade] }
-  } else {
-    if (grade === 0) return memoryState
-    const difficulty = Math.fround(memoryState.difficulty),
-      stability = Math.fround(memoryState.stability)
-
-    const deltaD = -w[6] * (grade - 3),
-      dp = memoryState.difficulty + (deltaD / 9) * (10 - difficulty),
-      dd = w[7] * (d0(4, w) - dp) + dp,
-      nextD = Math.min(Math.max(dd, 1), 10)
-
-    if (daysElapsed < 1) {
-      return {
-        stability: stability * Math.exp(w[17] * (grade - 3 + w[18])),
-        difficulty: nextD,
-      }
-    } else {
-      const retr = retrFSRS(stability, daysElapsed)
-      if (grade === 1) {
-        return {
-          stability: Math.min(
-            w[11] *
-              Math.pow(difficulty, -w[12]) *
-              (Math.pow(stability + 1, w[13]) - 1) *
-              Math.exp(w[14] * (1 - retr)),
-            stability / cache.e1718
-          ),
-          difficulty: nextD,
-        }
-      } else {
-        let sinci =
-          cache.ew8 *
-          (11 - difficulty) *
-          Math.pow(stability, -w[9]) *
-          (Math.exp(w[10] * (1 - retr)) - 1)
-
-        if (grade === 2) sinci *= w[15]
-        else if (grade === 4) sinci *= w[16]
-
-        return { stability: stability * (sinci + 1), difficulty: nextD }
-      }
-    }
-  }
 }
