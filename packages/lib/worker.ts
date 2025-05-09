@@ -1,6 +1,6 @@
 import { WorkerMessage, WorkerMetaMessage, WorkerResponseMessage } from './async'
 import { setLogLevel } from './log'
-import { findAliases } from './props'
+import { findAliases } from './alias'
 import { createLearningSession } from './session'
 
 function handleMessage(

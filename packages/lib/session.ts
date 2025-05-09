@@ -1,11 +1,6 @@
 import { getCache } from './cache'
 import { DateTime } from 'luxon'
-import {
-  getAllCards,
-  getInheritedElement,
-  getLearnOrder,
-  sampleElementIstance,
-} from './props'
+import { getAllCards, getInheritedElement, getLearnOrder } from './props'
 import {
   defaultParams,
   defaultretention,
@@ -19,6 +14,7 @@ import _ from 'lodash'
 import { computeElementInstance, computeElementMode } from './expr'
 import { cleanRuby } from './ruby'
 import { logger } from './log'
+import { sampleElementIstance } from './sample'
 
 export function createLearningSession(
   deck: t.Deck,
