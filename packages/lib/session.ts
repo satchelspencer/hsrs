@@ -229,7 +229,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
   log('review estimation', estReviews, 'original', session.reviews, 'delta ', delta)
 
   let redist = false
-  if (delta > 2) {
+  if (delta > 2 && session.allowNew) {
     const toRemove =
       _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
       _.findLast(session.stack, (c) => !c.new) //fall back to non new
