@@ -65,6 +65,9 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
   tree.topo = topoOrder.reverse()
 }
 
+/* get structure and heuristics from elements for fast lookups
+tree, param-depth, leaves, name maps. */
+
 export function getCache(relements: t.IdMap<t.Element>) {
   const elements = undraft(relements)
   if (elements === lastEls && lastCache) return lastCache

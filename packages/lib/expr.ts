@@ -6,52 +6,63 @@ import { getCache } from './cache'
 
 export const RUBY_DELIM = '~'
 
+/* replaces '+' with concat operator that adds ruby delimiters */
 jexl.addBinaryOp(':::', 20, (a, b) => a + RUBY_DELIM + b)
 
+/* suffix replxe */
 jexl.addTransform('r', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search + '$'), replace)
 )
 
+/* global replace */
 jexl.addTransform('rg', (val: string, search, replace) =>
   (val + '').replace(new RegExp(search, 'g'), replace)
 )
 
+/* single char bulk replace, a|b|c => d|e|f  */
 jexl.addTransform('cr', (val: string, search, replace) => {
   let res = val
   for (const i in search) res = res.replace(new RegExp(search[i] + '$'), replace[i])
   return res
 })
 
+/* prefix replace */
 jexl.addTransform('pr', (val: string, search, replace) =>
   (val + '').replace(new RegExp('^' + search), replace)
 )
 
+/* prefix char bulk replace */
 jexl.addTransform('pcr', (val: string, search, replace) => {
   let res = val
   for (const i in search) res = res.replace(new RegExp('^' + search[i]), replace[i])
   return res
 })
 
+/* move token to end */
 jexl.addTransform('mte', (val: string, search) => {
   const index = val.indexOf(search)
   if (index === -1) return val
   return val.slice(0, index) + val.slice(index + search.length) + search
 })
 
+/* move token to start */
 jexl.addTransform('mts', (val: string, search) => {
   const index = val.indexOf(search)
   if (index === -1) return val
   return search + val.slice(0, index) + val.slice(index + search.length)
 })
 
+/* creates an end-moving token that will move to the nearest boundary */
 jexl.addFunction('e', (val: string) => {
   return `(${val}>)`
 })
 
+/* same but to the left */
 jexl.addFunction('s', (val: string) => {
   return `(${val}<)`
 })
 
+/* boundary for moving tokens */
 jexl.addFunction('b', () => {
   return `|`
 })
@@ -179,6 +190,7 @@ export function computeElementMode(
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode?.toLowerCase()
 }
 
+/* implement the behavior of s() and e() */
 export function moveit(string: string) {
   const dests: { [index: number]: { index: number; content: string } } = {}
   for (const match of string.matchAll(/\(([^)]+)([><])\)/g)) {
