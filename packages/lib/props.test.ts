@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateElementInstanceSamples } from './props'
+import { generateElementInstanceSamples } from './sample'
 import { Element, ElementInstance, IdMap } from './types'
 import _ from 'lodash'
 

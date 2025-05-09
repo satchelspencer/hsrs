@@ -2,13 +2,13 @@ import {
   getElementParamsAndProps,
   getVariables,
   getNonVirtualDescendents,
-  generateElementInstanceSamples,
   getInheritedElement,
 } from '@hsrs/lib/props'
 import { createSelector } from './store'
 import _ from 'lodash'
 import { Selection } from './ui'
 import { getCache } from '@hsrs/lib/cache'
+import { generateElementInstanceSamples } from '@hsrs/lib/sample'
 
 export const selectSelections = createSelector(
   [(state) => state.ui.selections, (state) => state.deck.elements],
