@@ -69,7 +69,7 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
 tree, param-depth, leaves, name maps. */
 
 export function getCache(relements: t.IdMap<t.Element>) {
-  const elements = undraft(relements)
+  const elements = undraft(relements) //for when we're in a redux store
   if (elements === lastEls && lastCache) return lastCache
   //console.trace('cache')
   const t = new Date().getTime()

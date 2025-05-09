@@ -120,6 +120,8 @@ export function topoSort(deps: depsTree): string[] {
   return result
 }
 
+/* exprs like $.propName can reference other props, so we need 
+to execute props in the correct order. cycles are ignored */
 function getPropExecOrder(props: t.Props): string[] {
   const depsTree: { [propName: string]: string[] } = {}
   for (const propName in props) {

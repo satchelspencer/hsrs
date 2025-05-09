@@ -58,6 +58,7 @@ export function nextInterval(stability: number, retention: number) {
   return Math.floor(nextIntervalFSRS(stability, retention) * 24 * 3600)
 }
 
+/* inverse of retention curve from fsrs */
 function invertRetr(retention: number, secondsElapsed: number): number {
   if (retention >= 1) return 1e6
   if (retention <= 0) return 0.01

@@ -1,5 +1,8 @@
 import { RUBY_DELIM } from './expr'
 
+/* take text split by ruby delim and for each chunk only apply
+ruby to part between text and ruby without matching prefix or suffix */
+
 export function renderRuby(text: string, ruby: string) {
   const tcs = text.split(RUBY_DELIM),
     rcs = ruby.split(RUBY_DELIM)

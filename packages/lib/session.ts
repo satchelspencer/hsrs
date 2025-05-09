@@ -575,15 +575,15 @@ export function sampleAndAdd(
           undefined,
           (elId) => {
             const card = deck.cards[card2Id({ element: elId, property })],
-              jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale
+              jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
             if (!card) return jitter
 
             const seenAgo = now - (card.lastSeen ?? 0),
               cr = getRetr(card, seenAgo),
               retrDiff = cr - childTarget,
-              retrFactor = logistic(retrDiff),
-              depthFactor = logistic(-(cache.nvds[elId] ?? 0)),
-              seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24)
+              retrFactor = logistic(retrDiff), //prefer cards close to target retr
+              depthFactor = logistic(-(cache.nvds[elId] ?? 0)), //prefer cards with more possible params
+              seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
 
             return retrFactor * depthFactor * seenFactor + jitter
           },

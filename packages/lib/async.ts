@@ -1,3 +1,5 @@
+/* utils for running long running computations in web workers */
+
 import { getCache } from './cache'
 import _ from 'lodash'
 import * as t from './types'
@@ -91,6 +93,7 @@ async function callWorker<T extends WorkerMessage>(
 
   log(id, 'selected worker', thisIndex)
 
+  /* check for timeout to handle chromes killed workers :( */
   const res = await Promise.race([
     callWorkerBase(message, worker, id),
     new Promise<false>((res) => setTimeout(() => res(false), timeout)),
