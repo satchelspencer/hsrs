@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { nextState, nextStateFSRS, defaultParams } from './schedule'
+import { nextState, defaultParams } from './schedule'
 import { MemoryState } from './types'
+import { nextStateFSRS } from './fsrs'
 
 describe('schedule', async () => {
   it('should run nextState with undefined', () => {
