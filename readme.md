@@ -4,6 +4,12 @@
 
 _a hierarchical spaced-repetition system for learning structurally related materials._
 
+## hosted builds
+
+- [hsrs client](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
+- [tts plugin](https://elldev.com/hsrs-tts/): text-to-speech plugin for listening cards
+- [grsly](https://grsly.com/): consumer implementation for en-jp
+
 ## motivation
 
 japanese grammar, i know... though the concept generalizes well beyond japanese and grammar.
@@ -32,9 +38,3 @@ read more about [how it works](./docs/overview.md)
 - `yarn run dev`
 - http://localhost:8177/: the main client
 - http://localhost:8178/: the tts plugin
-
-## hosted builds
-
-- [hsrs client](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
-- [tts plugin](https://elldev.com/hsrs-tts/): text-to-speech plugin for listening cards
-- [grsly](https://grsly.com/): consumer implementation for en-jp
