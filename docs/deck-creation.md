@@ -44,7 +44,7 @@ repeat the same process, moving the other nouns to `feminine`. with our nouns no
 
 now make a new element called `le-noun` (the masculine article). unlike our other elements so far, `le-noun` will have have [parameters](./overview.md#data). create a parameter called `noun` and set its value to `masculine` (the folder we just created). now, whenever an instance of `le-noun` is created it will select a masculine noun at random that we can use in creating the properties for `le-noun`.
 
-since we have properties defined, we can use [jexl expressions](https://github.com/TomFrost/Jexl) to create property vales from our parameters. in this case we simply want to add 'le' to the noun. enter the properties as follows
+since we have properties defined, we can use [expressions](#expressions) to create property vales from our parameters. in this case we simply want to add 'le' to the noun. enter the properties as follows
 
 - fr: `'le '+noun.fr`
 - en: `'the '+noun.en`
@@ -136,6 +136,30 @@ if you want to test learning this, the clause card won't be learnable for at lea
 
 _please don't take this example as gospel. in a real french deck, you'd likely want to have cards for pronouns and their pairings as well, likewise not all verbs may be commonly used with all conjugations. clever categorization and constraint can get you there. there is no one correct way to tackle every language pattern, it depends on how you want to learn it, and how generalizable you want your elements to be. there is a three-way tradeoff between ease of setup, strict accuracy and end user learning efficiency._
 
+# expressions
+
+hsrs uses [jexl](https://github.com/TomFrost/Jexl) as its expression language for building properties from parameter values along with some custom functions.
+
+## variables
+
+the following variables are accessible in expressions:
+
+- **param values**: are accessible directly by name, if the parameter refers to an element with its own params, they are deeply accessible via dot notation. _remember to include the property name_ i.e `noun.en` not just `noun`
+- **other properties**: property values can reference other properties by prefixing their name with `$.` like `$.en`, `$.jp` etc. _If you create a cycle, props will be executed in the order they are defined and empty values will be filled in the last property to prevent an infinite loop._
+
+## functions
+
+in addition to the default jexl operators, the following expressions are available for string transformation:
+
+- `r`, used `value|r(search, replace)` replaces the **suffix** matching `search` of `value` with `replace`.
+- `pr` is the same as `r` but for prefix
+- `rg` replaces all searches throughout the value
+- `mts`, used `value|r(search)` moves the `search` to the start of the value
+- `mte` does the same but to the end
+- `e` used `e(value)` makes a moving token that will move to the end of the value until it reaches a `b()` boundary
+- `s` makes an end-moving token
+- `b` used `b()` defines a boundary for `e` and `s`
+
 # parameterization tradeoffs
 
 when designing a deck, you need to decide where on the _spectrum of parameterization_ you want to fall:
@@ -145,14 +169,14 @@ when designing a deck, you need to decide where on the _spectrum of parameteriza
 
 each of these have tradeoffs:
 
- - `zero` requires *exponentially* more examples for the same coverage of material compared with `full`.
- - `zero` can't take advantage of shared material between different examples when scheduling, making it drastically less efficient for learning.
- - `zero` is prone to memorization of individual sentences without understanding.
- - `full` yields unnatural sayings, implausible word combinations, and confusing grammar.
+- `zero` requires _exponentially_ more examples for the same coverage of material compared with `full`.
+- `zero` can't take advantage of shared material between different examples when scheduling, making it drastically less efficient for learning.
+- `zero` is prone to memorization of individual sentences without understanding.
+- `full` yields unnatural sayings, implausible word combinations, and confusing grammar.
 
 the best solution lies somewhere in between, and depends on your preferences and goals. you can use the following approaches to move along the spectrum:
 
- - the [relationship](#relationship-pattern) pattern can **decrease** the space of possibilities for your grammars, restricting it to only known combinations of verb-nouns or other param pairings.
- - rather than monolithic folders like `nouns`, parameterizing on sub-categories like `living things` can prune unnatural examples.
- - [modes](./overview.md#modes) can prevent use of context-specific words or grammars in places where they don't make sense.
- - mixing parameters into common fixed phrases can avoid having to break them fully down into their grammar while still getting some learning benefit.
+- the [relationship](#relationship-pattern) pattern can **decrease** the space of possibilities for your grammars, restricting it to only known combinations of verb-nouns or other param pairings.
+- rather than monolithic folders like `nouns`, parameterizing on sub-categories like `living things` can prune unnatural examples.
+- [modes](./overview.md#modes) can prevent use of context-specific words or grammars in places where they don't make sense.
+- mixing parameters into common fixed phrases can avoid having to break them fully down into their grammar while still getting some learning benefit.

@@ -6,7 +6,7 @@ _a hierarchical spaced-repetition system for learning structurally related mater
 
 ## hosted builds
 
-- [hsrs client](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
+- [hsrs web app](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
 - [tts plugin](https://elldev.com/hsrs-tts/): text-to-speech plugin for listening cards
 - [grsly](https://grsly.com/): consumer implementation for en-jp
 
