@@ -561,7 +561,7 @@ export function sampleAndAdd(
       elMatch = elId === element || cache.tree.ancestors[element]?.includes(elId)
     if (inv && elMatch) return
     else if (elMatch) hasMatch = true
-    else needsMatch = true
+    if (!inv) needsMatch = true
   }
   if (filter.length && needsMatch && !hasMatch) return
 
