@@ -411,7 +411,7 @@ function getNew(
         (c) => getLearnOrder(c.element, deck).order,
         (c) => {
           return getLearnOrder(c.element, deck).pre
-            ? (cache.depths[c.element] > 0 ? 0.5 : 1) * Math.random()
+            ? (cache.depths[c.element] > 0 ? 0.25 : 1) * Math.random()
             : Math.random()
         },
         () => Math.random(),
