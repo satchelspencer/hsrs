@@ -407,7 +407,15 @@ function getNew(
   const res: t.CardInstance[] = [],
     cards = _.orderBy(
       getAllCards(deck.elements).filter((c) => !deck.cards[card2Id(c)]),
-      [(c) => getLearnOrder(c.element, deck).order, () => Math.random()]
+      [
+        (c) => getLearnOrder(c.element, deck).order,
+        (c) => {
+          return getLearnOrder(c.element, deck).pre
+            ? (cache.depths[c.element] > 0 ? 0.5 : 1) * Math.random()
+            : Math.random()
+        },
+        () => Math.random(),
+      ]
     ),
     usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor()
