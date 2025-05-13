@@ -553,15 +553,19 @@ export function sampleAndAdd(
 
   if (!deck.elements[element]) return
 
-  let hasMatch = false
+  let hasMatch = false,
+    needsMatch = false
   for (const f of filter) {
     const inv = f[0] === '!',
       elId = inv ? f.substring(1) : f,
       elMatch = elId === element || cache.tree.ancestors[element]?.includes(elId)
     if (inv && elMatch) return
-    else if (elMatch) hasMatch = true
+    else {
+      if (elMatch) hasMatch = true
+      needsMatch = true
+    }
   }
-  if (filter.length && !hasMatch) return
+  if (filter.length && !needsMatch && !hasMatch) return
 
   const target = deck.settings.retention ?? defaultretention,
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
