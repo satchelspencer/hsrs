@@ -565,7 +565,7 @@ export function sampleAndAdd(
       needsMatch = true
     }
   }
-  if (filter.length && !needsMatch && !hasMatch) return
+  if (filter.length && needsMatch && !hasMatch) return
 
   const target = deck.settings.retention ?? defaultretention,
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
