@@ -422,17 +422,19 @@ function getNew(
 
   while (res.length < limit / newCardFactor && cards.length) {
     const card = cards.shift()!,
-      { props } = getInheritedElement(card.element, deck.elements)
+      { props } = getInheritedElement(card.element, deck.elements),
+      order = getLearnOrder(card.element, deck)
 
     if (usedEls[card.element]) continue
 
-    for (const property in props) {
+    for (const property of _.shuffle(Object.keys(props))) {
       if (property[0] === '_') continue
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
         sampleAndAdd(res, id, deck, filter, cache)
         usedEls[card.element] = true
       }
+      if (order.pre) break
     }
   }
 
