@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { css, cx } from '@emotion/css'
 import _ from 'lodash'
+import { Shortcut, keyboardShortcuts } from 'hsrs-plugin'
 
 import * as styles from '../styles'
 import * as r from '../redux'
@@ -68,16 +69,16 @@ export function Card() {
       setRevealed(false)
     }
 
-  const handleKey = useRef<(key: string, meta: boolean, ctrl: boolean) => void>()
-  handleKey.current = (key, meta, ctrl) => {
-    if (key === ' ') {
+  const handleShortCut = useRef<(sc: Shortcut) => void>(() => {})
+  handleShortCut.current = (sc) => {
+    if (sc === 'next') {
       if (revealed) setGrade(3)
       else setRevealed(true)
-    } else if (key === '1' && revealed) setGrade(1)
-    else if (key === '2' && revealed) setGrade(2)
-    else if (key === '3' && revealed) setGrade(3)
-    else if (key === '4' && revealed) setGrade(4)
-    else if (key === 'z' && (meta || ctrl)) undoGrade()
+    } else if (sc === '1' && revealed) setGrade(1)
+    else if (sc === '2' && revealed) setGrade(2)
+    else if (sc === '3' && revealed) setGrade(3)
+    else if (sc === '4' && revealed) setGrade(4)
+    else if (sc === 'undo') undoGrade()
   }
 
   const pluginRef = useRef<HTMLIFrameElement>(null),
@@ -87,18 +88,18 @@ export function Card() {
     setPluginLoaded(false)
 
     const handleMessage = (e: MessageEvent<any>) => {
-      if ('key' in e.data) handleKey.current?.(e.data.key, e.data.meta, e.data.ctrl)
+      if (e.data.type === 'shortcut') handleShortCut.current(e.data.name)
       if (e.data.type === 'ready') setPluginLoaded(true)
     }
     window.addEventListener('message', handleMessage)
 
-    const keyHanlder = (e: KeyboardEvent) =>
-      handleKey.current?.(e.key, e.metaKey, e.ctrlKey)
-    window.addEventListener('keydown', keyHanlder)
+    const cleanupShortcuts = keyboardShortcuts((shortCut) => {
+      handleShortCut.current(shortCut)
+    })
 
     return () => {
       window.removeEventListener('message', handleMessage)
-      window.removeEventListener('keydown', keyHanlder)
+      cleanupShortcuts()
     }
   }, [pluginRef.current])
 
