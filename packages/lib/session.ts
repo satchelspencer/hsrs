@@ -276,20 +276,24 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   /* ensure a minimum gap between siblings */
   const MIN_SPACING = 4
-  for (let i = 0; i < MIN_SPACING; i++) {
-    const nextFirst = session.stack[0],
-      lastSeenHistoryIndex = session.history.findLastIndex((c) => {
-        const card = id2Card(c.cardId)
-        return card.element === nextFirst.element && card.property !== nextFirst.property
-      })
+  if (session.stack.length > MIN_SPACING * 3) {
+    for (let i = 0; i < MIN_SPACING; i++) {
+      const nextFirst = session.stack[0],
+        lastSeenHistoryIndex = session.history.findLastIndex((c) => {
+          const card = id2Card(c.cardId)
+          return (
+            card.element === nextFirst.element && card.property !== nextFirst.property
+          )
+        })
 
-    if (
-      lastSeenHistoryIndex !== -1 &&
-      session.history.length - lastSeenHistoryIndex < MIN_SPACING
-    ) {
-      const [card] = session.stack.splice(0, 1)
-      session.stack.splice(MIN_SPACING + Math.abs(jitter), 0, card)
-    } else break
+      if (
+        lastSeenHistoryIndex !== -1 &&
+        session.history.length - lastSeenHistoryIndex < MIN_SPACING
+      ) {
+        const [card] = session.stack.splice(0, 1)
+        session.stack.splice(MIN_SPACING + Math.abs(jitter), 0, card)
+      } else break
+    }
   }
 
   return session
