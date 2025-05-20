@@ -205,7 +205,7 @@ function failsConstraint(
   return failed
 }
 
-function getInstanceId(instance: t.ElementInstance): string {
+export function getInstanceId(instance: t.ElementInstance): string {
   const res: string[] = [instance.element],
     queue: t.ElementInstance[] = [instance]
 

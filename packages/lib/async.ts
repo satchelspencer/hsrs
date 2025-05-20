@@ -106,8 +106,11 @@ async function callWorker<T extends WorkerMessage>(
       workerPool[thisIndex] = new Worker()
       worker.terminate()
     }
-    if (depth < 3) return callWorker(message, timeout, id, depth + 1)
-    else throw 'max depth exceeded'
+    if (depth < 1) return callWorker(message, timeout, id, depth + 1)
+    else {
+      window.location.reload()
+      throw 'max depth exceeded'
+    }
   } else return res
 }
 
