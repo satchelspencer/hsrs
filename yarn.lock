@@ -1311,11 +1311,6 @@ hsrs-plugin@^0.1.0:
   resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.1.0.tgz#a8f3fd21700d03699a903c021c6f15d277b7331a"
   integrity sha512-kkXSRP84nt+wpaK/V4pO752h3No6weehSiMTq6aeQ1k1xlDaXYr9sUKzDIY+5iiNntlFZ+15gIryAIflxqHeYw==
 
-hsrs-plugin@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.1.1.tgz#8b97f4a4320e3587c7c4c4e57980e510a297b846"
-  integrity sha512-euSPxoZ7wGFM2h9H8RiAwQEXn6VCyEkg5YGsY8JjjYerRqalXcB9URc3eOyTJD4AUg6y4g0WilCL+MOH7hEulQ==
-
 html-encoding-sniffer@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/html-encoding-sniffer/-/html-encoding-sniffer-4.0.0.tgz#696df529a7cfd82446369dc5193e590a3735b448"
