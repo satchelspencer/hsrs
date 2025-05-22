@@ -12,7 +12,7 @@ this client has the exact same learning functionality as [grsly](https://grsly.c
 
 ## basic setup
 
-1.  download the grsly Japanese deck from [here](https://github.com/satchelspencer/hsrs-deck-jp) (get `deck-jp.json`)
+1.  download the grsly Japanese deck from [here](https://app.grsly.com/jp.deck.json) (right click save as is your friend)
 2.  open the hsrs client at https://elldev.com/hsrs/
 3.  open the settings page
 4.  click the **upload** button next to import and select the deck `deck-jp.json`
