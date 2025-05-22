@@ -153,6 +153,16 @@ export function useTtsState(state: CardProps) {
       ? styles
       : {}
 
+  const handleKeyEvent = useRef<(e: KeyboardEvent) => void>()
+  handleKeyEvent.current = (e) => {
+    if (e.code === 'KeyP' && cardHasAudio) playSrc()
+  }
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => handleKeyEvent.current?.(e)
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   return {
     shownKeys,
     shownStyles,
