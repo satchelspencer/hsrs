@@ -47,7 +47,7 @@ export function useTtsState(state: CardProps) {
       (k) => typeof value[k] === 'string' && (state.revealed || k !== ttsKey)
     ),
     valueWithALiases = Object.fromEntries(
-      Object.entries(state.value).map(([key, value]) => [
+      Object.entries(value).map(([key, value]) => [
         key,
         typeof value === 'string'
           ? [value, ...state.aliases.map((a) => a[key])].join(aliasDelim)
