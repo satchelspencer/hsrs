@@ -192,6 +192,17 @@ export function ElementEditor(props: ElementEditorProps) {
                 filter={(e) => !!e.virtual}
               />,
             ],
+            [
+              'Notes',
+              <CodeInput
+                throttle
+                multiline
+                value={element.desc}
+                onChange={(desc) => handleChange({ ...element, desc })}
+                onClear={() => handleChange(_.omit(element, 'desc'))}
+              />,
+              false,
+            ],
           ]}
         />
         <LabelGroup
@@ -248,6 +259,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
+
             !!Object.keys(elementParams).length && [
               'Constrain',
               elementConstraint === undefined ? (
