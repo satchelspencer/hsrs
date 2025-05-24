@@ -41,7 +41,8 @@ export function getInheritedElement(
     inheritedParams: t.Params = {}
   let inheritedConstraint: string = '',
     inheritedMode: string = '',
-    inheritedRetention: string = ''
+    inheritedRetention: string = '',
+    inheritedDesc: string = ''
 
   const ancestors = cache.tree.ancestors[elementId] ?? []
   for (let i = ancestors.length - 1; i >= 0; i--) {
@@ -59,6 +60,7 @@ export function getInheritedElement(
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
     if (element.retention) inheritedRetention = element.retention
+    if (element.desc) inheritedDesc = element.desc
   }
 
   element.props = inheritedProps
@@ -66,6 +68,7 @@ export function getInheritedElement(
   if (inheritedConstraint) element.constraint = inheritedConstraint
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
+  if (inheritedDesc) element.desc = inheritedDesc
   element.order = getElementOrder(elementId, elements)
   return element
 }

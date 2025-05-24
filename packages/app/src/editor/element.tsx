@@ -32,6 +32,7 @@ export function ElementEditor(props: ElementEditorProps) {
       mode: elementMode,
       order: elementOrder,
       retention: elementRetention,
+      desc: elementDesc,
     } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
@@ -198,6 +199,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 throttle
                 multiline
                 value={element.desc}
+                placeholder={elementDesc}
                 onChange={(desc) => handleChange({ ...element, desc })}
                 onClear={() => handleChange(_.omit(element, 'desc'))}
               />,
