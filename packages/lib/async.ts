@@ -32,6 +32,7 @@ interface CreateSessionMessage extends WorkerMessageBase<t.SessionAndProgress> {
   size: number
   allowNew: boolean
   filter: string[]
+  propsFilter: string[]
   tz: string
   cache: t.DeckCache
 }
@@ -137,6 +138,7 @@ export function createSessionAsync(
   size: number,
   allowNew: boolean,
   filter: string[],
+  propsFilter: string[],
   tz: string
 ) {
   const message: CreateSessionMessage = {
@@ -145,6 +147,7 @@ export function createSessionAsync(
     size,
     allowNew,
     filter,
+    propsFilter,
     tz,
     cache: getCache(deck.elements),
   }

@@ -24,6 +24,7 @@ function handleMessage(
       message.size,
       message.allowNew,
       message.filter,
+      message.propsFilter,
       message.tz,
       message.cache
     )

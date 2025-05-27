@@ -190,6 +190,23 @@ export function ImportExport() {
             />
           </div>,
         ],
+        [
+          'Props',
+          <div style={{ width: 200 }}>
+            <CodeInput
+              value={deckSettings.propsFilter?.join(',')}
+              throttle
+              placeholder="Learn all props..."
+              onChange={(filter) => {
+                dispatch(
+                  r.actions.setDeckSettings({
+                    propsFilter: filter?.length ? filter.split(',') : [],
+                  })
+                )
+              }}
+            />
+          </div>,
+        ],
       ]}
     />
   )

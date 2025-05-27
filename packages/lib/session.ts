@@ -21,14 +21,22 @@ export function createLearningSession(
   size: number,
   allowNew: boolean,
   filter: string[],
+  propsFilter: string[],
   tz: string,
   cache = getCache(deck.elements)
 ): t.SessionAndProgress {
   const log = logger(2, 'session'),
     t = new Date().getTime(),
-    { dueCards, nextCards, progress } = getDue(deck, size, filter, tz, cache),
+    { dueCards, nextCards, progress } = getDue(
+      deck,
+      size,
+      filter,
+      propsFilter,
+      tz,
+      cache
+    ),
     newCards = allowNew
-      ? cardShuffle(getNew(deck, size - dueCards.length, filter, cache))
+      ? cardShuffle(getNew(deck, size - dueCards.length, filter, propsFilter, cache))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
@@ -52,6 +60,7 @@ export function createLearningSession(
       cards: {},
       history: [],
       filter,
+      propsFilter,
       allowNew,
     },
     new: newCards.length,
@@ -252,6 +261,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       },
       -delta,
       session.filter,
+      session.propsFilter,
       getCache(deck.elements)
     )
 
@@ -406,6 +416,7 @@ function getNew(
   deck: t.Deck,
   limit: number,
   filter: string[],
+  propsFilter: string[],
   cache: t.DeckCache
 ): t.CardInstance[] {
   const res: t.CardInstance[] = [],
@@ -432,7 +443,8 @@ function getNew(
     if (usedEls[card.element]) continue
 
     for (const property of _.shuffle(Object.keys(props))) {
-      if (property[0] === '_') continue
+      if (property[0] === '_' || (propsFilter.length && !propsFilter.includes(property)))
+        continue
       const id = card2Id({ ...card, property })
       if (!deck.cards[id]) {
         sampleAndAdd(res, id, deck, filter, cache)
@@ -449,6 +461,7 @@ function getDue(
   deck: t.Deck,
   limit: number,
   filter: string[],
+  propsFilter: string[],
   tz: string,
   cache: t.DeckCache
 ) {
@@ -459,8 +472,12 @@ function getDue(
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
-        const elid = id2Card(cid).element
-        return cache.hasProps[elid] && !deck.elements[elid].virtual
+        const { element, property } = id2Card(cid)
+        return (
+          cache.hasProps[element] &&
+          !deck.elements[element].virtual &&
+          (!propsFilter.length || propsFilter.includes(property))
+        )
       }),
       [
         (cardId) => {

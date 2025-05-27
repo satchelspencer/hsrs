@@ -52,3 +52,4 @@ you can access the builtin review stats by clicking the `bar-graph` icon at the 
   - **retention**: decide your target retention, or what % of reviews you want to pass per day.
   - **parameters**: clicking optimize will update your fsrs parameters based on your learning history
   - **re-schedule**: re-computes what cards are currently due, you can use it after changing other learning settings though it may _drastically impact_ your reviews schedule.
+  - **props**: filter the properties you want to learn by name, comma separated `en,jp`

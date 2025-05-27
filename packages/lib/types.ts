@@ -49,6 +49,7 @@ export interface DeckSettings {
   fsrsParams?: FSRSParams
   retention?: number
   filter?: string[]
+  propsFilter?: string[]
   startOrder?: string
 }
 
@@ -87,6 +88,7 @@ export interface LearningSession {
   history: SessionCardLearning[]
   reviews: number
   filter: string[]
+  propsFilter: string[]
   allowNew: boolean
 }
 

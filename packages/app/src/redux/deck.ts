@@ -50,6 +50,7 @@ export const deck = createSlice({
         action.payload.size,
         state.settings.allowNew,
         state.settings.filter ?? [],
+        state.settings.propsFilter ?? [],
         'local'
       )
       state.session = session

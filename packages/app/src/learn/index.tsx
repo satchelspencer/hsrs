@@ -15,7 +15,9 @@ export function Learn() {
     deck = r.useSelector((s) => s.deck),
     dispatch = r.useDispatch()
 
-  const { allowNew, newSessionSize, filter } = r.useSelector((s) => s.deck.settings)
+  const { allowNew, newSessionSize, filter, propsFilter } = r.useSelector(
+    (s) => s.deck.settings
+  )
 
   const actualSessionSize = Math.pow(2, newSessionSize) * 30,
     {
@@ -25,7 +27,14 @@ export function Learn() {
       progress: dayProgress,
     } = useMemo(
       () =>
-        createLearningSession(deck, actualSessionSize, allowNew, filter ?? [], 'local'),
+        createLearningSession(
+          deck,
+          actualSessionSize,
+          allowNew,
+          filter ?? [],
+          propsFilter ?? [],
+          'local'
+        ),
       [newSessionSize, allowNew, filter, !!session]
     )
 
