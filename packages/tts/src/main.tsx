@@ -61,6 +61,7 @@ export function useTtsState(state: CardProps) {
       value[ttsKey]?.length &&
       (state.property === ttsKey || shownKeys.includes(ttsKey)),
     [loaded, setLoaded] = useState(false),
+    [playing, setPlaying] = useState(false),
     dedupedAudio = getAudioTxt(valueWithALiases, state.vars),
     dedupedNextAudio = getAudioTxt(state.next ?? {}, state.vars),
     modeText = (mode + '')
@@ -102,9 +103,12 @@ export function useTtsState(state: CardProps) {
 
     if (!src && state.noAuto) src = await fetchAudio(dedupedAudio)
 
+    if (!navigator.userActivation.hasBeenActive) return
+    setPlaying(true)
     if (src && aref.current) {
       aref.current.src = src
       setLoaded(true)
+      aref.current.onended = () => setPlaying(false)
       aref.current?.play()
     } else {
       setLoaded(true)
@@ -112,6 +116,7 @@ export function useTtsState(state: CardProps) {
       speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(dedupedAudio.text)
       utterance.lang = state.vars['lang']
+      utterance.onend = () => setPlaying(false)
       speechSynthesis.speak(utterance)
     }
   }
@@ -171,6 +176,7 @@ export function useTtsState(state: CardProps) {
     cardHasAudio,
     playSrc,
     loaded,
+    playing,
     aref,
     modeKey: shownKeys.find((k) => k !== ttsKey && k !== txtKey),
     ...state,
