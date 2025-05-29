@@ -13,7 +13,7 @@ export const defaultretention = 0.965
 export const grades = ['again', 'hard', 'good', 'easy']
 
 export function getLearnTargetStability(w: number[]) {
-  return nextStateFSRS(undefined, 0, 3, w).stability * 0.9
+  return invertRetr(defaultretention, 1 * 3600 * 24) //now 1 day at 965, could pass in retention
 }
 
 function roundf(number: number) {
