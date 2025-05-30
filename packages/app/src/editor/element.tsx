@@ -299,14 +299,6 @@ export function ElementEditor(props: ElementEditorProps) {
               ),
               false,
             ],
-            [
-              'test',
-              <Button
-                onClick={() => simpleElementSample(props.id, elements, cache, 'jp')}
-              >
-                senddd
-              </Button>,
-            ],
             !!example && [
               <div className={exampleHead}>
                 <span>Example</span>

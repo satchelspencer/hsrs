@@ -11,7 +11,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'node18',
     rollupOptions: {
-      external: ['commander', 'fs', 'chartjs-node-canvas'],
+      external: ['commander', 'fs', 'node-llama-cpp', 'path', 'node-fetch'],
     },
   },
 })

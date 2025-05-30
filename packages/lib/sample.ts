@@ -153,16 +153,13 @@ export function sampleElementIstance(
   throw 'sample not found'
 }
 
-async function rankSuffixes(prefix: string, suffixes: string[]): Promise<number[]> {
-  console.log('agg', JSON.stringify({ prefix, suffixes }))
-  return suffixes.map((s) => Math.random())
-}
-
 export async function simpleElementSample(
   id: string,
   elements: t.IdMap<t.Element>,
   cache: t.DeckCache,
   propName: string,
+  rank: (prefix: string, suffixes: string[]) => Promise<number[]>,
+  prob: (str: string) => Promise<number>,
   depth = 1,
   prefix = ''
 ): Promise<t.ElementInstance> {
@@ -170,24 +167,26 @@ export async function simpleElementSample(
 
   log('sampling', elements[id].name, 'prefix', prefix)
 
-  const descs = getNonVirtualDescendents(id, elements, cache)
+  let descs = _.shuffle(getNonVirtualDescendents(id, elements, cache))
 
   const prefixContributions = descs.map((d) =>
     computePartialResult({ element: d, params: {} }, elements, propName)
   )
 
-  if (prefix) console.log(prefixContributions)
+  const ranks = prefix
+    ? await rank(prefix, prefixContributions)
+    : prefixContributions.map((f) => Math.random())
 
-  const ordered = _.sortBy(descs, (d) => {
-    return Math.random()
-  })
-
-  for (const descendentId of ordered) {
+  let i = 0
+  for (const descendentId of _.sortBy(
+    descs,
+    (d) => -ranks[descs.indexOf(d) * Math.pow(Math.random(), 1 )]
+  )) {
     const element = getInheritedElement(descendentId, elements, cache),
       expr = element.props[propName] ?? '',
       params = element.params ?? {}
 
-    log('descendent', element.name)
+    log('descendent', element.name, ranks[i])
 
     const templateResult = run(
         expr,
@@ -205,29 +204,44 @@ export async function simpleElementSample(
 
     let dprefix = ''
 
+    let failed = false
     for (const paramName of outputOrderedParamNames) {
       log(' - param', paramName)
-      const paramId = params[paramName],
-        child = await simpleElementSample(
-          paramId,
-          elements,
-          cache,
-          propName,
-          depth + 1,
-          prefix + dprefix
-        )
-      resultInstance.params![paramName] = child
+      try {
+        const paramId = params[paramName],
+          child = await simpleElementSample(
+            paramId,
+            elements,
+            cache,
+            propName,
+            rank,
+            prob,
+            depth + 1,
+            prefix + dprefix
+          )
+        resultInstance.params![paramName] = child
 
-      const partial = computePartialResult(resultInstance, elements, propName)
-      if (partial) dprefix = partial
+        const partial = computePartialResult(resultInstance, elements, propName)
+        if (partial) dprefix = partial
+      } catch {
+        failed = true
+        break
+      }
+    }
+    if (failed) {
+      log('failed')
+      continue
     }
 
-    log(
-      'result',
-      cleanRuby(computeElementInstance(resultInstance, elements, cache)[propName])
-    )
+    const partialResult =
+      prefix + cleanRuby(computePartialResult(resultInstance, elements, propName))
+    const p = prefix ? await prob(partialResult) : 1
 
-    return resultInstance
+    log('result', partialResult, p)
+
+    if (p > 0.1) return resultInstance
+
+    if (i++ > 20) break
   }
 
   throw 'none found'
