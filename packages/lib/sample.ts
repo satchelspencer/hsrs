@@ -162,80 +162,90 @@ export async function simpleElementSample(
   id: string,
   elements: t.IdMap<t.Element>,
   cache: t.DeckCache,
+  propName: string,
   depth = 1,
   prefix = ''
 ): Promise<t.ElementInstance> {
-  const log = logger(3, 'sample', new Array(depth).join('   '))
+  const log = logger(3, 'simple', new Array(depth).join('   '))
+
+  log('sampling', elements[id].name, 'prefix', prefix)
 
   const descs = getNonVirtualDescendents(id, elements, cache)
 
-  let descendentId = _.sample(descs)!
+  const prefixContributions = descs.map((d) =>
+    computePartialResult({ element: d, params: {} }, elements, propName)
+  )
 
-  if (descs.length > 1 && prefix) {
-    const possibles: string[] = []
-    for (const desc of descs) {
-      if (cache.depths[desc] < 2) {
-        const possible = await simpleElementSample(
-          desc,
+  if (prefix) console.log(prefixContributions)
+
+  const ordered = _.sortBy(descs, (d) => {
+    return Math.random()
+  })
+
+  for (const descendentId of ordered) {
+    const element = getInheritedElement(descendentId, elements, cache),
+      expr = element.props[propName] ?? '',
+      params = element.params ?? {}
+
+    log('descendent', element.name)
+
+    const templateResult = run(
+        expr,
+        _.mapValues(params, (_, k) => ({ [propName]: `{{${k}}}` }))
+      ),
+      outputOrderedParamNames = _.sortBy(Object.keys(params), (p) =>
+        templateResult.indexOf(`{{${p}}}`)
+      ),
+      resultInstance: t.ElementInstance = {
+        element: descendentId,
+        params: {},
+      }
+
+    log(templateResult)
+
+    let dprefix = ''
+
+    for (const paramName of outputOrderedParamNames) {
+      log(' - param', paramName)
+      const paramId = params[paramName],
+        child = await simpleElementSample(
+          paramId,
           elements,
           cache,
+          propName,
           depth + 1,
-          prefix
+          prefix + dprefix
         )
-        possibles.push(
-          cleanRuby(computeElementInstance(possible, elements, cache)['jp'] as string)
-        )
-      }
+      resultInstance.params![paramName] = child
+
+      const partial = computePartialResult(resultInstance, elements, propName)
+      if (partial) dprefix = partial
     }
-    if (possibles.length) {
-      const ranks = await rankSuffixes(prefix, possibles)
-      // log('possibles', prefix, possibles)
-      const best = _.first(_.sortBy(descs, (d, i) => ranks[i]))
-      if (best) descendentId = best
-    }
+
+    log(
+      'result',
+      cleanRuby(computeElementInstance(resultInstance, elements, cache)[propName])
+    )
+
+    return resultInstance
   }
 
-  const element = getInheritedElement(descendentId, elements, cache)
+  throw 'none found'
+}
 
-  const expr = element.props['jp'] ?? ''
-
-  const params = element.params ?? {}
-
-  log('sampling', element.name, 'prefix', prefix)
-
-  const result = run(
-      expr,
-      _.mapValues(params, (_, k) => ({ jp: `{{${k}}}` }))
-    ),
-    orderedParamNames = _.sortBy(Object.keys(params), (p) => result.indexOf(`{{${p}}}`))
-
-  //log('fake result', result)
-  const resultInstance: t.ElementInstance = {
-    element: descendentId,
-    params: {},
-  }
-  for (const paramName of orderedParamNames) {
-    log(' - param', paramName)
-    const paramId = params[paramName]
-
-    const child = await simpleElementSample(paramId, elements, cache, depth + 1, prefix)
-    resultInstance.params![paramName] = child
-
-    const partialResult = computeElementInstance(resultInstance, elements, cache)[
-      'jp'
-    ] as string
-
-    if (partialResult)
-      prefix = cleanRuby(
-        partialResult.includes('undefined')
-          ? partialResult.substring(0, partialResult.indexOf('undefined'))
-          : partialResult
-      )
-  }
-
-  log('result', cleanRuby(computeElementInstance(resultInstance, elements, cache)['jp']))
-
-  return resultInstance
+function computePartialResult(
+  instace: t.ElementInstance,
+  elements: t.IdMap<t.Element>,
+  propName: string
+) {
+  const partialResult = computeElementInstance(instace, elements)[propName] as string
+  if (partialResult)
+    return cleanRuby(
+      partialResult.includes('undefined')
+        ? partialResult.substring(0, partialResult.indexOf('undefined'))
+        : partialResult
+    )
+  else return ''
 }
 
 export function* generateElementInstanceSamples(

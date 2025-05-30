@@ -301,7 +301,9 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
             [
               'test',
-              <Button onClick={() => simpleElementSample(props.id, elements, cache)}>
+              <Button
+                onClick={() => simpleElementSample(props.id, elements, cache, 'jp')}
+              >
                 senddd
               </Button>,
             ],
