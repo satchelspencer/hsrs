@@ -1,0 +1,15 @@
+{
+  "name": "@hsrs/cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "vite build src --config vite.config.js",
+    "cli": "node ./dist/cli.js"
+  },
+  "dependencies": {
+    "@hsrs/lib": "*",
+    "chartjs-node-canvas": "^5.0.0",
+    "commander": "^14.0.0"
+  }
+}

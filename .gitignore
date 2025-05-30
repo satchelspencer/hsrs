@@ -8,3 +8,4 @@ packages/*
 !packages/app
 !packages/lib
 !packages/tts
+!packages/cli
