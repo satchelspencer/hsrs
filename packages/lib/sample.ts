@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import * as t from './types'
+import jexl from 'jexl'
 
 import { getCache } from './cache'
 import { logger } from './log'
@@ -9,6 +10,8 @@ import {
   satisfies,
   satisfiesMode,
 } from './props'
+import { computeElementInstance, run } from './expr'
+import { cleanRuby } from './ruby'
 
 /* randomly generate an instance of an element or child by id,
 ensures consistent modes, constraints and avoids duplicate leaves */
@@ -148,6 +151,91 @@ export function sampleElementIstance(
     return inst
   }
   throw 'sample not found'
+}
+
+async function rankSuffixes(prefix: string, suffixes: string[]): Promise<number[]> {
+  console.log('agg', JSON.stringify({ prefix, suffixes }))
+  return suffixes.map((s) => Math.random())
+}
+
+export async function simpleElementSample(
+  id: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache,
+  depth = 1,
+  prefix = ''
+): Promise<t.ElementInstance> {
+  const log = logger(3, 'sample', new Array(depth).join('   '))
+
+  const descs = getNonVirtualDescendents(id, elements, cache)
+
+  let descendentId = _.sample(descs)!
+
+  if (descs.length > 1 && prefix) {
+    const possibles: string[] = []
+    for (const desc of descs) {
+      if (cache.depths[desc] < 2) {
+        const possible = await simpleElementSample(
+          desc,
+          elements,
+          cache,
+          depth + 1,
+          prefix
+        )
+        possibles.push(
+          cleanRuby(computeElementInstance(possible, elements, cache)['jp'] as string)
+        )
+      }
+    }
+    if (possibles.length) {
+      const ranks = await rankSuffixes(prefix, possibles)
+      // log('possibles', prefix, possibles)
+      const best = _.first(_.sortBy(descs, (d, i) => ranks[i]))
+      if (best) descendentId = best
+    }
+  }
+
+  const element = getInheritedElement(descendentId, elements, cache)
+
+  const expr = element.props['jp'] ?? ''
+
+  const params = element.params ?? {}
+
+  log('sampling', element.name, 'prefix', prefix)
+
+  const result = run(
+      expr,
+      _.mapValues(params, (_, k) => ({ jp: `{{${k}}}` }))
+    ),
+    orderedParamNames = _.sortBy(Object.keys(params), (p) => result.indexOf(`{{${p}}}`))
+
+  //log('fake result', result)
+  const resultInstance: t.ElementInstance = {
+    element: descendentId,
+    params: {},
+  }
+  for (const paramName of orderedParamNames) {
+    log(' - param', paramName)
+    const paramId = params[paramName]
+
+    const child = await simpleElementSample(paramId, elements, cache, depth + 1, prefix)
+    resultInstance.params![paramName] = child
+
+    const partialResult = computeElementInstance(resultInstance, elements, cache)[
+      'jp'
+    ] as string
+
+    if (partialResult)
+      prefix = cleanRuby(
+        partialResult.includes('undefined')
+          ? partialResult.substring(0, partialResult.indexOf('undefined'))
+          : partialResult
+      )
+  }
+
+  log('result', cleanRuby(computeElementInstance(resultInstance, elements, cache)['jp']))
+
+  return resultInstance
 }
 
 export function* generateElementInstanceSamples(

@@ -14,6 +14,7 @@ import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
+import { simpleElementSample } from '@hsrs/lib/sample'
 
 interface ElementEditorProps {
   id: string
@@ -297,6 +298,12 @@ export function ElementEditor(props: ElementEditorProps) {
                 />
               ),
               false,
+            ],
+            [
+              'test',
+              <Button onClick={() => simpleElementSample(props.id, elements, cache)}>
+                senddd
+              </Button>,
             ],
             !!example && [
               <div className={exampleHead}>
