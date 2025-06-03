@@ -342,18 +342,24 @@ export interface SessionState {
     graduation: number
   }
   shownValue?: Partial<t.PropsInstance>
+  isNew?: boolean
 }
 
 export function getSessionState(
   session: t.LearningSession | null,
   elements: t.IdMap<t.Element>,
-  revealed: boolean
+  revealed: boolean,
+  cardStates: t.CardStates
 ): SessionState {
   const estReviews = session ? estimateReviewsRemaining(session) : 0,
     card = session?.stack[0],
     value = card && computeElementInstance(card, elements),
     nextCard = session?.stack[1],
-    next = nextCard && computeElementInstance(nextCard, elements)
+    next = nextCard && computeElementInstance(nextCard, elements),
+    isNew =
+      !!card &&
+      !cardStates[card2Id(card)] &&
+      !session.history.findLast((c) => id2Card(c.cardId).element === card.element)
 
   return {
     progress: {
@@ -372,6 +378,7 @@ export function getSessionState(
     next,
     mode: card && computeElementMode(card, elements),
     shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
+    isNew,
   }
 }
 

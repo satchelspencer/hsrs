@@ -25,7 +25,7 @@ export function Card() {
 
   const [revealed, setRevealed] = useState(false),
     sessionState = useMemo(
-      () => getSessionState(session, elements, revealed),
+      () => getSessionState(session, elements, revealed, deck.cards),
       [session, elements, revealed]
     ),
     { progress, card, value, mode, shownValue, next } = sessionState,
