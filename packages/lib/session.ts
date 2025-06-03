@@ -190,7 +190,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
   const cardState = nextSessionState(session.cards[cardId], virtualGrade)
   session.cards[cardId] = cardState
 
-  const jitter = Math.floor(Math.random() * 3 - 1),
+  const jitter = cardState.stability <= 0.5 ? 0 : Math.floor(Math.random() * 3 - 1),
     graduated = cardState.stability >= 1,
     minGraduatedIndex = session.stack.findLastIndex((v) => {
       const state = session.cards[card2Id(v)]
