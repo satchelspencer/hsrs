@@ -470,6 +470,7 @@ function getDue(
     nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
     startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
+    timeToEndOfDay = endOfDay - nowTz.toSeconds(),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
         const { element, property } = id2Card(cid)
@@ -491,7 +492,9 @@ function getDue(
               state.lastMiss && state.lastSeen! - state.lastMiss < 60 * 30
                 ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
                 : Infinity
-          return Math.min(dueIn, lastOpenMissAgo)
+          return lastOpenMissAgo < dueIn
+            ? lastOpenMissAgo
+            : Math.max(lastOpenMissAgo, timeToEndOfDay * Math.random())
         },
       ]
     )
