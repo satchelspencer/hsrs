@@ -3,6 +3,7 @@ import _ from 'lodash'
 import * as t from './types'
 import { getInheritedElement, satisfiesMode } from './props'
 import { getCache } from './cache'
+import { cleanRuby } from './ruby'
 
 export const RUBY_DELIM = '~'
 
@@ -50,6 +51,11 @@ jexl.addTransform('mts', (val: string, search) => {
   const index = val.indexOf(search)
   if (index === -1) return val
   return search + val.slice(0, index) + val.slice(index + search.length)
+})
+
+/* no ruby, atomize */
+jexl.addTransform('a', (val: string) => {
+  return cleanRuby(val)
 })
 
 /* creates an end-moving token that will move to the nearest boundary */
