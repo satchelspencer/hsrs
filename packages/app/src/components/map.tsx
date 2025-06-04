@@ -28,10 +28,13 @@ interface MapEditorProps<T extends t.IdMap<any>> {
 
 export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
   const hasOwnAdder = props.defaultValue !== undefined,
-    items = _.sortBy([
-      ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
-      ...Object.keys(props.value),
-    ])
+    items = _.orderBy(
+      [
+        ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
+        ...Object.keys(props.value),
+      ],
+      [(v) => (v[0] === '_' ? 1 : 0), (v) => v]
+    )
   return hasOwnAdder || items.length > 0 ? (
     <div className={mapWrapper}>
       <LabelGroup
