@@ -164,6 +164,7 @@ export function Card() {
               Object.keys(shownValue ?? {}).map((id) => {
                 const value = shownValue?.[id]
                 return (
+                  id[0] !== '_' &&
                   value &&
                   typeof value === 'string' && (
                     <div key={id} className={cardValue}>

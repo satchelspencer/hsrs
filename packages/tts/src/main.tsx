@@ -44,7 +44,10 @@ export function useTtsState(state: CardProps) {
     keys = Object.keys(value),
     { txtKey, ttsKey } = getKeys(value, state.vars),
     shownKeys = (state.revealed ? keys : state.property ? [state.property] : []).filter(
-      (k) => typeof value[k] === 'string' && (state.revealed || k !== ttsKey)
+      (k) =>
+        typeof value[k] === 'string' &&
+        (state.revealed || k !== ttsKey) &&
+        (k === ttsKey || k[0] !== '_')
     ),
     valueWithALiases = Object.fromEntries(
       Object.entries(value).map(([key, value]) => [
