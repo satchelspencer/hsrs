@@ -531,13 +531,14 @@ function getDue(
   }
 
   let sameDays = 0,
-    sampleFailures = 0
+    sampleFailures = 0,
+    nextDones = 0
 
   while (dueCards.length + nextCards.length < limit && cardsIds.length) {
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
       dueToday = state.due && state.due < endOfDay,
-      seenToday = state.lastSeen && state.lastSeen > startOfDay,
+      seenToday = state.lastRoot && state.lastRoot > startOfDay,
       firstSeenToday = state.firstSeen && state.firstSeen > startOfDay,
       isDue = dueToday && !seenToday,
       isSameDay = dueToday && seenToday
@@ -553,6 +554,7 @@ function getDue(
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
+    if (added && isDue) nextDones++
   }
 
   const dcvs = Object.values(dayCounts),
@@ -573,7 +575,7 @@ function getDue(
     due: Math.max(dueCount - sampleFailures + doneCount, doneCount),
     done: doneCount,
     new: newCount,
-    next: dueCards.length - sameDays, //next discounts same day reviews
+    next: nextDones,
   }
 
   return { dueCards, nextCards, progress }
