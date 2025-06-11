@@ -559,6 +559,16 @@ function getDue(
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
     if (added && !isSameDay) nextDones++
+
+    /* finishing goal, session can be shorter down to 60 */
+    if (
+      deck.goal &&
+      deck.goal.date === startOfDay &&
+      doneCount < deck.goal.count &&
+      nextDones + doneCount >= deck.goal.count &&
+      dueCards.length + nextCards.length >= 60
+    )
+      break
   }
 
   const dcvs = Object.values(dayCounts),
