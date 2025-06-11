@@ -558,7 +558,7 @@ function getDue(
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
-    if (added && isDue) nextDones++
+    if (added && !isSameDay) nextDones++
   }
 
   const dcvs = Object.values(dayCounts),
