@@ -495,13 +495,17 @@ function getDue(
         (cardId) => {
           const state = deck.cards[cardId],
             dueIn = (state.due ?? Infinity) - endOfDay,
+            openMissRange = 24, //hours
             lastOpenMissAgo =
               state.lastMiss &&
               state.lastSeen! - state.lastMiss < 60 * 30 &&
               nowSeconds - state.lastMiss > 60 * 30
-                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
+                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) /
+                  openMissRange
                 : Infinity
-          return Math.min(dueIn, lastOpenMissAgo)
+          return lastOpenMissAgo < dueIn
+            ? lastOpenMissAgo
+            : Math.max(lastOpenMissAgo, openMissRange * 3600 * Math.random())
         },
       ]
     )
