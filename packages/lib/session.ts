@@ -495,17 +495,13 @@ function getDue(
         (cardId) => {
           const state = deck.cards[cardId],
             dueIn = (state.due ?? Infinity) - endOfDay,
-            openMissRange = 24, //hours
             lastOpenMissAgo =
               state.lastMiss &&
               state.lastSeen! - state.lastMiss < 60 * 30 &&
               nowSeconds - state.lastMiss > 60 * 30
-                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) /
-                  openMissRange
+                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
                 : Infinity
-          return lastOpenMissAgo < dueIn
-            ? lastOpenMissAgo
-            : Math.max(lastOpenMissAgo, openMissRange * 3600 * Math.random())
+          return Math.min(lastOpenMissAgo, dueIn)
         },
       ]
     )
@@ -623,10 +619,7 @@ export function sampleAndAdd(
   if (filter.length && needsMatch && !hasMatch) return
 
   const target = deck.settings.retention ?? defaultretention,
-    childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
-    targetStability =
-      getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-      (Math.pow(cache.depths[element], 1.5) + 1)
+    childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1))
 
   let i = 0
   while (i < SAMPLE_TRIES) {
@@ -655,10 +648,14 @@ export function sampleAndAdd(
           (elId) => {
             const card = deck.cards[card2Id({ element: elId, property })]
             if (!cache.hasProps[elId] || elId === element) return true
-            else
+            else {
+              const targetStability =
+                getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
+                (Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
               return card
                 ? card.stability > targetStability
                 : !cache.depths[elId] && getLearnOrder(elId, deck).pre
+            }
           }
         ),
         property,
