@@ -27,16 +27,18 @@ export function createLearningSession(
 ): t.SessionAndProgress {
   const log = logger(2, 'session'),
     t = new Date().getTime(),
+    nc = getNewCardFactor(),
+    newCount = allowNew ? nc * Math.sqrt(size / 30) * 6 : 0,
     { dueCards, nextCards, progress } = getDue(
       deck,
-      size,
+      size - newCount / nc,
       filter,
       propsFilter,
       tz,
       cache
     ),
     newCards = allowNew
-      ? cardShuffle(getNew(deck, size - dueCards.length, filter, propsFilter, cache))
+      ? cardShuffle(getNew(deck, newCount, filter, propsFilter, cache))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
@@ -426,13 +428,19 @@ function getNew(
   propsFilter: string[],
   cache: t.DeckCache
 ): t.CardInstance[] {
+  let maxOrder = '0'
+  for (const cardId in deck.cards) {
+    const { order } = getLearnOrder(id2Card(cardId).element, deck)
+    if (order && order > maxOrder) maxOrder = order
+  }
+
   const res: t.CardInstance[] = [],
     cards = _.orderBy(
       getAllCards(deck.elements).filter((c) => !deck.cards[card2Id(c)]),
       [
         (c) => getLearnOrder(c.element, deck).order,
         (c) => {
-          return getLearnOrder(c.element, deck).pre
+          return getLearnOrder(c.element, deck).order < maxOrder
             ? (cache.depths[c.element] > 0 ? 0.25 : 1) * Math.random()
             : Math.random()
         },
