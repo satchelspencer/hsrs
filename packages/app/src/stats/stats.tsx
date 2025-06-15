@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { DateTime, DateTimeUnit } from 'luxon'
-import _ from 'lodash'
+import _, { set } from 'lodash'
 import { Bar, Chart, Line } from 'react-chartjs-2'
 
 import * as t from '@hsrs/lib/types'
@@ -15,6 +15,8 @@ import {
   nextInterval,
   offsetRetention,
 } from '@hsrs/lib/schedule'
+import { Icon } from '../components/icon'
+import { Button } from '../components/button'
 
 interface TimeStatProps {
   stats: t.HourlyStatsMap
@@ -387,5 +389,144 @@ export function Accuracy(props: TimeStatProps) {
         scales: { x: { stacked: false }, y: { stacked: false } },
       }}
     />
+  )
+}
+
+const hue = 150
+
+const COLORS = [
+  `oklch(0.9 0 ${hue})`,
+  `oklch(0.8 0.1 ${hue})`,
+  `oklch(0.7 0.1 ${hue})`,
+  `oklch(0.6 0.1 ${hue})`,
+  `oklch(0.5 0.1 ${hue})`,
+]
+
+type StreakDay = { date: string; count: number }
+
+export function Heatmap({ stats }: TimeStatProps) {
+  const [offset, setOffset] = useState(0)
+
+  const { weeks, maxStreak, firstStreak } = useMemo(() => {
+    const dayGroups = _.groupBy(Object.values(stats), (s) =>
+        DateTime.fromSeconds(s.time).minus({ hours: 4 }).toISODate()
+      ),
+      now = DateTime.local().plus({ day: 1 }).startOf('week').minus({ day: 1 }),
+      byWeek: StreakDay[][] = []
+
+    let max = 0
+    for (let i = 0; i < 52; i++) {
+      const week: StreakDay[] = []
+      for (let j = 0; j < 7; j++) {
+        const date = now
+            .minus({ weeks: i - offset * 52 })
+            .plus({ days: j })
+            .toISODate(),
+          count = _.sumBy(dayGroups[date], (d) =>
+            _.sumBy(Object.values(d.scores), (s) => s.count)
+          )
+        week.push({ date, count })
+        if (count > max) max = count
+      }
+      byWeek.unshift(week)
+    }
+
+    let streak = 0,
+      maxStreak = 0,
+      firstStreak = 0,
+      firstMiss = false
+
+    const startTime = _.minBy(Object.values(stats), (s) => s.time)?.time,
+      limit = startTime ? -DateTime.fromSeconds(startTime).diffNow('days').days : 0
+
+    for (let d = 0; d < limit; d++) {
+      const newDate = DateTime.local()
+        .minus({ day: d + 1 })
+        .toISODate()
+      if (dayGroups[newDate] && d < limit - 1) {
+        streak++
+      } else {
+        if (d === 0) firstMiss = true
+        if (!firstStreak) firstStreak = streak
+        if (streak > maxStreak) maxStreak = streak
+        streak = 0
+      }
+    }
+
+    return {
+      weeks: byWeek.map((col) =>
+        col.map((d) => ({
+          ...d,
+          lvl: d.count === 0 ? 0 : Math.min(4, Math.ceil((d.count / max) * 4)),
+        }))
+      ),
+      maxStreak,
+      firstStreak: firstMiss ? 0 : firstStreak,
+    }
+  }, [stats, offset])
+
+  const today = DateTime.local().toISODate()
+
+  return (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 20,
+        }}
+      >
+        <div>
+          Current streak: <b>{firstStreak}d</b>, longest: <b>{maxStreak}d</b>
+        </div>
+        <div style={{ display: 'flex' }}>
+          <Button onClick={(s) => setOffset((o) => o - 1)}>
+            <Icon size={1.2} name="caret-left" />
+          </Button>
+          <Button disabled={offset === 0} onClick={(s) => setOffset((o) => o + 1)}>
+            <Icon size={1.2} name="caret-right" />
+          </Button>
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          gap: 2,
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        {weeks.map((week, wi) => (
+          <div
+            key={wi}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              flex: 1,
+              boxSizing: 'border-box',
+            }}
+          >
+            {week.map((d, di) => (
+              <div
+                key={di}
+                title={
+                  d.date ? `${d.date}: ${d.count} review${d.count === 1 ? '' : 's'}` : ''
+                }
+                style={{
+                  width: '100%',
+                  paddingBottom: '100%',
+                  backgroundColor:
+                    d.date === today && !d.count ? `oklch(0.8 0.1 250)` : COLORS[d.lvl],
+                  boxSizing: 'border-box',
+                  opacity: 0.9,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
