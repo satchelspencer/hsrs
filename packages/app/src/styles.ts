@@ -1,5 +1,5 @@
 import { css, injectGlobal } from '@emotion/css'
-import { convertOkhslToOklab, convertOklabToRgb, formatRgb, Okhsl } from 'culori'
+import { convertOkhslToOklab, convertOklabToRgb, formatHex } from 'culori'
 
 injectGlobal`
   body {
@@ -24,7 +24,7 @@ function normColor(color?: Color) {
 }
 
 export function color(color?: Color) {
-  return formatRgb(
+  return formatHex(
     convertOklabToRgb(convertOkhslToOklab({ l: 1, s: 0, ...normColor(color) }))
   )
 }

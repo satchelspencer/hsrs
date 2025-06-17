@@ -17,6 +17,7 @@ import { Deck, HourlyStatsMap } from '@hsrs/lib/types'
 import {
   Accuracy,
   DifficultyDist,
+  Heatmap,
   HoursSpent,
   NewCards,
   ProgressDist,
@@ -138,6 +139,7 @@ export function Stats(props: StatsEditorProps) {
               ],
               ['Total new cards seen', <NewCards stats={stats} options={options} />],
               ['Accuracy', <Accuracy stats={stats} options={options} />],
+              ['Heatmap', <Heatmap stats={stats} options={options} />],
             ]}
           />
         )}

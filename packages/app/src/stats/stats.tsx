@@ -17,15 +17,18 @@ import {
 } from '@hsrs/lib/schedule'
 import { Icon } from '../components/icon'
 import { Button } from '../components/button'
+import { color } from '../styles'
 
 interface TimeStatProps {
   stats: t.HourlyStatsMap
   options: StatsOptions
+  hue?: number
 }
 
 interface DeckStatProps {
   deck: t.Deck
   options: StatsOptions
+  hue?: number
 }
 
 function formatDate(seconds: number, scale: DateTimeUnit) {
@@ -49,7 +52,14 @@ export function HoursSpent(props: TimeStatProps) {
         })),
       }
     }, [props.stats, props.options]),
-    scoreColors = ['', '#c24141', '#cd9138', '#50bf68', '#29c34b']
+    hue = props.hue ?? 240,
+    scoreColors = [
+      '',
+      getColorV(hue, 1),
+      getColorV(hue, 0.75),
+      getColorV(hue, 0.25),
+      getColorV(hue, 0),
+    ]
 
   return (
     <Bar
@@ -95,7 +105,7 @@ export function Reviews(props: TimeStatProps) {
   )
 }
 
-export function StabilityDist({ deck, options }: DeckStatProps) {
+export function StabilityDist({ deck, options, hue }: DeckStatProps) {
   const data = useMemo(() => {
     const cache = getCache(deck.elements),
       allCards = getAllCards(deck.elements).filter((c) => !!deck.cards[card2Id(c)]),
@@ -133,6 +143,12 @@ export function StabilityDist({ deck, options }: DeckStatProps) {
     }
   }, [])
 
+  const total = data.data.length,
+    backgroundColors = data.data.map(
+      (_, i) => getColorV(hue ?? 240, 1 - i / total) + 'a0'
+    ),
+    borderColors = data.data.map((_, i) => getColorV(hue ?? 240, 1 - i / total))
+
   return (
     <Bar
       data={{
@@ -141,8 +157,8 @@ export function StabilityDist({ deck, options }: DeckStatProps) {
           {
             label: 'Card Count',
             data: data.data,
-            backgroundColor: '#518bc1a0',
-            borderColor: '#518bc1',
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
             borderWidth: 1,
           },
         ],
@@ -166,13 +182,13 @@ export function SeenPercentage({ deck }: DeckStatProps) {
 
   return (
     <div>
-      <i>{data.seenCount}</i> seen of <i>{data.totalCards}</i> cards available (
-      <i>{data.percentage}%</i>)
+      <b>{data.seenCount}</b> seen of <b>{data.totalCards}</b> cards available (
+      <b>{data.percentage}%</b>)
     </div>
   )
 }
 
-export function ProgressDist({ deck }: DeckStatProps) {
+export function ProgressDist({ deck, hue }: DeckStatProps) {
   const data = useMemo(() => {
     const allCards = getAllCards(deck.elements),
       seenMap: { [order: string]: number } = {},
@@ -197,7 +213,8 @@ export function ProgressDist({ deck }: DeckStatProps) {
     }
   }, [deck])
 
-  const colors = ['#50bf68', '#cdcdcd']
+  const colors = [color({ l: 0.6, s: 0.7, h: hue ?? 240 }), '#cdcdcd']
+
   return (
     <Bar
       data={{
@@ -211,16 +228,21 @@ export function ProgressDist({ deck }: DeckStatProps) {
       }}
       options={{
         ...commonChartOptions,
+        indexAxis: 'y',
         scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true },
+          x: { stacked: true, beginAtZero: true },
+          y: { stacked: true },
         },
       }}
     />
   )
 }
 
-export function DifficultyDist({ deck, options }: DeckStatProps) {
+function getColorV(hue: number, t: number) {
+  return color({ l: (1 - t) * 0.4 + 0.3, s: 0.7, h: (hue ?? 240) - t * 30 })
+}
+
+export function DifficultyDist({ deck, options, hue }: DeckStatProps) {
   const data = useMemo(() => {
     const allCards = getAllCards(deck.elements).filter((c) => !!deck.cards[card2Id(c)]),
       difficultyValues = allCards.map(
@@ -248,11 +270,10 @@ export function DifficultyDist({ deck, options }: DeckStatProps) {
 
   function getGradientColor(i: number, total: number) {
     const t = total > 1 ? i / (total - 1) : 0,
-      r = Math.round(230 * t),
-      g = Math.round(230 * (1 - t))
+      c = getColorV(hue ?? 240, t)
     return {
-      background: `rgba(${r}, ${g}, 0, 0.5)`,
-      border: `rgb(${r}, ${g}, 0,0.7)`,
+      background: c + 'a0',
+      border: c,
     }
   }
 
@@ -307,6 +328,8 @@ export function NewCards(props: TimeStatProps) {
     }
   }, [props.stats, props.options])
 
+  const c = color({ l: 0.6, s: 0.7, h: props.hue ?? 240 })
+
   return (
     <Chart
       type="line"
@@ -316,8 +339,8 @@ export function NewCards(props: TimeStatProps) {
           ds.type === 'bar'
             ? {
                 ...ds,
-                borderColor: '#50bf68',
-                backgroundColor: '#50bf68a0',
+                borderColor: c,
+                backgroundColor: c + 'a0',
                 borderWidth: 1,
                 type: 'bar',
                 yAxisID: 'y1',
@@ -370,6 +393,7 @@ export function Accuracy(props: TimeStatProps) {
     }
   }, [props.stats, props.options])
 
+  const c = color({ l: 0.6, s: 0.7, h: props.hue ?? 240 })
   return (
     <Line
       data={{
@@ -377,7 +401,7 @@ export function Accuracy(props: TimeStatProps) {
         datasets: data.datasets.map((ds) => ({
           ...ds,
           fill: false,
-          borderColor: '#2967c39f',
+          borderColor: c + '9f',
           tension: 0.1,
           pointRadius: 0,
           pointHoverRadius: 0,
@@ -392,19 +416,11 @@ export function Accuracy(props: TimeStatProps) {
   )
 }
 
-const hue = 150
-
-const COLORS = [
-  `oklch(0.9 0 ${hue})`,
-  `oklch(0.8 0.1 ${hue})`,
-  `oklch(0.7 0.1 ${hue})`,
-  `oklch(0.6 0.1 ${hue})`,
-  `oklch(0.5 0.1 ${hue})`,
-]
-
 type StreakDay = { date: string; count: number }
 
-export function Heatmap({ stats }: TimeStatProps) {
+export function Heatmap({ stats, hue }: TimeStatProps) {
+  const rhue = hue ?? 240
+
   const [offset, setOffset] = useState(0)
 
   const { weeks, maxStreak, firstStreak } = useMemo(() => {
@@ -518,7 +534,11 @@ export function Heatmap({ stats }: TimeStatProps) {
                   width: '100%',
                   paddingBottom: '100%',
                   backgroundColor:
-                    d.date === today && !d.count ? `oklch(0.8 0.1 250)` : COLORS[d.lvl],
+                    d.date === today && !d.count
+                      ? `oklch(0.8 0.1 250)`
+                      : d.count
+                      ? getColorV(rhue, d.lvl / 4) + 'd0'
+                      : `oklch(0.9 0 30)`,
                   boxSizing: 'border-box',
                   opacity: 0.9,
                 }}
