@@ -345,6 +345,7 @@ export interface SessionState {
   }
   shownValue?: Partial<t.PropsInstance>
   isNew?: boolean
+  hasFailed?: boolean
 }
 
 export function getSessionState(
@@ -361,7 +362,9 @@ export function getSessionState(
     isNew =
       !!card &&
       !cardStates[card2Id(card)] &&
-      !session.history.findLast((c) => id2Card(c.cardId).element === card.element)
+      !session.history.findLast((c) => id2Card(c.cardId).element === card.element),
+    hasFailed =
+      !!card && session.history?.findLast((v) => v.cardId === card2Id(card))?.score === 1
 
   return {
     progress: {
@@ -381,6 +384,7 @@ export function getSessionState(
     mode: card && computeElementMode(card, elements),
     shownValue: revealed ? value : _.pick(value, card?.property ?? ''),
     isNew,
+    hasFailed,
   }
 }
 
