@@ -48,7 +48,6 @@ export function nextCardState(
     lastSeen: now,
     lastScore: grade,
     lastMiss: grade > 2 || !root ? cardState?.lastMiss : now,
-    due: base + nextInterval(memoryState.stability, retention),
     firstSeen: cardState?.firstSeen ?? now,
     lastRoot: root ? now : cardState?.lastRoot,
   }
@@ -224,4 +223,27 @@ export function getELRetrOffset(
       // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
       3 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
   return offset
+}
+
+export function getCardDueDates(deck: t.Deck, cache: t.DeckCache) {
+  const dues: { [cardId: string]: number | undefined } = {}
+
+  for (const cardId in deck.cards)
+    dues[cardId] = getCardDue(cardId, deck.cards[cardId], deck, cache)
+
+  return dues
+}
+
+export function getCardDue(
+  cardId: string,
+  state: t.CardState,
+  deck: t.Deck,
+  cache: t.DeckCache
+) {
+  if (state.lastBase) {
+    const offset = getELRetrOffset(id2Card(cardId).element, deck.elements, cache),
+      retention = offsetRetention(deck.settings.retention ?? defaultretention, offset)
+
+    return state.lastBase + nextInterval(state.stability, retention)
+  }
 }

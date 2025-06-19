@@ -4,6 +4,7 @@ import * as r from '../redux'
 
 import {
   defaultretention,
+  getCardDue,
   getELRetrOffset,
   getLearningCardDiff,
   getRetr,
@@ -71,16 +72,18 @@ export function SessionStats() {
           currentInt = nextInterval(current?.stability, eretention),
           nextInt = nextInterval(v.stability, eretention),
           currentVal = currentInt / 24 / 3600,
-          nextVal = nextInt / 24 / 3600
+          nextVal = nextInt / 24 / 3600,
+          currentDue = current && getCardDue(key, current, deck, cache),
+          nextDue = v && getCardDue(key, v, deck, cache)
 
         nextStats.push({
           cardId: key,
           s: nextVal,
           intdiff: current ? ((nextVal - currentVal) / currentVal) * 100 : 0,
-          duediff: current?.due ? (now - current.due) / 24 / 3600 : 0,
+          duediff: currentDue ? (now - currentDue) / 24 / 3600 : 0,
           seendiff: current?.lastSeen ? (now - current.lastSeen) / 24 / 3600 : 0,
           retr: current?.lastSeen ? getRetr(current, now - current.lastSeen) : 0,
-          nextDueDiff: current?.due && v?.due ? (v.due - current.due) / 24 / 3600 : 0,
+          nextDueDiff: currentDue && nextDue ? (nextDue - currentDue) / 24 / 3600 : 0,
         })
       }
     } else {

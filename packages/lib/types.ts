@@ -59,7 +59,6 @@ export interface MemoryState {
 }
 
 export interface CardState extends MemoryState {
-  due?: number
   lastSeen?: number
   lastBase?: number
   lastScore?: number
@@ -141,7 +140,6 @@ export interface SessionAndProgress {
   new: number
   due: number
   next: number
-  maxp: number
   progress: DayProgress
 }
 
@@ -155,5 +153,6 @@ export type DayProgress = {
 
 export interface GoalState {
   date: number
+  ret?: number
   count: number
 }

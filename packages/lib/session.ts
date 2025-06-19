@@ -4,6 +4,7 @@ import { getAllCards, getInheritedElement, getLearnOrder } from './props'
 import {
   defaultParams,
   defaultretention,
+  getCardDueDates,
   getLearnTargetStability,
   getRetr,
   getTime,
@@ -68,7 +69,6 @@ export function createLearningSession(
     new: newCards.length,
     due: dueCards.length,
     next: previewCards.length,
-    maxp: Math.max(0, ...previewCards.map((card) => deck.cards[card2Id(card)].due ?? 0)),
     progress,
   }
 }
@@ -485,7 +485,8 @@ function getDue(
   tz: string,
   cache: t.DeckCache
 ) {
-  const dueCards: t.CardInstance[] = [],
+  const dues = getCardDueDates(deck, cache),
+    dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
     nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
     nowSeconds = nowTz.toSeconds(),
@@ -502,12 +503,12 @@ function getDue(
       }),
       [
         (cardId) => {
-          const state = deck.cards[cardId]
-          return state.due && state.due < endOfDay ? 0 : 1
+          const due = dues[cardId]
+          return due && due < endOfDay ? 0 : 1
         },
         (cardId) => {
           const state = deck.cards[cardId],
-            dueIn = (state.due ?? Infinity) - endOfDay,
+            dueIn = (dues[cardId] ?? Infinity) - endOfDay,
             lastOpenMissAgo =
               state.lastMiss &&
               state.lastSeen! - state.lastMiss < 60 * 30 &&
@@ -524,20 +525,13 @@ function getDue(
     dueCount = 0
   const dayCounts: { [day: number]: number } = {}
   for (const cardId of cardsIds) {
-    const state = deck.cards[cardId]
+    const state = deck.cards[cardId],
+      due = dues[cardId]
 
     if (state.firstSeen && state.firstSeen > startOfDay) newCount++
     else if (state.lastRoot && state.lastRoot > startOfDay) doneCount++
-    else if (
-      state.due &&
-      state.lastSeen &&
-      state.due < endOfDay &&
-      state.lastSeen < startOfDay
-    ) {
-      const day = DateTime.fromSeconds(state.due!)
-        .minus({ hours: 4 })
-        .startOf('day')
-        .toSeconds()
+    else if (due && state.lastSeen && due < endOfDay && state.lastSeen < startOfDay) {
+      const day = DateTime.fromSeconds(due).minus({ hours: 4 }).startOf('day').toSeconds()
       dayCounts[day] = (dayCounts[day] ?? 0) + 1
       dueCount++
     }
@@ -550,7 +544,8 @@ function getDue(
   while (dueCards.length + nextCards.length < limit && cardsIds.length) {
     const cardId = cardsIds.shift()!,
       state = deck.cards[cardId],
-      dueToday = state.due && state.due < endOfDay,
+      due = dues[cardId],
+      dueToday = due && due < endOfDay,
       seenToday = state.lastRoot && state.lastRoot > startOfDay,
       firstSeenToday = state.firstSeen && state.firstSeen > startOfDay,
       isDue = dueToday && !seenToday,
@@ -586,10 +581,13 @@ function getDue(
     chipper = Math.min(backlog, dailyGoal) //backlog cant exceed single day due
 
   const nextGoal: t.GoalState =
-    deck.goal && deck.goal.date === startOfDay
+    deck.goal &&
+    deck.goal.date === startOfDay &&
+    deck.goal.ret === deck.settings.retention
       ? deck.goal
       : {
           date: startOfDay,
+          ret: deck.settings.retention,
           count: Math.min(dailyGoal + chipper, dueCount) + doneCount - sampleFailures,
         }
 
