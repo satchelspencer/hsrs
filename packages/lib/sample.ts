@@ -30,7 +30,7 @@ export function sampleElementIstance(
     rootElement = getInheritedElement(id, elements, cache)
   commonMode ??= new Array(8).fill(0).map((_, i) => {
     const rootm = rootElement.mode?.[i] ?? ''
-    return { mode: rootm && rootm.toUpperCase() === rootm ? '*' : rootm }
+    return { mode: rootm && rootm.match(/[A-Z]/) ? '*' : rootm }
   })
   leaves ??= {}
 
@@ -52,6 +52,7 @@ export function sampleElementIstance(
     Object.keys(leaves)
       .map((l) => elements[l].name)
       .join(','),
+    commonMode.map((c) => c.mode || '.').join(''),
   ])
   while (normed.length) {
     const sum = _.sumBy(normed),
@@ -94,7 +95,10 @@ export function sampleElementIstance(
         if (ncommon) common.mode = ncommon
       }
     }
-    if (failed) continue
+    if (failed) {
+      log('-mode fail', mode)
+      continue
+    }
 
     for (const fparam in fixedParams) {
       if (!params[fparam]) continue
@@ -114,9 +118,7 @@ export function sampleElementIstance(
         (_, v) => constraint.includes(v)
       ),
       childCommonMode = commonMode.map((c, i) =>
-        mode?.[i] && (mode[i] === '*' || mode[i].toUpperCase() === mode[i])
-          ? { mode: '*' }
-          : c
+        mode?.[i] && (mode[i] === '*' || mode[i].match(/[A-Z]/)) ? { mode: '*' } : c
       )
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()

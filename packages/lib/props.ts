@@ -103,7 +103,9 @@ export function satisfiesMode(a: string = '', b: string = '') {
     const av = a[i],
       bv = b[i]
 
-    if (
+    if (av?.match(/[A-Z]/)) common = common + av
+    else if (bv?.match(/[A-Z]/)) common = common + bv
+    else if (
       av &&
       bv &&
       av !== '-' &&
@@ -113,7 +115,7 @@ export function satisfiesMode(a: string = '', b: string = '') {
       av.toLowerCase() !== bv.toLowerCase()
     )
       return undefined
-    common = common + getCommon(av, bv)
+    else common = common + getCommon(av, bv)
   }
   return common
 }
