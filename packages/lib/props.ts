@@ -104,7 +104,6 @@ export function satisfiesMode(a: string = '', b: string = '') {
       bv = b[i]
 
     if (av?.match(/[A-Z]/)) common = common + av
-    else if (bv?.match(/[A-Z]/)) common = common + bv
     else if (
       av &&
       bv &&
@@ -115,6 +114,7 @@ export function satisfiesMode(a: string = '', b: string = '') {
       av.toLowerCase() !== bv.toLowerCase()
     )
       return undefined
+    else if (bv?.match(/[A-Z]/)) common = common + bv
     else common = common + getCommon(av, bv)
   }
   return common
