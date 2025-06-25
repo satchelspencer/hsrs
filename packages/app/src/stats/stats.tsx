@@ -188,49 +188,81 @@ export function SeenPercentage({ deck }: DeckStatProps) {
   )
 }
 
-export function ProgressDist({ deck, hue }: DeckStatProps) {
+const THRESHOLDS = [0, 1, 7, 28] as const,
+  LABELS = ['<1 d', '1-7 d', '7-28 d', '≥28 d']
+
+export function ProgressDist({ deck, hue = 240 }: DeckStatProps) {
   const data = useMemo(() => {
-    const allCards = getAllCards(deck.elements),
-      seenMap: { [order: string]: number } = {},
-      totalMap: { [order: string]: number } = {}
+    const cache = getCache(deck.elements),
+      allCards = getAllCards(deck.elements),
+      baseRet = deck.settings.retention ?? defaultretention,
+      seenMap: { [order: string]: number[] } = {},
+      remainingMap: { [order: string]: number } = {}
 
     for (const c of allCards) {
-      const order = (
+      const orderPrefix = (
         getInheritedElement(c.element, deck.elements).order ?? '0'
       ).substring(0, 3)
-      if (!!deck.cards[card2Id(c)]) seenMap[order] = (seenMap[order] ?? 0) + 1
-      totalMap[order] = (totalMap[order] ?? 0) + 1
+
+      if (deck.cards[card2Id(c)]) {
+        const ret = offsetRetention(
+            baseRet,
+            getELRetrOffset(c.element, deck.elements, cache)
+          ),
+          state = deck.cards[card2Id(c)],
+          stabilityDays = nextInterval(state.stability, ret) / 3600 / 24
+
+        let bucketIdx = _.findLastIndex(THRESHOLDS, (t) => stabilityDays >= t)
+        seenMap[orderPrefix] ??= Array(THRESHOLDS.length).fill(0)
+        seenMap[orderPrefix][bucketIdx]++
+      } else remainingMap[orderPrefix] = (remainingMap[orderPrefix] ?? 0) + 1
     }
 
-    const labels = _.sortBy(Object.keys(totalMap))
+    const labels = _.sortBy(
+      _.uniq([...Object.keys(seenMap), ...Object.keys(remainingMap)])
+    )
 
-    return {
-      labels,
-      datasets: [
-        { label: 'Completed', data: labels.map((l) => seenMap[l] ?? 0) },
-        { label: 'Remaining', data: labels.map((l) => totalMap[l] - (seenMap[l] ?? 0)) },
-      ],
-    }
+    const datasets = THRESHOLDS.map((_, bucketIdx) => ({
+      label: LABELS[bucketIdx],
+      data: labels.map((l) => seenMap[l]?.[bucketIdx] ?? 0),
+      bucketIdx,
+      remaining: false,
+    }))
+
+    datasets.push({
+      label: 'Remaining',
+      data: labels.map((l) => remainingMap[l] ?? 0),
+      remaining: true,
+      bucketIdx: -1,
+    })
+
+    return { labels, datasets }
   }, [deck])
 
-  const colors = [color({ l: 0.6, s: 0.7, h: hue ?? 240 }), '#cdcdcd']
+  const bucketCount = THRESHOLDS.length
 
   return (
     <Bar
       data={{
         labels: data.labels,
-        datasets: data.datasets.map((ds, i) => ({
-          ...ds,
-          backgroundColor: colors[i] + 'a0',
-          borderColor: colors[i],
-          borderWidth: 1,
-        })),
+        datasets: data.datasets.map((ds: any) => {
+          const baseColour = ds.remaining
+            ? '#cdcdcd'
+            : getColorV(hue, 1 - ds.bucketIdx / (bucketCount - 1))
+          return {
+            ...ds,
+            backgroundColor: baseColour + 'd0',
+            borderColor: baseColour,
+            borderWidth: 1,
+            stack: 'progress',
+          }
+        }),
       }}
       options={{
         ...commonChartOptions,
         indexAxis: 'y',
         scales: {
-          x: { stacked: true, beginAtZero: true },
+          x: { beginAtZero: true, stacked: true },
           y: { stacked: true },
         },
       }}

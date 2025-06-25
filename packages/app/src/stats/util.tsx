@@ -111,7 +111,7 @@ export function groupByTimescale(map: t.HourlyStatsMap, maxGroups: number) {
       'days'
     ).days,
     groupUnit: DateTimeUnit =
-      diff <= maxGroups ? 'day' : diff * 7 <= maxGroups ? 'week' : 'month',
+      diff <= maxGroups ? 'day' : diff / 7 <= maxGroups ? 'week' : 'month',
     grouped: Record<number, t.HourlyStats> = {}
 
   for (const item of items) {
