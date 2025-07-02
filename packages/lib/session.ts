@@ -541,8 +541,13 @@ function getDue(
     sampleFailures = 0,
     nextDones = 0
 
-  while (dueCards.length + nextCards.length < limit && cardsIds.length) {
-    const cardId = cardsIds.shift()!,
+  const used = new Set<string>(),
+    chunkOrdered = _.chunk(cardsIds, limit).flatMap((c) =>
+      _.sortBy(c, (c) => -cache.depths[id2Card(c).element])
+    )
+
+  while (dueCards.length + nextCards.length < limit && chunkOrdered.length) {
+    const cardId = chunkOrdered.shift()!,
       state = deck.cards[cardId],
       due = dues[cardId],
       dueToday = due && due < endOfDay,
@@ -558,7 +563,8 @@ function getDue(
       cardId,
       deck,
       filter,
-      cache
+      cache,
+      used
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
@@ -610,7 +616,8 @@ export function sampleAndAdd(
   cardId: string,
   deck: t.Deck,
   filter: string[],
-  cache: t.DeckCache
+  cache: t.DeckCache,
+  used = new Set<string>()
 ) {
   const { element, property } = id2Card(cardId),
     now = getTime()
@@ -635,45 +642,65 @@ export function sampleAndAdd(
   let i = 0
   while (i < SAMPLE_TRIES) {
     try {
-      res.push({
-        ...sampleElementIstance(
-          element,
-          deck.elements,
-          cache,
-          undefined,
-          (elId) => {
-            const card = deck.cards[card2Id({ element: elId, property })],
-              jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
-            if (!card) return jitter
+      const instance = sampleElementIstance(
+        element,
+        deck.elements,
+        cache,
+        undefined,
+        (elId) => {
+          const card = deck.cards[card2Id({ element: elId, property })],
+            jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
+          if (!card) return jitter
 
-            const seenAgo = now - (card.lastSeen ?? 0),
-              cr = getRetr(card, seenAgo),
-              retrDiff = cr - childTarget,
-              retrFactor = logistic(retrDiff), //prefer cards close to target retr
-              depthFactor = logistic(-(cache.nvds[elId] ?? 0)), //prefer cards with more possible params
-              seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
+          const seenAgo = now - (card.lastSeen ?? 0),
+            cr = getRetr(card, seenAgo),
+            retrDiff = cr - childTarget,
+            retrFactor = logistic(retrDiff), //prefer cards close to target retr
+            depthFactor = logistic(-(cache.nvds[elId] ?? 0)), //prefer cards with more possible params
+            seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
 
-            return retrFactor * depthFactor * seenFactor + jitter
-          },
-          undefined,
-          (elId) => {
-            const card = deck.cards[card2Id({ element: elId, property })]
-            if (!cache.hasProps[elId] || elId === element) return true
-            else {
-              const targetStability =
-                getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-                (Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
-              return card
-                ? card.stability > targetStability
-                : !cache.depths[elId] && getLearnOrder(elId, deck).pre
-            }
+          return retrFactor * depthFactor * seenFactor + jitter
+        },
+        undefined,
+        (elId) => {
+          if (used.has(elId) && !cache.depths[elId]) return false
+          const card = deck.cards[card2Id({ element: elId, property })]
+          if (!cache.hasProps[elId] || elId === element) return true
+          else {
+            const targetStability =
+              getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
+              (Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
+            return card
+              ? card.stability > targetStability
+              : !cache.depths[elId] && getLearnOrder(elId, deck).pre
           }
-        ),
-        property,
-      })
+        }
+      )
+      for (const x of getInstanceEls(instance)) used.add(x)
+      res.push({ ...instance, property })
       return true
     } catch {}
     i++
   }
   return false
+}
+
+export function getInstanceEls(instance: t.ElementInstance): Set<string> {
+  const res = new Set<string>([instance.element]),
+    queue: t.ElementInstance[] = [instance]
+
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    if (node.params) {
+      for (const paramKey in node.params) {
+        const paramValue = node.params[paramKey]
+        if (paramValue) {
+          res.add(paramValue.element)
+          queue.push(paramValue)
+        }
+      }
+    }
+  }
+
+  return res
 }
