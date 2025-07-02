@@ -568,7 +568,7 @@ function getDue(
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
-    if (added && !isSameDay) nextDones++
+    if (added && !seenToday && !dueToday) nextDones++
 
     /* finishing goal, session can be shorter down to 60 */
     if (
