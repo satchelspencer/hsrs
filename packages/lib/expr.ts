@@ -165,18 +165,17 @@ export function computeElementInstance(
       (v, k) =>
         v &&
         run(
-          v.replaceAll('.' + k, '.' + prop).replaceAll('+', ':::'),
-          { ...params, _: result },
+          (prop[0] === '_' ? v : v.replaceAll('.' + k, '.' + prop)).replaceAll(
+            '+',
+            ':::'
+          ),
+          { ...params, $: result },
           !child
         )
     )
     result[prop] =
       elProps[prop] &&
-      run(
-        elProps[prop].replaceAll('+', ':::'),
-        { ...params, _: result, $: mapped },
-        !child
-      )
+      run(elProps[prop].replaceAll('+', ':::'), { ...params, $: mapped }, !child)
   }
 
   return { ...result, ...params }
