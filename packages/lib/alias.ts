@@ -39,7 +39,10 @@ export function findAliases(
 
   log(target)
 
+  const startTime = new Date().getTime()
+
   for (let i = 0; i < 4; i++) {
+    if (new Date().getTime() - startTime > 2000) break
     for (const elId in elements) {
       if (
         elements[elId].virtual ||

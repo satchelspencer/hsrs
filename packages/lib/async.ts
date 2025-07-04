@@ -85,7 +85,7 @@ async function callWorkerBase<T extends WorkerMessage>(
 
 async function callWorker<T extends WorkerMessage>(
   message: T,
-  timeout = 3000,
+  timeout = 10000,
   id = uid(),
   depth = 0
 ): Promise<Exclude<T['result'], undefined>> {
