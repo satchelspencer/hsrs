@@ -568,7 +568,7 @@ function getDue(
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
-    if (added && !seenToday && !dueToday) nextDones++
+    if (added && !seenToday) nextDones++
 
     /* finishing goal, session can be shorter down to 60 */
     if (
@@ -608,7 +608,7 @@ function getDue(
   return { dueCards, nextCards, progress }
 }
 
-const SAMPLE_TRIES = 20,
+const SAMPLE_TRIES = 10,
   jitterScale = 1
 
 export function sampleAndAdd(
