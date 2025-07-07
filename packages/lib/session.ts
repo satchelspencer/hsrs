@@ -363,9 +363,11 @@ export function getSessionState(
       !!card &&
       !cardStates[card2Id(card)] &&
       !session.history.findLast((c) => id2Card(c.cardId).element === card.element) &&
-      !Object.values(elements).find(
-        (e) => e.props[card.property] === value?.[card.property]
-      ),
+      !Object.keys(elements).find((id) => {
+        if (id === card.element) return false
+        const e = elements[id]
+        return e.props[card.property] === value?.[card.property]
+      }),
     hasFailed =
       !!card && session.history?.findLast((v) => v.cardId === card2Id(card))?.score === 1
 
