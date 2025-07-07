@@ -10,7 +10,7 @@ import { Button } from '../components/button'
 import { Selection } from '../redux/ui'
 import { Element } from '@hsrs/lib/types'
 import CodeInput from '../components/code'
-import { getElementOrder } from '@hsrs/lib/props'
+import { getElementOrder, getLearnOrder } from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
 import { useElVarList } from './element'
 
@@ -28,9 +28,9 @@ export function ElementsList(props: ElementsListProps) {
       r.selectors.selectNonVirtialElementIdsByParent(state, props.parentId)
     ),
     elementIds = showVirtual ? allElementIds : nonVirtualElementIds,
-    elements = r.useSelector((s) => s.deck.elements),
+    deck = r.useSelector((s) => s.deck),
     sortedIds = useMemo(
-      () => _.sortBy(elementIds, (id) => getElementOrder(id, elements)),
+      () => _.sortBy(elementIds, (id) => getLearnOrder(id, deck, '0.0').order),
       [elementIds]
     ),
     nextSelection = r.useSelector((s) =>
@@ -59,14 +59,18 @@ export function ElementsList(props: ElementsListProps) {
       </div>
       <div className={elementsListInner}>
         {sortedIds.map((elementId, index) => {
-          const element = elements[elementId],
+          const element = deck.elements[elementId],
             selected = !!nextSelection?.find((s) => s.id === elementId)
           return (
             <ElementListItem
               key={elementId}
               name={element.name}
               virtual={!!element.virtual}
-              order={showVirtual ? element.order : getElementOrder(elementId, elements)}
+              order={
+                !showVirtual
+                  ? getLearnOrder(elementId, deck, '0.0').order
+                  : getElementOrder(elementId, deck.elements)
+              }
               selected={selected}
               onClick={(e) => {
                 const otherSelected =

@@ -435,30 +435,35 @@ function getNew(
   let maxOrder = '0'
   for (const cardId in deck.cards) {
     const { order } = getLearnOrder(id2Card(cardId).element, deck)
-    if (order && order > maxOrder) maxOrder = order
+    if (order && order > maxOrder) maxOrder = order.substring(0, 3)
   }
+
+  const allCards = getAllCards(deck.elements),
+    seenCards = Object.keys(deck.cards)
+  let seenDeep = seenCards.filter((c) => cache.depths[id2Card(c).element]).length,
+    seenTotal = seenCards.length,
+    allDeep = allCards.filter((c) => cache.depths[c.element]).length,
+    allTotal = allCards.length,
+    seenDeepRatio = seenDeep / seenTotal,
+    allDeepRatio = allDeep / allTotal,
+    priorityDeep = !!seenTotal && seenDeepRatio < allDeepRatio
 
   const res: t.CardInstance[] = [],
     cards = _.orderBy(
-      getAllCards(deck.elements).filter((c) => !deck.cards[card2Id(c)]),
+      getAllCards(deck.elements)
+        .filter((c) => !deck.cards[card2Id(c)])
+        .map((c) => [c, getLearnOrder(c.element, deck, maxOrder)] as const),
       [
-        (c) => getLearnOrder(c.element, deck).order,
-        (c) => {
-          const { pre, order } = getLearnOrder(c.element, deck)
-          return pre || order < maxOrder
-            ? (cache.depths[c.element] > 0 ? (pre ? 0.5 : 0.25) : 1) * Math.random()
-            : Math.random()
-        },
-        () => Math.random(),
+        (c) => (priorityDeep ? (cache.depths[c[0].element] ? 0 : 1) : 0), //if priority deep sort by deep first
+        (c) => c[1].order,
       ]
     ),
     usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor()
 
   while (res.length < limit / newCardFactor && cards.length) {
-    const card = cards.shift()!,
-      { props } = getInheritedElement(card.element, deck.elements),
-      order = getLearnOrder(card.element, deck)
+    const [card, order] = cards.shift()!,
+      { props } = getInheritedElement(card.element, deck.elements)
 
     if (usedEls[card.element]) continue
 
@@ -629,7 +634,7 @@ export function sampleAndAdd(
   for (const f of filter) {
     const inv = f[0] === '!',
       elId = inv ? f.substring(1) : f,
-      elMatch = elId === element || cache.tree.ancestors[element]?.includes(elId)
+      elMatch = elId === element || cache.tree.firstAncestors[element]?.includes(elId)
     if (inv && elMatch) return
     else if (elMatch) hasMatch = true
     if (!inv) needsMatch = true
@@ -670,9 +675,7 @@ export function sampleAndAdd(
             const targetStability =
               getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
               (Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
-            return card
-              ? card.stability > targetStability
-              : !cache.depths[elId] && getLearnOrder(elId, deck).pre
+            return card && card.stability > targetStability
           }
         }
       )
