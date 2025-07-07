@@ -54,6 +54,11 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
       for (const ancestor of tree.ancestors[p])
         if (!tree.ancestors[id].includes(ancestor)) tree.ancestors[id].push(ancestor)
     }
+
+    const firstAncestor = tree.parents[id][0]
+    tree.firstAncestors[id] = firstAncestor
+      ? [firstAncestor, ...tree.firstAncestors[firstAncestor]]
+      : []
   }
 
   for (const id in tree.ancestors) {
@@ -74,7 +79,15 @@ export function getCache(relements: t.IdMap<t.Element>) {
   //console.trace('cache')
   const t = new Date().getTime()
   const cache: t.DeckCache = {
-    tree: { parents: {}, children: {}, ancestors: {}, topo: [], leaves: {}, roots: {} },
+    tree: {
+      parents: {},
+      children: {},
+      ancestors: {},
+      topo: [],
+      leaves: {},
+      roots: {},
+      firstAncestors: {},
+    },
     paramTree: {
       parents: {},
       children: {},
@@ -82,6 +95,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
       topo: [],
       leaves: {},
       roots: {},
+      firstAncestors: {},
     },
     depths: {},
     hasProps: {},

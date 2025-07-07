@@ -110,6 +110,7 @@ export type TreeCache = {
   topo: string[]
   leaves: { [elId: string]: number }
   roots: { [elId: string]: string | undefined }
+  firstAncestors: ListMap
 }
 
 export type DeckCache = {
