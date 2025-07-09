@@ -526,7 +526,7 @@ export function Heatmap({ stats, hue }: TimeStatProps) {
         }}
       >
         <div>
-          Current streak: <b>{firstStreak}d</b>, longest: <b>{maxStreak}d</b>
+          Current streak: <b>{Math.max(firstStreak, 1)}d</b>, longest: <b>{maxStreak}d</b>
         </div>
         <div style={{ display: 'flex' }}>
           <Button onClick={(s) => setOffset((o) => o - 1)}>
