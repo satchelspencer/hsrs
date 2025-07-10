@@ -41,8 +41,7 @@ export function getInheritedElement(
     inheritedParams: t.Params = {}
   let inheritedConstraint: string = '',
     inheritedMode: string = '',
-    inheritedRetention: string = '',
-    inheritedDesc: string = ''
+    inheritedRetention: string = ''
 
   const ancestors = cache.tree.ancestors[elementId] ?? []
   for (let i = ancestors.length - 1; i >= 0; i--) {
@@ -60,7 +59,6 @@ export function getInheritedElement(
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
     if (element.retention) inheritedRetention = element.retention
-    if (element.desc) inheritedDesc = element.desc
   }
 
   element.props = inheritedProps
@@ -68,7 +66,6 @@ export function getInheritedElement(
   if (inheritedConstraint) element.constraint = inheritedConstraint
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
-  if (inheritedDesc) element.desc = inheritedDesc
   element.order = getElementOrder(elementId, elements)
   return element
 }
@@ -214,4 +211,21 @@ export function getLearnOrder(element: string, deck: t.Deck, maxOrder?: string) 
   if (pre) Object.assign(final, startOrder.split('.'))
 
   return { order: final.join('.'), pre }
+}
+
+export function computeDescs(
+  elementId: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
+) {
+  const ancestors = cache.tree.ancestors[elementId],
+    descs: [string, string][] = []
+
+  for (const id of ancestors) {
+    const el = elements[id]
+    console.log(el.name, el.desc)
+    if (el.desc) descs.push([id, el.desc])
+  }
+
+  return descs
 }

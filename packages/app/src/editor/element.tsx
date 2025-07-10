@@ -14,6 +14,7 @@ import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
+import { computeDescs } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -69,6 +70,8 @@ export function ElementEditor(props: ElementEditorProps) {
     element.virtual &&
     Object.keys(element.params ?? {}).length === 2 &&
     Object.keys(element.props).length === 0
+
+  const descs = computeDescs(props.id, elements)
 
   return (
     <div className={editorWrapperOuter}>
@@ -334,6 +337,22 @@ export function ElementEditor(props: ElementEditorProps) {
                 {mode && (
                   <LabelGroup
                     items={[[<div className={propName}>m</div>, <div>{mode}</div>]]}
+                  />
+                )}
+                {!!descs.length && (
+                  <LabelGroup
+                    items={descs.map(([id, note]) => [
+                      <div className={propName}>{elements[id].name}</div>,
+                      <div
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {note}
+                      </div>,
+                    ])}
                   />
                 )}
               </>,
