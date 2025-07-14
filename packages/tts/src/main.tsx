@@ -37,7 +37,7 @@ function getAudioTxt(value: PropMap, vars: PropMap) {
   return dedupeAudio(audioTxt || '', audioRaw)
 }
 
-export function useTtsState(state: CardProps) {
+export function useTtsState(state: CardProps, adapter = browserSynth) {
   const modeKeys = state.vars['modes']?.split('.').map((c) => c.split('-')) ?? [],
     value = state.value ?? {},
     mode = state.mode ?? '',
@@ -115,12 +115,9 @@ export function useTtsState(state: CardProps) {
       aref.current?.play()
     } else {
       setLoaded(true)
-      speechSynthesis.pause()
-      speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(dedupedAudio.text)
-      utterance.lang = state.vars['lang']
-      utterance.onend = () => setPlaying(false)
-      speechSynthesis.speak(utterance)
+      await adapter.stop()
+      await adapter.speak(dedupedAudio.text, state.vars['lang'])
+      setPlaying(false)
     }
   }
 
@@ -128,8 +125,7 @@ export function useTtsState(state: CardProps) {
     let canceled = false
     setLoaded(false)
     if (aref.current) aref.current.pause()
-    speechSynthesis.pause()
-    speechSynthesis.cancel()
+    adapter.stop()
 
     if (cardHasAudio && aref.current && dedupedAudio.text && !state.noAuto)
       fetchAudio(dedupedAudio).then(() => {
@@ -184,6 +180,31 @@ export function useTtsState(state: CardProps) {
     modeKey: shownKeys.find((k) => k !== ttsKey && k !== txtKey),
     ...state,
   }
+}
+
+export interface LocalTTSAdapter {
+  speak: (test: string, lang: string) => Promise<void>
+  stop: () => Promise<void>
+}
+
+const browserSynth: LocalTTSAdapter = {
+  speak: (text, lang) =>
+    new Promise((res) => {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = lang
+        utterance.onend = () => res()
+        speechSynthesis.speak(utterance)
+      } catch {
+        res()
+      }
+    }),
+  stop: async () => {
+    try {
+      speechSynthesis.pause()
+      speechSynthesis.cancel()
+    } catch {}
+  },
 }
 
 function dedupeAudio(txt: string, raw?: string) {
