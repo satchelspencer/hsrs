@@ -1,6 +1,6 @@
 import { getCache } from './cache'
 import { DateTime } from 'luxon'
-import { getAllCards, getInheritedElement, getLearnOrder } from './props'
+import { getAllCards, getLearnOrder } from './props'
 import {
   defaultParams,
   defaultretention,
@@ -232,18 +232,15 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
   const ncFactor = getNewCardFactor(),
     delta = Math.floor((estReviews - session.reviews) / ncFactor)
 
-  const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element),
-    unseenEls = Object.keys(cardsGroupedByEl).filter((elId) =>
-      _.every(cardsGroupedByEl[elId], (c) => !session.cards[card2Id(c)])
-    )
+  const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element)
 
   log('review estimation', estReviews, 'original', session.reviews, 'delta ', delta)
 
   let redist = false
   if (delta > 2 && session.allowNew) {
     const toRemove =
-      _.findLast(session.stack, (c) => unseenEls.includes(c.element) && !!c.new) ??
-      _.findLast(session.stack, (c) => !c.new) //fall back to non new
+      _.findLast(session.stack, (c) => !session.cards[card2Id(c)] && !!c.new) ??
+      _.findLast(session.stack, (c) => !session.cards[card2Id(c)] && !c.new) //fall back to non new
 
     if (toRemove && cardsGroupedByEl[toRemove.element].length <= delta) {
       session.stack = session.stack.filter((c) => c.element !== toRemove.element)
@@ -463,25 +460,14 @@ function getNew(
         (c) => c[1].order,
       ]
     ),
-    usedEls: { [elId: string]: true } = {},
     newCardFactor = getNewCardFactor()
 
   while (res.length < limit / newCardFactor && cards.length) {
-    const [card, order] = cards.shift()!,
-      { props } = getInheritedElement(card.element, deck.elements)
+    const [card] = cards.shift()!,
+      id = card2Id(card)
 
-    if (usedEls[card.element]) continue
-
-    for (const property of _.shuffle(Object.keys(props))) {
-      if (property[0] === '_' || (propsFilter.length && !propsFilter.includes(property)))
-        continue
-      const id = card2Id({ ...card, property })
-      if (!deck.cards[id]) {
-        sampleAndAdd(res, id, deck, filter, cache)
-        usedEls[card.element] = true
-      }
-      if (order.pre) break
-    }
+    if ((!propsFilter.length || propsFilter.includes(card.property)) && !deck.cards[id])
+      sampleAndAdd(res, id, deck, filter, cache)
   }
 
   return res.map((c) => ({ ...c, new: true }))
