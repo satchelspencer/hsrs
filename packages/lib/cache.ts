@@ -44,16 +44,20 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
     }
   }
 
-  const topoOrderIndexes: { [id: string]: number } = {}
+  const topoOrderIndexes: { [id: string]: number } = {},
+    ancestorSets: { [id: string]: Set<string> } = {}
   for (let index = 0; index < topoOrder.length; index++) {
-    const id = topoOrder[index]
-    tree.ancestors[id] ??= []
+    const id = topoOrder[index],
+      set = ancestorSets[id] ?? new Set([id])
+
     topoOrderIndexes[id] = index
     for (const p of tree.parents[id]) {
-      tree.ancestors[id].push(p)
-      for (const ancestor of tree.ancestors[p])
-        if (!tree.ancestors[id].includes(ancestor)) tree.ancestors[id].push(ancestor)
+      set.add(p)
+      const pset = ancestorSets[p]
+      for (const ancestor of pset) set.add(ancestor)
     }
+
+    ancestorSets[id] = set
 
     const firstAncestor = tree.parents[id][0]
     tree.firstAncestors[id] = firstAncestor
@@ -61,11 +65,13 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
       : []
   }
 
-  for (const id in tree.ancestors) {
-    tree.ancestors[id].sort((a, b) => topoOrderIndexes[b] - topoOrderIndexes[a])
-    tree.roots[id] =
-      tree.ancestors[id].length > 1 ? _.last(tree.ancestors[id]) : undefined
-    for (const aid of tree.ancestors[id]) tree.leaves[aid] = (tree.leaves[aid] ?? 0) + 1
+  for (const id in ancestorSets) {
+    const ancestors = [...ancestorSets[id]].sort(
+      (a, b) => topoOrderIndexes[b] - topoOrderIndexes[a]
+    )
+    tree.roots[id] = ancestors.length > 1 ? _.last(ancestors) : undefined
+    for (const aid of ancestors) tree.leaves[aid] = (tree.leaves[aid] ?? 0) + 1
+    tree.ancestors[id] = ancestors
   }
   tree.topo = topoOrder.reverse()
 }

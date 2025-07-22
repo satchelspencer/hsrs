@@ -223,7 +223,6 @@ export function computeDescs(
 
   for (const id of ancestors) {
     const el = elements[id]
-    console.log(el.name, el.desc)
     if (el.desc) descs.push([id, el.desc])
   }
 
