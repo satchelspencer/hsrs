@@ -1306,11 +1306,6 @@ hierarchical-clustering@^1.1.0:
   resolved "https://registry.yarnpkg.com/hierarchical-clustering/-/hierarchical-clustering-1.1.0.tgz#316fca0005ed45fe310f40b2ce024851bf8157b2"
   integrity sha512-JRWUyY8ttyyNMKM/7W/Kf+Xx+xU2zKHQ3JJskNP0yeszAbEbY2RiT9TXX5unPGEpMuqZ0kZQrb8s/O+pfPzo2Q==
 
-hsrs-plugin@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.1.0.tgz#a8f3fd21700d03699a903c021c6f15d277b7331a"
-  integrity sha512-kkXSRP84nt+wpaK/V4pO752h3No6weehSiMTq6aeQ1k1xlDaXYr9sUKzDIY+5iiNntlFZ+15gIryAIflxqHeYw==
-
 hsrs-plugin@^0.1.3:
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/hsrs-plugin/-/hsrs-plugin-0.1.3.tgz#0ff26fb41e565f512b95b72f746304ad06ee0739"
