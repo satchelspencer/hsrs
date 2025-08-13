@@ -16,6 +16,7 @@ import { computeElementInstance, computeElementMode } from './expr'
 import { cleanRuby } from './ruby'
 import { logger } from './log'
 import { sampleElementIstance } from './sample'
+import { uid } from './uid'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -92,13 +93,18 @@ function cardShuffle(vals: t.CardInstance[]) {
 since they will usually be repeated multiple times, you get a more even
 spacing during learning */
 
-function distributeNewUnseenCards(
-  session: Partial<t.LearningSession>,
-  maxIndex = Infinity
-) {
-  const sessionStack = session.stack ?? [],
+function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
+  const sessionStack: t.CardInstance[] = [],
+    learning: [t.CardInstance, number][] = [],
     stack: t.CardInstance[] = [],
     newUnseen: t.CardInstance[] = []
+
+  for (let i = 0; i < (session.stack?.length ?? 0); i++) {
+    const card = session.stack![i],
+      state = session.cards?.[card2Id(card)]
+    if (state && state.stability < 1) learning.push([card, i])
+    else sessionStack.push(card)
+  }
 
   for (let i = 0; i < sessionStack.length; i++) {
     const card = sessionStack[i]
@@ -106,9 +112,15 @@ function distributeNewUnseenCards(
     else stack.push(card)
   }
 
+  const limit = stack.findLastIndex((v) => {
+    const state = session.cards?.[card2Id(v)]
+    return !state || state.stability < 1
+  })
+
+  log('limit', limit, learning.length)
   const gaps = newUnseen.length,
     actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = Math.min(maxIndex, sessionStack.length * 0.75) / actual,
+    gapFactor = (limit === -1 ? sessionStack.length * 0.75 : limit) / actual,
     sumSpac = [
       0,
       ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
@@ -121,6 +133,9 @@ function distributeNewUnseenCards(
     if (!nc) break
     stack.splice(Math.min(Math.max(Math.floor(d)), stack.length - 1), 0, nc)
   }
+
+  for (const [card, index] of learning) stack.splice(index, 0, card)
+
   return stack
 }
 
@@ -157,16 +172,17 @@ export function applySessionHistoryToCards(
   }
 }
 
-export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.LearningSession {
+const log = logger(3, 'session-stack')
+
+export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   const { session } = deck
   if (!session) throw 'no session'
 
-  const currentCard = session.stack.shift()
+  const currentCard = session.stack[0]
   if (!currentCard) throw 'no card'
 
   const cardId = card2Id(currentCard),
-    now = getTime(),
-    log = logger(3, 'session-stack')
+    now = getTime()
 
   const missedSibling =
       !session.cards[cardId] &&
@@ -174,8 +190,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       Object.keys(session.cards).find(
         (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
       ),
-    cardReviewsRemaning = estimateReviewsRemaining(session),
-    estReviews = session.history.length + cardReviewsRemaning,
+    estReviews = getEstReviews(session),
     isEnding = session.history.length / estReviews >= 0.75,
     grade = missedSibling ? Math.min(rgrade, 2) : rgrade, //if new and sibling was missed, max grade of 2
     virtualGrade = Math.min(grade + (isEnding ? 1 : 0), 4) //bump grade by 1 to prevent session end being stuck
@@ -194,10 +209,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
 
   const jitter = cardState.stability <= 0.5 ? 0 : Math.floor(Math.random() * 3 - 1),
     graduated = cardState.stability >= 1,
-    minGraduatedIndex = session.stack.findLastIndex((v) => {
-      const state = session.cards[card2Id(v)]
-      return !state || state.stability < 1
-    }),
+    minGraduatedIndex = getMinGraduatedIndex(session),
     midPoint = Math.floor(session.stack.length / 2),
     graduatedIndex = // if graduated reinsert randomly in the end of the stack already graduated, past half way
       minGraduatedIndex === -1
@@ -210,11 +222,15 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
     canSpace = session.stack.length >= 20,
-    learningIndex = canSpace //if not graduated reinsert 'proprtional' to stability
-      ? (currentCard.new ? 0 : 2) +
-        Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
-        jitter
-      : Math.floor(cardState.stability * Math.max(7, session.stack.length / 2)) + jitter,
+    learningIndex = Math.min(
+      canSpace //if not graduated reinsert 'proprtional' to stability
+        ? (currentCard.new ? 0 : 2) +
+            Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
+            jitter
+        : Math.floor(cardState.stability * Math.max(7, session.stack.length / 2)) +
+            jitter,
+      minGraduatedIndex === -1 ? session.stack.length : Math.max(minGraduatedIndex, 4) // don't exceeed min grad index to prevent slow session end
+    ),
     newIndex = Math.max(
       Math.min(
         Math.floor(!graduated ? learningIndex : graduatedIndex),
@@ -223,65 +239,8 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       1
     )
 
+  session.stack.shift()
   session.stack.splice(newIndex, 0, currentCard)
-
-  /* compare new session length estimation with original goal,
-  if under and new cards learning, sample more new, if over
-  remove new that haven't been seen */
-
-  const ncFactor = getNewCardFactor(),
-    delta = Math.floor((estReviews - session.reviews) / ncFactor)
-
-  const cardsGroupedByEl = _.groupBy(session.stack, (card) => card.element)
-
-  log('review estimation', estReviews, 'original', session.reviews, 'delta ', delta)
-
-  let redist = false
-  if (delta > 2 && session.allowNew) {
-    const toRemove =
-      _.findLast(session.stack, (c) => !session.cards[card2Id(c)] && !!c.new) ??
-      _.findLast(session.stack, (c) => !session.cards[card2Id(c)] && !c.new) //fall back to non new
-
-    if (toRemove && cardsGroupedByEl[toRemove.element].length <= delta) {
-      session.stack = session.stack.filter((c) => c.element !== toRemove.element)
-      log('removing', deck.elements[toRemove?.element!].name)
-      redist = true
-    }
-  } else if (delta < -2 && session.allowNew && minGraduatedIndex > 10) {
-    const newCards = getNew(
-      {
-        ...deck,
-        cards: {
-          ..._.fromPairs(
-            session.stack.map((s) => [card2Id(s), { stability: 1, difficulty: 5 }])
-          ), //exclude ones already in session
-          ...deck.cards,
-        },
-      },
-      -delta,
-      session.filter,
-      session.propsFilter,
-      getCache(deck.elements)
-    )
-
-    if (newCards.length <= -delta) {
-      log('add', deck.elements[newCards[0].element].name)
-      const midPoint = session.stack.length / 2
-      newCards.forEach((card) =>
-        session.stack.splice(Math.floor(Math.random() * midPoint) + midPoint, 0, card)
-      )
-
-      /* remove already seen, to keep stack length roughly the same, just with harder cards */
-      const toRemove = _.findLast(session.stack, (c) => !c.new)
-      if (toRemove) {
-        log('remove old', deck.elements[toRemove.element].name)
-        session.stack = session.stack.filter((c) => c.element !== toRemove.element)
-      }
-      redist = true
-    }
-  }
-
-  if (redist) session.stack = distributeNewUnseenCards(session, minGraduatedIndex)
 
   /* ensure a minimum gap between siblings */
   const MIN_SPACING = 4
@@ -304,8 +263,70 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number): t.Learnin
       } else break
     }
   }
+}
 
-  return session
+export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) {
+  log('applySessionUpdate', update.commit)
+  const { session } = deck
+  if (!session) throw 'no session'
+
+  if (session.commit !== update.commit || getGraduation(session) === 1) {
+    log('cancel')
+    return
+  }
+
+  let redist = false
+  if ('remove' in update) {
+    let toRemove = _.findLastIndex(
+      session.stack,
+      (c) => !session.cards[card2Id(c)] && !!c.new
+    )
+    if (toRemove === -1)
+      toRemove = _.findLastIndex(
+        session.stack,
+        (c) => !session.cards[card2Id(c)] && !c.new //fall back to non new
+      )
+
+    if (toRemove !== -1) {
+      log('removing', deck.elements[session.stack[toRemove].element].name)
+      session.stack.splice(toRemove, 1)
+      redist = true
+    }
+  } else if ('add' in update) {
+    log('add', deck.elements[update.add.element].name)
+    const midPoint = session.stack.length / 2
+    session.stack.splice(Math.floor(Math.random() * midPoint) + midPoint, 0, update.add)
+
+    /* remove already seen, to keep stack length roughly the same, just with harder cards */
+    const toRemove = _.findLastIndex(
+      session.stack,
+      (c) => !session.cards[card2Id(c)] && !c.new
+    )
+    if (toRemove !== -1) {
+      log('remove old', deck.elements[session.stack[toRemove].element].name)
+      session.stack.splice(toRemove, 1)
+    }
+    redist = true
+  }
+  if (redist) {
+    const first = session.stack.shift()
+    session.stack = distributeNewUnseenCards(session)
+    if (first) session.stack.unshift(first)
+    session.commit = uid()
+    log('commit', session.commit)
+  }
+}
+
+export function getMinGraduatedIndex(session: t.LearningSession) {
+  return session.stack.findLastIndex((v) => {
+    const state = session.cards[card2Id(v)]
+    return !state || state.stability < 1
+  })
+}
+
+export function getEstReviews(session: t.LearningSession) {
+  const cardReviewsRemaning = estimateReviewsRemaining(session)
+  return session.history.length + cardReviewsRemaning
 }
 
 /* simple review estimation by simulating repeated 3 scores  */
@@ -334,7 +355,6 @@ export interface SessionState {
   next?: t.PropsInstance
   mode?: string
   progress: {
-    completion: number
     count: number
     sessionSeconds: number
     accuracy: number | null
@@ -351,8 +371,7 @@ export function getSessionState(
   revealed: boolean,
   cardStates: t.CardStates
 ): SessionState {
-  const estReviews = session ? estimateReviewsRemaining(session) : 0,
-    card = session?.stack[0],
+  const card = session?.stack[0],
     value = card && computeElementInstance(card, elements),
     nextCard = session?.stack[1],
     next = nextCard && computeElementInstance(nextCard, elements),
@@ -375,9 +394,6 @@ export function getSessionState(
       accuracy:
         session &&
         session.history.filter((h) => h.score !== 1).length / session.history.length,
-      completion: session
-        ? session.history.length / (estReviews + session.history.length)
-        : 0,
       graduation: getGraduation(session),
     },
     card,
@@ -423,11 +439,11 @@ export function id2Card(id: string): t.Card {
   return { element, property }
 }
 
-function getNewCardFactor() {
+export function getNewCardFactor() {
   return 4
 }
 
-function getNew(
+export function getNew(
   deck: t.Deck,
   limit: number,
   filter: string[],

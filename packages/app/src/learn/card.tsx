@@ -29,7 +29,7 @@ export function Card() {
       [session, elements, revealed]
     ),
     { progress, card, value, mode, shownValue, next } = sessionState,
-    sessionDone = progress.completion === 1,
+    sessionDone = progress.graduation === 1,
     cache = getCache(elements),
     plugin =
       card &&
@@ -62,7 +62,9 @@ export function Card() {
   const setGrade = (grade: number) => {
       setRevealed(false)
       if (!sessionDone)
-        dispatch(r.actions.gradeCard({ grade, took: Math.min(getTime() - time, 60) }))
+        dispatch(
+          r.actions.gradeCardAndUpdate({ grade, took: Math.min(getTime() - time, 60) })
+        )
     },
     undoGrade = () => {
       dispatch(r.actions.undoGrade({}))
@@ -130,11 +132,11 @@ export function Card() {
         <div className={progressWrapper}>
           <div
             className={progressInner}
-            style={{ width: progress.completion * 100 + '%' }}
+            style={{ width: progress.graduation * 100 + '%' }}
           />
         </div>
       )}
-      {!session ? null : progress.completion === 1 ? (
+      {!session ? null : progress.graduation === 1 || !session.stack.length ? (
         <>
           <Button className={mainAction} onClick={() => dispatch(r.actions.endSession())}>
             <Icon size={1.2} name="check" />

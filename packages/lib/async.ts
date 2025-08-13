@@ -37,11 +37,24 @@ interface CreateSessionMessage extends WorkerMessageBase<t.SessionAndProgress> {
   cache: t.DeckCache
 }
 
+interface GetNewMessage extends WorkerMessageBase<t.CardInstance[]> {
+  type: 'getNew'
+  deck: t.Deck
+  limit: number
+  filter: string[]
+  propsFilter: string[]
+  cache: t.DeckCache
+}
+
 interface PingMessage extends WorkerMessageBase<true> {
   type: 'ping'
 }
 
-export type WorkerMessage = FindAliasesMessage | CreateSessionMessage | PingMessage
+export type WorkerMessage =
+  | FindAliasesMessage
+  | CreateSessionMessage
+  | PingMessage
+  | GetNewMessage
 
 type WorkerMessageMeta = { messageId: string }
 
@@ -149,6 +162,23 @@ export function createSessionAsync(
     filter,
     propsFilter,
     tz,
+    cache: getCache(deck.elements),
+  }
+  return callWorker(message)
+}
+
+export function getNewAsync(
+  deck: t.Deck,
+  limit: number,
+  filter: string[],
+  propsFilter: string[]
+) {
+  const message: GetNewMessage = {
+    type: 'getNew',
+    deck,
+    limit,
+    filter,
+    propsFilter,
     cache: getCache(deck.elements),
   }
   return callWorker(message)

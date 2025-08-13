@@ -1,7 +1,7 @@
 import { WorkerMessage, WorkerMetaMessage, WorkerResponseMessage } from './async'
 import { setLogLevel } from './log'
 import { findAliases } from './alias'
-import { createLearningSession } from './session'
+import { createLearningSession, getNew } from './session'
 
 function handleMessage(
   message: WorkerMessage
@@ -30,6 +30,15 @@ function handleMessage(
     )
   }
   if (message.type === 'ping') return true
+  if (message.type === 'getNew') {
+    return getNew(
+      message.deck,
+      message.limit,
+      message.filter,
+      message.propsFilter,
+      message.cache
+    )
+  }
   throw 'unhandled message'
 }
 

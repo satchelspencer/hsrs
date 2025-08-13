@@ -89,6 +89,7 @@ export interface LearningSession {
   filter: string[]
   propsFilter: string[]
   allowNew: boolean
+  commit?: string
 }
 
 export interface HistoryExport {
@@ -156,4 +157,10 @@ export interface GoalState {
   date: number
   ret?: number
   count: number
+}
+
+export type GradePayload = { grade: number; took: number }
+
+export type UpdatePayload = ({ add: CardInstance } | { remove: true }) & {
+  commit?: string
 }

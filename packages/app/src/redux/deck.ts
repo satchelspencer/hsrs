@@ -1,10 +1,16 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import * as t from '@hsrs/lib/types'
 import _ from 'lodash'
-import { createLearningSession, gradeCard, undoGrade } from '@hsrs/lib/session'
+import {
+  applySessionUpdate,
+  createLearningSession,
+  gradeCard,
+  undoGrade,
+} from '@hsrs/lib/session'
 import { applyHistoryToCards } from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
 import { computeParams } from './fsrs'
+import { getSessionUpdate } from '@hsrs/lib/update'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -59,9 +65,11 @@ export const deck = createSlice({
     cancelSession: (state, action: PayloadAction<{}>) => {
       state.session = null
     },
-    gradeCard: (state, action: PayloadAction<{ grade: number; took: number }>) => {
-      if (!state.session) throw 'no session'
-      state.session = gradeCard(state, action.payload.grade, action.payload.took)
+    gradeCard: (state, action: PayloadAction<t.GradePayload>) => {
+      gradeCard(state, action.payload.grade, action.payload.took)
+    },
+    applySessionUpdate: (state, action: PayloadAction<t.UpdatePayload>) => {
+      applySessionUpdate(state, action.payload)
     },
     undoGrade: (state, action: PayloadAction<{}>) => {
       if (!state.session) throw 'no session'
@@ -96,6 +104,15 @@ export const deck = createSlice({
 })
 
 export const deckThunks = {
+  gradeCardAndUpdate: createAsyncThunk<void, t.GradePayload, { state: { deck: t.Deck } }>(
+    'deck/gradeCardAndUpdate',
+    async (payload, { getState, dispatch }) => {
+      dispatch(deck.actions.gradeCard(payload))
+
+      const update = await getSessionUpdate(getState().deck)
+      if (update) dispatch(deck.actions.applySessionUpdate(update))
+    }
+  ),
   endSession: createAsyncThunk<t.CardLearning[], void, { state: { deck: t.Deck } }>(
     'deck/endSession',
     async (x, { getState }) => {
