@@ -115,8 +115,17 @@ export function getRetr(state: t.MemoryState, secondsElapsed: number) {
   )
 }
 
+let mockTime: number | undefined = undefined
+
+export function setMockTime(time: number) {
+  if (typeof process === 'undefined' || !process.env.VITEST)
+    throw 'setMockTime can only be used in vitest'
+
+  mockTime = time
+}
+
 export function getTime() {
-  return Math.floor(new Date().getTime() / 1000)
+  return mockTime ?? Math.floor(new Date().getTime() / 1000)
 }
 
 export function applyHistoryToCards(
@@ -125,6 +134,8 @@ export function applyHistoryToCards(
   deck: t.Deck
 ) {
   for (const learning of history) {
+    if (flattenCard(learning).find((l) => !deck.elements[id2Card(l.cardId).element]))
+      continue
     const diff = getLearningCardDiff(cards, learning, deck)
     Object.assign(cards, diff)
   }

@@ -53,8 +53,8 @@ export async function getSessionUpdate(
       },
       1,
       session.filter,
-      session.propsFilter
-      //getCache(deck.elements)
+      session.propsFilter,
+      !!deck.settings.minDepth
     )
     pending = undefined
     if (newCard) return { add: newCard, commit }

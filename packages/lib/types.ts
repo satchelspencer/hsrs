@@ -51,6 +51,7 @@ export interface DeckSettings {
   filter?: string[]
   propsFilter?: string[]
   startOrder?: string
+  minDepth?: number
 }
 
 export interface MemoryState {
@@ -79,11 +80,12 @@ export interface CardLearning {
 
 export interface SessionCardLearning extends CardLearning {
   vscore?: number
+  instanceId: string
 }
 
 export interface LearningSession {
   stack: CardInstance[]
-  cards: CardStates
+  states: { [cardId: string]: { [instanceId: string]: CardState } }
   history: SessionCardLearning[]
   reviews: number
   filter: string[]
@@ -120,6 +122,7 @@ export type DeckCache = {
   depths: { [elId: string]: number }
   pdepths: { [elId: string]: number }
   hasProps: { [elId: string]: boolean }
+  hasParams: { [elId: string]: boolean }
   nvds: { [elId: string]: number }
   names: { [rootId: string]: { [name: string]: string } }
 }

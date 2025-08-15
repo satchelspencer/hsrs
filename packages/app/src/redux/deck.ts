@@ -57,7 +57,8 @@ export const deck = createSlice({
         state.settings.allowNew,
         state.settings.filter ?? [],
         state.settings.propsFilter ?? [],
-        'local'
+        'local',
+        state.settings.minDepth
       )
       state.session = session
       state.goal = undefined //need per-deck goals
@@ -119,7 +120,7 @@ export const deckThunks = {
       const state = getState().deck
       if (!state.session) throw 'no session'
       await db.cardLearning.bulkAdd(
-        state.session.history.map((l) => learning2db(_.omit(l, 'vscore')))
+        state.session.history.map((l) => learning2db(_.omit(l, ['vscore', 'instanceId'])))
       )
       return state.session.history
     }

@@ -193,19 +193,27 @@ export function findCommonAncestors(
   return common
 }
 
-export function getLearnOrder(element: string, deck: t.Deck, maxOrder?: string) {
+export function getLearnOrder(
+  element: string,
+  deck: t.Deck,
+  maxOrder?: string,
+  priorityDeep?: boolean,
+  cache = getCache(deck.elements)
+) {
   const startOrder =
       (maxOrder ?? '') > (deck.settings.startOrder ?? '')
         ? maxOrder
         : deck.settings.startOrder,
     order = getElementOrder(element, deck.elements),
-    pre = !!startOrder && order < startOrder,
+    pre = !(priorityDeep && cache.depths[element]) && !!startOrder && order < startOrder,
     final = maxOrder
       ? element //use the base 36 id as the source of randomness
           .substring(0, 6)
           .split('')
           .map((c) => Math.floor(parseInt(c, 36) / 3.6) + '')
       : []
+
+  final[2] = Math.floor(9 / Math.sqrt(cache.paramTree.parents[element].length)) + ''
 
   Object.assign(final, order.split('.'))
   if (pre) Object.assign(final, startOrder.split('.'))

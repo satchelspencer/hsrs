@@ -207,6 +207,22 @@ export function ImportExport() {
             />
           </div>,
         ],
+        [
+          'Min depth',
+          <div className={inputWrapper}>
+            <CodeInput
+              value={deckSettings.minDepth ? deckSettings.minDepth + '' : '0'}
+              throttle
+              onChange={(rt) => {
+                let rtv: number | undefined = undefined
+                try {
+                  rtv = parseFloat(rt ?? '')
+                } catch {}
+                dispatch(r.actions.setDeckSettings({ minDepth: rtv }))
+              }}
+            />
+          </div>,
+        ],
       ]}
     />
   )

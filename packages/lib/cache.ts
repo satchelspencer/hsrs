@@ -105,6 +105,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     },
     depths: {},
     hasProps: {},
+    hasParams: {},
     nvds: {},
     pdepths: {},
     names: {},
@@ -132,6 +133,12 @@ export function getCache(relements: t.IdMap<t.Element>) {
         Object.keys(ancestor.props).find((c) => !!ancestor.props[c])
       )
         cache.hasProps[id] = true
+      if (
+        !cache.hasParams[id] &&
+        ancestor.params &&
+        Object.keys(ancestor.params).find((c) => !!ancestor.params?.[c])
+      )
+        cache.hasParams[id] = true
     }
   }
 
@@ -152,13 +159,16 @@ export function getCache(relements: t.IdMap<t.Element>) {
       ancestors = cache.tree.ancestors[id]
     for (const aid of ancestors) {
       for (const pname in elements[aid].params) {
-        const pvalue = elements[aid].params[pname]
-        if (!ps[pname] && pvalue && cache.hasProps[pvalue]) {
+        const pvalue = elements[aid].params[pname],
+          hasProps = cache.hasProps[pvalue]
+        if (!ps[pname] && pvalue && (cache.hasParams[pvalue] || hasProps)) {
           ps[pname] = true
           cache.paramTree.parents[pvalue] ??= []
           cache.paramTree.parents[pvalue].push(id)
-          cache.depths[id] = (cache.depths[id] ?? 0) + 1
-          paramNVDCounts[id] = (paramNVDCounts[id] ?? 0) + cache.tree.leaves[pvalue]
+          if (hasProps) {
+            cache.depths[id] = (cache.depths[id] ?? 0) + 1
+            paramNVDCounts[id] = (paramNVDCounts[id] ?? 0) + cache.tree.leaves[pvalue]
+          }
         }
       }
     }
@@ -170,6 +180,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   for (const id of cache.paramTree.topo) {
     for (const aid of cache.paramTree.parents[id]) {
+      if (!cache.hasProps[id]) continue
       const currentDepth = cache.depths[aid] ?? 0,
         nextDepth = cache.depths[id] ?? 0
 

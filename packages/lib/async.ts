@@ -35,6 +35,7 @@ interface CreateSessionMessage extends WorkerMessageBase<t.SessionAndProgress> {
   propsFilter: string[]
   tz: string
   cache: t.DeckCache
+  minDepth?: number
 }
 
 interface GetNewMessage extends WorkerMessageBase<t.CardInstance[]> {
@@ -44,6 +45,7 @@ interface GetNewMessage extends WorkerMessageBase<t.CardInstance[]> {
   filter: string[]
   propsFilter: string[]
   cache: t.DeckCache
+  preferDeep?: boolean
 }
 
 interface PingMessage extends WorkerMessageBase<true> {
@@ -152,7 +154,8 @@ export function createSessionAsync(
   allowNew: boolean,
   filter: string[],
   propsFilter: string[],
-  tz: string
+  tz: string,
+  minDepth?: number
 ) {
   const message: CreateSessionMessage = {
     type: 'createSession',
@@ -163,6 +166,7 @@ export function createSessionAsync(
     propsFilter,
     tz,
     cache: getCache(deck.elements),
+    minDepth,
   }
   return callWorker(message)
 }
@@ -171,7 +175,8 @@ export function getNewAsync(
   deck: t.Deck,
   limit: number,
   filter: string[],
-  propsFilter: string[]
+  propsFilter: string[],
+  preferDeep?: boolean
 ) {
   const message: GetNewMessage = {
     type: 'getNew',
@@ -180,6 +185,7 @@ export function getNewAsync(
     filter,
     propsFilter,
     cache: getCache(deck.elements),
+    preferDeep,
   }
   return callWorker(message)
 }

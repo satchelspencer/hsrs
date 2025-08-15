@@ -26,6 +26,7 @@ function handleMessage(
       message.filter,
       message.propsFilter,
       message.tz,
+      message.minDepth,
       message.cache
     )
   }
@@ -36,7 +37,8 @@ function handleMessage(
       message.limit,
       message.filter,
       message.propsFilter,
-      message.cache
+      message.cache,
+      message.preferDeep
     )
   }
   throw 'unhandled message'

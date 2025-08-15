@@ -15,7 +15,7 @@ export function Learn() {
     deck = r.useSelector((s) => s.deck),
     dispatch = r.useDispatch()
 
-  const { allowNew, newSessionSize, filter, propsFilter } = r.useSelector(
+  const { allowNew, newSessionSize, filter, propsFilter, minDepth } = r.useSelector(
     (s) => s.deck.settings
   )
 
@@ -33,7 +33,8 @@ export function Learn() {
           allowNew,
           filter ?? [],
           propsFilter ?? [],
-          'local'
+          'local',
+          minDepth
         ),
       [newSessionSize, allowNew, filter, !!session]
     )

@@ -21,6 +21,7 @@ import {
 } from '@hsrs/lib/session'
 import { css } from '@emotion/css'
 import { logger } from '@hsrs/lib/log'
+import { getInstanceId } from '@hsrs/lib/alias'
 
 type CardStat =
   | {
@@ -101,14 +102,15 @@ export function SessionStats() {
   useEffect(() => {
     log('\n', () =>
       session?.stack
-        .map((s) =>
-          [
-            s.new && !session.cards[card2Id(s)] ? '****' : '    ',
+        .map((s) => {
+          const state = session.states[card2Id(s)]?.[getInstanceId(s)]
+          return [
+            s.new && !state ? '****' : '    ',
             deck.elements[s.element].name,
             s?.property,
-            session.cards[card2Id(s)]?.stability,
+            state?.stability,
           ].join(' ')
-        )
+        })
         .join('\n')
     )
   }, [session?.history])

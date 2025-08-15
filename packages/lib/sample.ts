@@ -21,27 +21,60 @@ export function sampleElementIstance(
   order?: (elId: string) => number,
   commonMode?: { mode: string }[],
   filter?: (elId: string) => boolean,
+  minDepth?: number,
   hardSample?: boolean, //
   leaves?: { [id: string]: boolean },
   parentConstrained?: boolean,
   depth = 1
 ): t.ElementInstance {
-  const log = logger(3, 'sample', new Array(depth).join('   ')),
-    rootElement = getInheritedElement(id, elements, cache)
+  const log = logger(3, 'sample', new Array(Math.abs(depth)).join('   '))
+
+  if (minDepth && depth <= 1 && (cache.depths[id] < minDepth || !cache.hasProps[id])) {
+    const pset = new Set<string>(),
+      ownAncestors = cache.tree.ancestors[id]
+
+    for (const aid of cache.tree.ancestors[id])
+      for (const pp of cache.paramTree.parents[aid] ?? []) pset.add(pp)
+
+    for (const parent of evOrder([...pset], 0, order, filter)) {
+      const pel = getInheritedElement(parent, elements, cache),
+        pnames = Object.keys(pel.params ?? {}).filter((n) =>
+          ownAncestors.includes(pel.params![n])
+        ),
+        mutative = Object.values(pel.props).find((k) => k?.includes('('))
+      if (pnames.length !== 1 || mutative) continue
+
+      const fp: t.Params = { ...fixedParams }
+      for (const pname of pnames) fp[pname] = id
+
+      log('upsample', pel.name)
+
+      try {
+        return sampleElementIstance(
+          parent,
+          elements,
+          cache,
+          fp,
+          order,
+          commonMode,
+          filter,
+          minDepth,
+          hardSample,
+          { ...leaves, [id]: true },
+          parentConstrained
+        )
+      } catch {}
+    }
+
+    if (!cache.hasProps[id]) throw 'np upsample'
+  }
+
+  const rootElement = getInheritedElement(id, elements, cache)
   commonMode ??= new Array(8).fill(0).map((_, i) => {
     const rootm = rootElement.mode?.[i] ?? ''
     return { mode: rootm }
   })
   leaves ??= {}
-
-  const nonVR = getNonVirtualDescendents(id, elements, cache),
-    nonV = filter ? nonVR.filter(filter) : nonVR,
-    descendents = order ? _.sortBy(nonV, order) : _.shuffle(nonV)
-
-  const orders = _.sortBy(nonV.map((v) => order?.(v) ?? 1)),
-    minOrder = orders[0] ?? Infinity,
-    maxOrder = orders[orders.length - 1] ?? -Infinity,
-    normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
 
   log('sampling', () => [
     rootElement.name,
@@ -54,22 +87,10 @@ export function sampleElementIstance(
       .join(','),
     commonMode.map((c) => c.mode || '.').join(''),
   ])
-  while (normed.length) {
-    const sum = _.sumBy(normed),
-      sample = Math.random() * sum
 
-    let accum = 0,
-      index = 0
-    for (const v of normed) {
-      accum += v
-      if (accum >= sample) break
-      index++
-    }
-    if (hardSample) index = 0
-    if (Math.random() > 0.99) normed.splice(index, 1)
-    const [descendent] = descendents.splice(index, 1)
-    if (!descendent) continue
+  const nonVR = getNonVirtualDescendents(id, elements, cache)
 
+  for (const descendent of evOrder(nonVR, depth, order, filter, hardSample)) {
     log('-trying', elements[descendent].name)
 
     if (leaves[descendent]) {
@@ -133,6 +154,7 @@ export function sampleElementIstance(
         order,
         childCommonMode,
         filter,
+        minDepth,
         hardSample,
         leaves,
         isConstrained,
@@ -150,6 +172,41 @@ export function sampleElementIstance(
     return inst
   }
   throw 'sample not found'
+}
+
+function* evOrder(
+  els: string[],
+  depth: number,
+  order?: (elId: string) => number,
+  filter?: (elId: string) => boolean,
+  hardSample?: boolean
+) {
+  const fels = filter ? els.filter(filter) : els,
+    ordered = order ? _.sortBy(fels, order) : _.shuffle(fels)
+
+  const orders = _.sortBy(fels.map((v) => order?.(v) ?? 1)),
+    minOrder = orders[0] ?? Infinity,
+    maxOrder = orders[orders.length - 1] ?? -Infinity,
+    normed = orders.map((o) => (maxOrder - o + minOrder + 1e-10) / maxOrder)
+
+  let i = 0
+  while (normed.length && i++ < 1000) {
+    const sum = _.sumBy(normed),
+      sample = Math.random() * sum
+
+    let accum = 0,
+      index = 0
+    for (const v of normed) {
+      accum += v
+      if (accum >= sample) break
+      index++
+    }
+    if (hardSample) index = 0
+    if (Math.random() > 0.99) normed.splice(index, 1)
+    const [descendent] = ordered.splice(index, 1)
+    if (!descendent) continue
+    yield descendent
+  }
 }
 
 export function* generateElementInstanceSamples(

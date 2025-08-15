@@ -17,6 +17,7 @@ import { cleanRuby } from './ruby'
 import { logger } from './log'
 import { sampleElementIstance } from './sample'
 import { uid } from './uid'
+import { getInstanceId } from './alias'
 
 export function createLearningSession(
   deck: t.Deck,
@@ -25,6 +26,7 @@ export function createLearningSession(
   filter: string[],
   propsFilter: string[],
   tz: string,
+  minDepth?: number,
   cache = getCache(deck.elements)
 ): t.SessionAndProgress {
   const log = logger(2, 'session'),
@@ -37,31 +39,41 @@ export function createLearningSession(
       filter,
       propsFilter,
       tz,
-      cache
+      cache,
+      minDepth
     ),
     newCards = allowNew
-      ? cardShuffle(getNew(deck, newCount, filter, propsFilter, cache))
+      ? cardShuffle(getNew(deck, newCount, filter, propsFilter, cache, !!minDepth))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
       stack: [...newCards, ...cardShuffle([...dueCards, ...previewCards])],
     })
 
-  log(`took ${new Date().getTime() - t}ms\n`, () =>
-    stack
-      .map((s) => {
-        return `${s.new ? '****' : '    '} ${s.property} ${
-          deck.elements[s.element].name
-        } - ${cleanRuby(computeElementInstance(s, deck.elements).jp)}`
-      })
-      .join('\n')
+  log(
+    `took ${new Date().getTime() - t}ms\n`,
+    () =>
+      stack
+        .map((s) => {
+          return `${s.new ? '****' : '    '} ${s.property} ${
+            deck.elements[s.element].name
+          } - ${cleanRuby(computeElementInstance(s, deck.elements).jp)} - ${
+            cache.pdepths[s.element]
+          }`
+        })
+        .join('\n'),
+    `depth ${
+      stack.length
+        ? stack.filter((s) => (cache.depths?.[s.element] ?? 0) >= 1).length / stack.length
+        : 0
+    }`
   )
 
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
       stack,
-      cards: {},
+      states: {},
       history: [],
       filter,
       propsFilter,
@@ -101,19 +113,20 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
 
   for (let i = 0; i < (session.stack?.length ?? 0); i++) {
     const card = session.stack![i],
-      state = session.cards?.[card2Id(card)]
+      state = session.states?.[card2Id(card)]?.[getInstanceId(card)]
     if (state && state.stability < 1) learning.push([card, i])
     else sessionStack.push(card)
   }
 
   for (let i = 0; i < sessionStack.length; i++) {
     const card = sessionStack[i]
-    if (card.new && !session.cards?.[card2Id(card)]) newUnseen.push(card)
+    if (card.new && !session.states?.[card2Id(card)]?.[getInstanceId(card)])
+      newUnseen.push(card)
     else stack.push(card)
   }
 
   const limit = stack.findLastIndex((v) => {
-    const state = session.cards?.[card2Id(v)]
+    const state = session.states?.[card2Id(v)]?.[getInstanceId(v)]
     return !state || state.stability < 1
   })
 
@@ -161,12 +174,13 @@ export function nextSessionState(
 }
 
 export function applySessionHistoryToCards(
-  cards: t.CardStates,
+  cards: t.LearningSession['states'],
   history: t.SessionCardLearning[]
 ) {
   for (const learning of history) {
-    cards[learning.cardId] = nextSessionState(
-      cards[learning.cardId],
+    cards[learning.cardId] ??= {}
+    cards[learning.cardId][learning.instanceId] = nextSessionState(
+      cards[learning.cardId][learning.instanceId],
       learning.vscore ?? learning.score
     )
   }
@@ -182,13 +196,16 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   if (!currentCard) throw 'no card'
 
   const cardId = card2Id(currentCard),
+    instanceId = getInstanceId(currentCard),
     now = getTime()
 
   const missedSibling =
-      !session.cards[cardId] &&
+      !session.states[cardId] &&
       !deck.cards[cardId] &&
-      Object.keys(session.cards).find(
-        (c) => session.cards[c].lastMiss && id2Card(c).element === currentCard.element
+      Object.keys(session.states).find((c) =>
+        Object.values(session.states[c]).find(
+          (s) => s.lastMiss && id2Card(c).element === currentCard.element
+        )
       ),
     estReviews = getEstReviews(session),
     isEnding = session.history.length / estReviews >= 0.75,
@@ -202,10 +219,12 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
     vscore: grade === virtualGrade ? undefined : virtualGrade,
     time: now,
     took,
+    instanceId,
   })
 
-  const cardState = nextSessionState(session.cards[cardId], virtualGrade)
-  session.cards[cardId] = cardState
+  const cardState = nextSessionState(session.states[cardId]?.[instanceId], virtualGrade)
+  session.states[cardId] ??= {}
+  session.states[cardId][instanceId] = cardState
 
   const jitter = cardState.stability <= 0.5 ? 0 : Math.floor(Math.random() * 3 - 1),
     graduated = cardState.stability >= 1,
@@ -279,12 +298,12 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
   if ('remove' in update) {
     let toRemove = _.findLastIndex(
       session.stack,
-      (c) => !session.cards[card2Id(c)] && !!c.new
+      (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !!c.new
     )
     if (toRemove === -1)
       toRemove = _.findLastIndex(
         session.stack,
-        (c) => !session.cards[card2Id(c)] && !c.new //fall back to non new
+        (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !c.new //fall back to non new
       )
 
     if (toRemove !== -1) {
@@ -300,7 +319,7 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
     /* remove already seen, to keep stack length roughly the same, just with harder cards */
     const toRemove = _.findLastIndex(
       session.stack,
-      (c) => !session.cards[card2Id(c)] && !c.new
+      (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !c.new
     )
     if (toRemove !== -1) {
       log('remove old', deck.elements[session.stack[toRemove].element].name)
@@ -319,7 +338,7 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
 
 export function getMinGraduatedIndex(session: t.LearningSession) {
   return session.stack.findLastIndex((v) => {
-    const state = session.cards[card2Id(v)]
+    const state = session.states[card2Id(v)]?.[getInstanceId(v)]
     return !state || state.stability < 1
   })
 }
@@ -333,14 +352,13 @@ export function getEstReviews(session: t.LearningSession) {
 export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   const ncFactor = getNewCardFactor(),
     cardReviewsRemaning = _.sumBy(session.stack ?? [], (card) => {
-      const tcardId = card2Id(card),
-        state = session.cards?.[tcardId]
+      const state = session.states?.[card2Id(card)]?.[getInstanceId(card)]
       if (!state) return card.new ? ncFactor : 1
 
       let changedState = state,
         i = 0
       while (changedState.stability < 1 && i < 10) {
-        changedState = nextSessionState(changedState, i === 0 ? state.lastScore ?? 3 : 3)
+        changedState = nextSessionState(changedState, 3)
         i++
       }
       return i
@@ -386,7 +404,6 @@ export function getSessionState(
       }),
     hasFailed =
       !!card && session.history?.findLast((v) => v.cardId === card2Id(card))?.score === 1
-
   return {
     progress: {
       sessionSeconds: _.sumBy(session?.history, (h) => h.took),
@@ -407,25 +424,33 @@ export function getSessionState(
 }
 
 function getGraduation(session: t.LearningSession | null) {
-  const keys = Object.keys(session?.cards ?? {})
-  return !keys.length
-    ? 0
-    : keys.filter((k) => session!.cards![k].stability >= 1).length / session!.stack.length
+  let graduated = 0
+  const states = session?.states ?? {}
+  for (const cardId in states) {
+    for (const instanceId in states[cardId]) {
+      const state = states[cardId][instanceId]
+      if (state.stability >= 1) graduated++
+    }
+  }
+
+  return !session!.stack.length ? 0 : graduated / session!.stack.length
 }
 
 export function undoGrade(session: t.LearningSession): t.LearningSession {
   const learning = session.history.pop()
   if (!learning) throw 'no card to undo'
 
-  const stackIndex = session.stack.findIndex((s) => card2Id(s) === learning.cardId)
+  const stackIndex = session.stack.findIndex(
+    (s) => getInstanceId(s) === learning.instanceId
+  )
   if (stackIndex === -1) throw 'not in stack'
 
   const cardInstance = session.stack[stackIndex]
   session.stack.splice(stackIndex, 1)
   session.stack.unshift(cardInstance)
 
-  session.cards = {}
-  applySessionHistoryToCards(session.cards, session.history)
+  session.states = {}
+  applySessionHistoryToCards(session.states, session.history)
 
   return session
 }
@@ -448,11 +473,20 @@ export function getNew(
   limit: number,
   filter: string[],
   propsFilter: string[],
-  cache: t.DeckCache
+  cache: t.DeckCache,
+  preferDeep?: boolean
 ): t.CardInstance[] {
+  const log = logger(2, 'session')
+
   let maxOrder = '0'
   for (const cardId in deck.cards) {
-    const { order } = getLearnOrder(id2Card(cardId).element, deck)
+    const { order } = getLearnOrder(
+      id2Card(cardId).element,
+      deck,
+      undefined,
+      false,
+      cache
+    )
     if (order && order > maxOrder) maxOrder = order.substring(0, 3)
   }
 
@@ -463,27 +497,62 @@ export function getNew(
     allDeep = allCards.filter((c) => cache.depths[c.element]).length,
     allTotal = allCards.length,
     seenDeepRatio = seenDeep / seenTotal,
-    allDeepRatio = allDeep / allTotal,
+    allDeepRatio = preferDeep ? 0.5 : allDeep / allTotal,
     priorityDeep = !!seenTotal && seenDeepRatio < allDeepRatio
+
+  log('depth target', allDeepRatio, 'current', seenDeepRatio)
 
   const res: t.CardInstance[] = [],
     cards = _.orderBy(
       getAllCards(deck.elements)
         .filter((c) => !deck.cards[card2Id(c)])
-        .map((c) => [c, getLearnOrder(c.element, deck, maxOrder)] as const),
-      [
-        (c) => (priorityDeep ? (cache.depths[c[0].element] ? 0 : 1) : 0), //if priority deep sort by deep first
-        (c) => c[1].order,
-      ]
+        .map(
+          (c) =>
+            [c, getLearnOrder(c.element, deck, maxOrder, priorityDeep, cache)] as const
+        )
+        .filter((c) =>
+          cache.depths[c[0].element]
+            ? c[1].order.substring(0, maxOrder.length) <= maxOrder
+            : true
+        ),
+      [(c) => c[1].order]
     ),
     newCardFactor = getNewCardFactor()
 
-  while (res.length < limit / newCardFactor && cards.length) {
-    const [card] = cards.shift()!,
-      id = card2Id(card)
+  //need to check if priority deep exceeds maxOrder...
 
-    if ((!propsFilter.length || propsFilter.includes(card.property)) && !deck.cards[id])
-      sampleAndAdd(res, id, deck, filter, cache)
+  let lastSucessOrder: string | null = null,
+    deepFail = false,
+    fails = 0
+  while (res.length < limit / newCardFactor && cards.length) {
+    const [card, order] = cards.shift()!,
+      id = card2Id(card),
+      deep = cache.depths[card.element]
+
+    if ((deepFail || fails > 100) && priorityDeep && deep) continue
+
+    if ((!propsFilter.length || propsFilter.includes(card.property)) && !deck.cards[id]) {
+      const added = sampleAndAdd(
+        res,
+        id,
+        deck,
+        filter,
+        cache,
+        undefined,
+        undefined,
+        preferDeep
+      )
+      if (deep) {
+        const cat = order.order.substring(0, 3)
+        if (added === true) {
+          lastSucessOrder = cat
+          fails = 0
+        } else if (added === false) {
+          fails++
+          if (lastSucessOrder && cat !== lastSucessOrder) deepFail = true
+        }
+      }
+    }
   }
 
   return res.map((c) => ({ ...c, new: true }))
@@ -495,7 +564,8 @@ function getDue(
   filter: string[],
   propsFilter: string[],
   tz: string,
-  cache: t.DeckCache
+  cache: t.DeckCache,
+  minDepth?: number
 ) {
   const dues = getCardDueDates(deck, cache),
     dueCards: t.CardInstance[] = [],
@@ -553,7 +623,7 @@ function getDue(
     sampleFailures = 0,
     nextDones = 0
 
-  const used = new Set<string>(),
+  const used = {},
     chunkOrdered = _.chunk(cardsIds, limit).flatMap((c) =>
       _.sortBy(c, (c) => -cache.depths[id2Card(c).element])
     )
@@ -576,7 +646,9 @@ function getDue(
       deck,
       filter,
       cache,
-      used
+      used,
+      minDepth,
+      !!minDepth
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
@@ -629,7 +701,9 @@ export function sampleAndAdd(
   deck: t.Deck,
   filter: string[],
   cache: t.DeckCache,
-  used = new Set<string>()
+  used: { [id: string]: number } = {},
+  minDepth?: number,
+  preferDeep?: boolean
 ) {
   const { element, property } = id2Card(cardId),
     now = getTime()
@@ -675,18 +749,21 @@ export function sampleAndAdd(
         },
         undefined,
         (elId) => {
-          if (used.has(elId) && !cache.depths[elId]) return false
+          if ((used[elId] ?? 0) > cache.pdepths[elId] * 2) return false
           const card = deck.cards[card2Id({ element: elId, property })]
           if (!cache.hasProps[elId] || elId === element) return true
           else {
             const targetStability =
               getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
-              (Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
+              (preferDeep
+                ? 1
+                : Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
             return card && card.stability > targetStability
           }
-        }
+        },
+        minDepth
       )
-      for (const x of getInstanceEls(instance)) used.add(x)
+      for (const x of getInstanceEls(instance)) used[x] = (used[x] ?? 0) + 1
       res.push({ ...instance, property })
       return true
     } catch {}

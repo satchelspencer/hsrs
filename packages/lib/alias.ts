@@ -125,6 +125,7 @@ export function findAliases(
                     (id) => -instanceEls.indexOf(id),
                     undefined,
                     (id) => instanceEls.includes(id),
+                    undefined,
                     true
                   ),
                   computed = computeElementInstance(inst, elements, cache)
