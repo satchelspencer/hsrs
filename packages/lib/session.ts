@@ -87,7 +87,7 @@ export function createLearningSession(
 }
 
 function cardShuffle(vals: t.CardInstance[]) {
-  const byId = _.groupBy(_.shuffle(vals), (c) => c.element),
+  const byId = _.groupBy(_.shuffle(vals), (c) => getInstanceId(c)),
     res: t.CardInstance[] = []
 
   while (Object.keys(byId).length) {
@@ -749,7 +749,7 @@ export function sampleAndAdd(
         },
         undefined,
         (elId) => {
-          if ((used[elId] ?? 0) > cache.pdepths[elId] * 2) return false
+          if ((used[elId] ?? 0) > Math.pow(cache.pdepths[elId], 2)) return false
           const card = deck.cards[card2Id({ element: elId, property })]
           if (!cache.hasProps[elId] || elId === element) return true
           else {
