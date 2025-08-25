@@ -69,6 +69,15 @@ export function createLearningSession(
     }`
   )
 
+  log(() => {
+    const b: string[] = []
+    for (const cardId in deck.cards) {
+      const card = deck.cards[cardId]
+      if (typeof card.stability !== 'number') b.push(cardId)
+    }
+    return b.length ? `BROKEN ${b.join(',')}` : 'no broken'
+  })
+
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),

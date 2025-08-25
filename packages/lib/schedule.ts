@@ -170,7 +170,11 @@ export function getLearningCardDiff(
 
     const successProb = successProbs[i],
       probability =
-        state && flearnings.length > 1 ? (1 - successProb) / (1 - totalSuccessProb) : 1,
+        state && flearnings.length > 1
+          ? totalSuccessProb === 1
+            ? 0
+            : (1 - successProb) / (1 - totalSuccessProb)
+          : 1,
       ret = offsetRetention(baseRet, offsets[i])
 
     const delayM = (learning.time - (state?.lastSeen ?? 0)) / 3600,
