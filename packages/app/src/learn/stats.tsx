@@ -113,7 +113,7 @@ export function SessionStats() {
         })
         .join('\n')
     )
-  }, [session?.history])
+  }, [session?.stack])
 
   return (
     <div className={sessionStats}>

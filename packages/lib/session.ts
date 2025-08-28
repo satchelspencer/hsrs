@@ -115,50 +115,32 @@ since they will usually be repeated multiple times, you get a more even
 spacing during learning */
 
 function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
-  const sessionStack: t.CardInstance[] = [],
-    learning: [t.CardInstance, number][] = [],
-    stack: t.CardInstance[] = [],
-    newUnseen: t.CardInstance[] = []
+  if (!session.stack) return []
+  const firstMissIndex = findStackIndex(session, (s) => s && s?.stability < MISS_THRESH)
 
-  for (let i = 0; i < (session.stack?.length ?? 0); i++) {
-    const card = session.stack![i],
-      state = session.states?.[card2Id(card)]?.[getInstanceId(card)]
-    if (state && state.stability < 1) learning.push([card, i])
-    else sessionStack.push(card)
+  log('fmi', firstMissIndex)
+  for (let i = firstMissIndex - 1; i >= 0; i--) {
+    const card = session.stack[i],
+      state = getCardState(card, session)
+
+    const isNewUnseen = card.new && !state
+    if (isNewUnseen) {
+      const replacement = findStackIndex(
+        session,
+        (s, c, i) =>
+          i > firstMissIndex &&
+          ((!s && !c.new) || (s && s.stability >= 1 && s.stability <= 2))
+      )
+
+      log('nu before fmi', i, 'replace', replacement)
+      if (replacement !== -1) {
+        session.stack[i] = session.stack[replacement]
+        session.stack[replacement] = card
+      } else break
+    }
   }
 
-  for (let i = 0; i < sessionStack.length; i++) {
-    const card = sessionStack[i]
-    if (card.new && !session.states?.[card2Id(card)]?.[getInstanceId(card)])
-      newUnseen.push(card)
-    else stack.push(card)
-  }
-
-  const limit = stack.findLastIndex((v) => {
-    const state = session.states?.[card2Id(v)]?.[getInstanceId(v)]
-    return !state || state.stability < 1
-  })
-
-  log('limit', limit, learning.length)
-  const gaps = newUnseen.length,
-    actual = (gaps * (gaps + 1)) / 2,
-    gapFactor = (limit === -1 ? sessionStack.length * 0.75 : limit) / actual,
-    sumSpac = [
-      0,
-      ...new Array(gaps).fill(0).map((v, i) => Math.max((i + 1) * gapFactor, 1)),
-    ]
-
-  let d = 0
-  for (const gap of sumSpac) {
-    d += gap
-    const nc = newUnseen.shift()
-    if (!nc) break
-    stack.splice(Math.min(Math.max(Math.floor(d)), stack.length - 1), 0, nc)
-  }
-
-  for (const [card, index] of learning) stack.splice(index, 0, card)
-
-  return stack
+  return session.stack
 }
 
 const initSessionStabs = [0.25, 0.5, 1, 2],
@@ -235,7 +217,8 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   session.states[cardId] ??= {}
   session.states[cardId][instanceId] = cardState
 
-  const jitter = cardState.stability <= 0.5 ? 0 : Math.floor(Math.random() * 3 - 1),
+  const jitter =
+      cardState.stability <= MISS_THRESH ? 0 : Math.floor(Math.random() * 3 - 1),
     graduated = cardState.stability >= 1,
     minGraduatedIndex = getMinGraduatedIndex(session),
     midPoint = Math.floor(session.stack.length / 2),
@@ -291,6 +274,34 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
       } else break
     }
   }
+
+  /* if theres an unseen new card before the first miss then redist */
+  const firstMissIndex = findStackIndex(session, (s) => s && s?.stability < MISS_THRESH),
+    firstNewIndex = findStackIndex(session, (s, c) => c.new && !s)
+
+  if (firstNewIndex !== -1 && firstMissIndex !== -1 && firstNewIndex < firstMissIndex)
+    session.stack = distributeNewUnseenCards(session)
+}
+
+const MISS_THRESH = initSessionStabs[1] //0.5
+
+function findStackIndex(
+  session: Partial<t.LearningSession>,
+  pred: (
+    state: t.CardState | undefined,
+    c: t.CardInstance,
+    i: number
+  ) => boolean | undefined,
+  reverse?: boolean
+) {
+  if (!session.stack) return -1
+  return session.stack[reverse ? 'findLastIndex' : 'findIndex']((c, i) =>
+    pred(getCardState(c, session), c, i)
+  )
+}
+
+function getCardState(card: t.CardInstance, session: Partial<t.LearningSession>) {
+  return session.states && session.states[card2Id(card)]?.[getInstanceId(card)]
 }
 
 export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) {
@@ -305,31 +316,28 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
 
   let redist = false
   if ('remove' in update) {
-    let toRemove = _.findLastIndex(
-      session.stack,
-      (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !!c.new
-    )
-    if (toRemove === -1)
-      toRemove = _.findLastIndex(
-        session.stack,
-        (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !c.new //fall back to non new
-      )
+    for (let i = 0; i < update.remove; i++) {
+      let toRemove = findStackIndex(session, (s, c) => !s && !!c.new, true)
 
-    if (toRemove !== -1) {
-      log('removing', deck.elements[session.stack[toRemove].element].name)
-      session.stack.splice(toRemove, 1)
-      redist = true
+      if (toRemove === -1)
+        toRemove = findStackIndex(session, (s, c) => !s && !c.new, true) //fall back to non new
+
+      if (toRemove !== -1) {
+        log('removing', deck.elements[session.stack[toRemove].element].name)
+        session.stack.splice(toRemove, 1)
+        redist = true
+      }
     }
   } else if ('add' in update) {
     log('add', deck.elements[update.add.element].name)
-    const midPoint = session.stack.length / 2
-    session.stack.splice(Math.floor(Math.random() * midPoint) + midPoint, 0, update.add)
+    const insertIndex = Math.max(
+      findStackIndex(session, (s, c) => !s && !!c.new, true),
+      findStackIndex(session, (s) => s && s.stability < 1, true)
+    )
+    session.stack.splice(insertIndex + 1, 0, update.add)
 
     /* remove already seen, to keep stack length roughly the same, just with harder cards */
-    const toRemove = _.findLastIndex(
-      session.stack,
-      (c) => !session.states[card2Id(c)]?.[getInstanceId(c)] && !c.new
-    )
+    const toRemove = findStackIndex(session, (s, c) => !s && !c.new, true)
     if (toRemove !== -1) {
       log('remove old', deck.elements[session.stack[toRemove].element].name)
       session.stack.splice(toRemove, 1)
@@ -346,10 +354,7 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
 }
 
 export function getMinGraduatedIndex(session: t.LearningSession) {
-  return session.stack.findLastIndex((v) => {
-    const state = session.states[card2Id(v)]?.[getInstanceId(v)]
-    return !state || state.stability < 1
-  })
+  return findStackIndex(session, (s) => !s || s.stability < 1, true)
 }
 
 export function getEstReviews(session: t.LearningSession) {
@@ -361,7 +366,7 @@ export function getEstReviews(session: t.LearningSession) {
 export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
   const ncFactor = getNewCardFactor(),
     cardReviewsRemaning = _.sumBy(session.stack ?? [], (card) => {
-      const state = session.states?.[card2Id(card)]?.[getInstanceId(card)]
+      const state = getCardState(card, session)
       if (!state) return card.new ? ncFactor : 1
 
       let changedState = state,

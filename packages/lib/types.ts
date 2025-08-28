@@ -164,6 +164,6 @@ export interface GoalState {
 
 export type GradePayload = { grade: number; took: number }
 
-export type UpdatePayload = ({ add: CardInstance } | { remove: true }) & {
+export type UpdatePayload = ({ add: CardInstance } | { remove: number }) & {
   commit?: string
 }

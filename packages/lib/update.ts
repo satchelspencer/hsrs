@@ -22,11 +22,18 @@ export async function getSessionUpdate(
     delta = Math.floor((estReviews - session.reviews) / ncFactor),
     commit = session.commit
 
-  log('delta', estReviews, 'original', session.reviews, 'delta ', delta)
+  log(
+    'est',
+    `${session.reviews}->${estReviews}`,
+    'delta ',
+    delta,
+    'total',
+    session.history.length
+  )
 
   if (delta > 1 && session.allowNew) {
     log('remove', delta)
-    return { remove: true, commit }
+    return { remove: delta, commit }
   } else if (
     delta < -2 &&
     session.allowNew &&
