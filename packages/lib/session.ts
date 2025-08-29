@@ -1,6 +1,6 @@
 import { getCache } from './cache'
 import { DateTime } from 'luxon'
-import { getAllCards, getLearnOrder } from './props'
+import { getAllCards, getInheritedElement, getLearnOrder } from './props'
 import {
   defaultParams,
   defaultretention,
@@ -81,7 +81,7 @@ export function createLearningSession(
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
-      stack: _.uniqBy(stack, (s) => getInstanceId(s)),
+      stack: _.uniqBy(stack, (s) => getInstanceId(s) + s.property),
       states: {},
       history: [],
       filter,
@@ -254,7 +254,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   session.stack.splice(newIndex, 0, currentCard)
 
   /* ensure a minimum gap between siblings */
-  const MIN_SPACING = 4
+  const MIN_SPACING = Math.min(Math.ceil(session.stack.length / 6), 4)
   if (session.stack.length > MIN_SPACING * 3) {
     for (let i = 0; i < MIN_SPACING; i++) {
       const nextFirst = session.stack[0],
@@ -281,6 +281,12 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
 
   if (firstNewIndex !== -1 && firstMissIndex !== -1 && firstNewIndex < firstMissIndex)
     session.stack = distributeNewUnseenCards(session)
+
+  if (getInstanceId(session.stack[0]) === _.last(session.history)?.instanceId) {
+    log('first dup')
+    const f = session.stack.shift()!
+    session.stack.splice(2, 0, f)
+  }
 }
 
 const MISS_THRESH = initSessionStabs[1] //0.5
@@ -407,15 +413,13 @@ export function getSessionState(
     value = card && computeElementInstance(card, elements),
     nextCard = session?.stack[1],
     next = nextCard && computeElementInstance(nextCard, elements),
+    element = card && getInheritedElement(card.element, elements),
+    siblingCardIds = element
+      ? Object.keys(element.props).map((property) => card2Id({ ...card, property }))
+      : [],
     isNew =
       !!card &&
-      !cardStates[card2Id(card)] &&
-      !session.history.findLast((c) => id2Card(c.cardId).element === card.element) &&
-      !Object.keys(elements).find((id) => {
-        if (id === card.element) return false
-        const e = elements[id]
-        return e.props[card.property] === value?.[card.property]
-      }),
+      !siblingCardIds.find((cardId) => cardStates[cardId] || session.states[cardId]),
     hasFailed =
       !!card && session.history?.findLast((v) => v.cardId === card2Id(card))?.score === 1
   return {
