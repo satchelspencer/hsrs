@@ -33,21 +33,37 @@ export function sampleElementIstance(
     const pset = new Set<string>(),
       ownAncestors = cache.tree.ancestors[id]
 
-    for (const aid of cache.tree.ancestors[id])
+    for (const aid of ownAncestors)
       for (const pp of cache.paramTree.parents[aid] ?? []) pset.add(pp)
 
-    for (const parent of evOrder([...pset], 0, order, filter)) {
+    log(
+      'need upsample',
+      elements[id].name,
+      'parents:',
+      [...pset].map((c) => elements[c].name)
+    )
+
+    for (const parent of evOrder(
+      [...pset],
+      0,
+      cache.hasProps[id] ? (elid) => 1 / cache.depths[elid] : order, //most shallow first
+      cache.hasProps[id]
+        ? (elid) =>
+            cache.pdepths[elid] > cache.pdepths[id] + 1.5 && //force upsampling w/ siblings
+            (filter ? filter(elid) : true)
+        : filter
+    )) {
       const pel = getInheritedElement(parent, elements, cache),
         pnames = Object.keys(pel.params ?? {}).filter((n) =>
           ownAncestors.includes(pel.params![n])
-        ),
-        mutative = Object.values(pel.props).find((k) => k?.includes('('))
-      if (pnames.length !== 1 || mutative) continue
+        )
+
+      log('-try upsample', pel.name, pnames.length)
+
+      if (pnames.length !== 1) continue //must be exactly 1 or non-uniq leaves possible
 
       const fp: t.Params = { ...fixedParams }
       for (const pname of pnames) fp[pname] = id
-
-      log('upsample', pel.name)
 
       try {
         return sampleElementIstance(
@@ -63,7 +79,9 @@ export function sampleElementIstance(
           { ...leaves, [id]: true },
           parentConstrained
         )
-      } catch {}
+      } catch (e) {
+        log('upsample err', e)
+      }
     }
 
     if (!cache.hasProps[id]) throw 'np upsample'
@@ -124,8 +142,10 @@ export function sampleElementIstance(
     for (const fparam in fixedParams) {
       if (!params[fparam]) continue
       const common = satisfies(fixedParams[fparam], params[fparam], cache)
-      if (!common) failed = true
-      else params[fparam] = common
+      if (!common) {
+        log('-fixed fail', fparam, elements[params[fparam]].name)
+        failed = true
+      } else params[fparam] = common
     }
     if (failed) continue
 
@@ -144,27 +164,32 @@ export function sampleElementIstance(
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
-      const isConstrained = !!fixedParams?.[param]
-      log('-param', param, isConstrained ? '**constrained' : 'nc')
-      const pinst = sampleElementIstance(
-        params[param],
-        elements,
-        cache,
-        constraints,
-        order,
-        childCommonMode,
-        filter,
-        minDepth,
-        hardSample,
-        leaves,
-        isConstrained,
-        depth + 1
-      )
-      walkParamsDeep({ [param]: pinst }, (childParam, el) => {
-        if (constraint.includes(childParam)) constraints[childParam] = el.element
-      })
-      inst.params![param] = pinst
+      try {
+        const isConstrained = !!fixedParams?.[param]
+        log('-param', param, isConstrained ? '**constrained' : 'nc')
+        const pinst = sampleElementIstance(
+          params[param],
+          elements,
+          cache,
+          constraints,
+          order,
+          childCommonMode,
+          filter,
+          minDepth,
+          hardSample,
+          leaves,
+          isConstrained,
+          depth + 1
+        )
+        walkParamsDeep({ [param]: pinst }, (childParam, el) => {
+          if (constraint.includes(childParam)) constraints[childParam] = el.element
+        })
+        inst.params![param] = pinst
+      } catch (e) {
+        failed = true //catching allows full search but impacts perf
+      }
     }
+    if (failed) continue
     if (!cache.depths[inst.element] && !leaves[inst.element]) {
       leaves[inst.element] = true
       log('-adding leaf')

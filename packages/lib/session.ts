@@ -81,7 +81,7 @@ export function createLearningSession(
   return {
     session: {
       reviews: estimateReviewsRemaining({ stack }),
-      stack,
+      stack: _.uniqBy(stack, (s) => getInstanceId(s)),
       states: {},
       history: [],
       filter,
@@ -654,6 +654,13 @@ function getDue(
 
     if (!firstSeenToday && isSameDay && sameDays > limit / 8 && dueCards.length) continue
 
+    /* only upsample if minimally learned */
+    const thisMinDepth =
+      state.stability >=
+      getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams)
+        ? minDepth
+        : 0
+
     const added = sampleAndAdd(
       dueToday ? dueCards : nextCards,
       cardId,
@@ -661,8 +668,8 @@ function getDue(
       filter,
       cache,
       used,
-      minDepth,
-      !!minDepth
+      thisMinDepth,
+      !!thisMinDepth
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
@@ -763,7 +770,8 @@ export function sampleAndAdd(
         },
         undefined,
         (elId) => {
-          if ((used[elId] ?? 0) > Math.pow(cache.pdepths[elId], 2)) return false
+          if (!minDepth && (used[elId] ?? 0) > Math.pow(cache.pdepths[elId], 2))
+            return false //prevent reuse, except if upsampling
           const card = deck.cards[card2Id({ element: elId, property })]
           if (!cache.hasProps[elId] || elId === element) return true
           else {
