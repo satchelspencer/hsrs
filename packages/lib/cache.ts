@@ -2,6 +2,7 @@ import { logistic } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 import { current, isDraft } from 'immer'
+import { logger } from './log'
 
 function undraft<T>(v: T): T {
   return isDraft(v) ? current(v) : v
@@ -76,33 +77,32 @@ function getAncestors(elements: t.IdMap<t.Element>, tree: t.TreeCache) {
   tree.topo = topoOrder.reverse()
 }
 
+function initTreeCache(): t.TreeCache {
+  return {
+    parents: {},
+    children: {},
+    ancestors: {},
+    topo: [],
+    leaves: {},
+    roots: {},
+    firstAncestors: {},
+  }
+}
+
 /* get structure and heuristics from elements for fast lookups
 tree, param-depth, leaves, name maps. */
+
+const log = logger(2, 'cache')
 
 export function getCache(relements: t.IdMap<t.Element>) {
   const elements = undraft(relements) //for when we're in a redux store
   if (elements === lastEls && lastCache) return lastCache
-  //console.trace('cache')
+  log('cache')
   const t = new Date().getTime()
   const cache: t.DeckCache = {
-    tree: {
-      parents: {},
-      children: {},
-      ancestors: {},
-      topo: [],
-      leaves: {},
-      roots: {},
-      firstAncestors: {},
-    },
-    paramTree: {
-      parents: {},
-      children: {},
-      ancestors: {},
-      topo: [],
-      leaves: {},
-      roots: {},
-      firstAncestors: {},
-    },
+    tree: initTreeCache(),
+    paramTree: initTreeCache(),
+    depthTree: initTreeCache(),
     depths: {},
     hasProps: {},
     hasParams: {},
@@ -153,19 +153,21 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   for (const id in elements) {
     cache.paramTree.parents[id] ??= []
-    cache.paramTree.parents[id].push(...elements[id].parents.slice())
+    cache.depthTree.parents[id] ??= []
+    cache.depthTree.parents[id].push(...elements[id].parents.slice())
     if (elements[id].virtual) continue
     const ps: { [name: string]: true } = {},
       ancestors = cache.tree.ancestors[id]
     for (const aid of ancestors) {
       for (const pname in elements[aid].params) {
-        const pvalue = elements[aid].params[pname],
-          hasProps = cache.hasProps[pvalue]
-        if (!ps[pname] && pvalue && (cache.hasParams[pvalue] || hasProps)) {
-          ps[pname] = true
+        const pvalue = elements[aid].params[pname]
+        if (!ps[pname] && pvalue) {
           cache.paramTree.parents[pvalue] ??= []
           cache.paramTree.parents[pvalue].push(id)
-          if (hasProps) {
+          ps[pname] = true
+          if (cache.hasProps[pvalue]) {
+            cache.depthTree.parents[pvalue] ??= []
+            cache.depthTree.parents[pvalue].push(id)
             cache.depths[id] = (cache.depths[id] ?? 0) + 1
             paramNVDCounts[id] = (paramNVDCounts[id] ?? 0) + cache.tree.leaves[pvalue]
           }
@@ -174,12 +176,14 @@ export function getCache(relements: t.IdMap<t.Element>) {
     }
   }
 
+  getAncestors(elements, cache.depthTree)
+
   getAncestors(elements, cache.paramTree)
 
   const paramNVDTotals: { [id: string]: number } = { ...paramNVDCounts }
 
-  for (const id of cache.paramTree.topo) {
-    for (const aid of cache.paramTree.parents[id]) {
+  for (const id of cache.depthTree.topo) {
+    for (const aid of cache.depthTree.parents[id]) {
       if (!cache.hasProps[id]) continue
       const currentDepth = cache.depths[aid] ?? 0,
         nextDepth = cache.depths[id] ?? 0
@@ -206,7 +210,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     cache.pdepths[id] = cache.depths[id]
     cache.depths[id] *= (logistic((paramNVDTotals[id] ?? 0) / 50) - 0.5) * 2
   }
-  //console.log(cache, new Date().getTime() - t)
+  log(cache, new Date().getTime() - t)
 
   lastCache = cache
   lastEls = elements
