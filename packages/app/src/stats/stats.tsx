@@ -99,8 +99,12 @@ export function Reviews(props: TimeStatProps) {
 
   return (
     <div>
-      <i>{data.count}</i> over <i>{(data.took / 3600).toFixed(2)}</i> hours, averaging{' '}
-      <i>{(data.took / data.count).toFixed(2)}</i> seconds
+      <i>{data.count}</i> over <i>{(data.took / 3600).toFixed(2)}</i> hours
+      {!!data.count && (
+        <>
+          , averaging <i>{(data.took / data.count).toFixed(2)}</i> seconds
+        </>
+      )}
     </div>
   )
 }
