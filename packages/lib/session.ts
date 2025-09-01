@@ -190,18 +190,25 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
     instanceId = getInstanceId(currentCard),
     now = getTime()
 
-  const missedSibling =
+  const siblingCardIds = getSiblingCards(currentCard, deck.elements),
+    missedSibling =
       !session.states[cardId] &&
       !deck.cards[cardId] &&
-      Object.keys(session.states).find((c) =>
-        Object.values(session.states[c]).find(
-          (s) => s.lastMiss && id2Card(c).element === currentCard.element
+      siblingCardIds.find((cardId) => {
+        const cardState = deck.cards[cardId]
+        return (
+          Object.values(session.states[cardId] ?? {}).find((s) => s.lastMiss) ||
+          (cardState &&
+            cardState.lastMiss &&
+            cardState.lastMiss - (cardState.firstSeen ?? 0) < 3600 * 24)
         )
-      ),
+      }),
     estReviews = getEstReviews(session),
     isEnding = session.history.length / estReviews >= 0.75,
     grade = missedSibling ? Math.min(rgrade, 2) : rgrade, //if new and sibling was missed, max grade of 2
     virtualGrade = Math.min(grade + (isEnding ? 1 : 0), 4) //bump grade by 1 to prevent session end being stuck
+
+  log('missed sibling', missedSibling)
 
   session.history.push({
     cardId,
@@ -413,10 +420,7 @@ export function getSessionState(
     value = card && computeElementInstance(card, elements),
     nextCard = session?.stack[1],
     next = nextCard && computeElementInstance(nextCard, elements),
-    element = card && getInheritedElement(card.element, elements),
-    siblingCardIds = element
-      ? Object.keys(element.props).map((property) => card2Id({ ...card, property }))
-      : [],
+    siblingCardIds = getSiblingCards(card, elements),
     isNew =
       !!card &&
       !siblingCardIds.find((cardId) => cardStates[cardId] || session.states[cardId]),
@@ -439,6 +443,13 @@ export function getSessionState(
     isNew,
     hasFailed,
   }
+}
+
+function getSiblingCards(card: t.CardInstance | undefined, elements: t.IdMap<t.Element>) {
+  const element = card && getInheritedElement(card.element, elements)
+  return element
+    ? Object.keys(element.props).map((property) => card2Id({ ...card, property }))
+    : []
 }
 
 function getGraduation(session: t.LearningSession | null) {
