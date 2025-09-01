@@ -213,7 +213,7 @@ export function getLearnOrder(
           .map((c) => Math.floor(parseInt(c, 36) / 3.6) + '')
       : []
 
-  final[2] = Math.floor(9 / Math.sqrt(cache.paramTree.parents[element]?.length ?? 1)) + ''
+  final[2] = Math.floor(9 / Math.sqrt(cache.paramTree.parents[element]?.length || 1)) + ''
 
   Object.assign(final, order.split('.'))
   if (pre) Object.assign(final, startOrder.split('.'))
