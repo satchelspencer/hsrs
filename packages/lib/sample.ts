@@ -109,7 +109,11 @@ export function sampleElementIstance(
   const nonVR = getNonVirtualDescendents(id, elements, cache)
 
   for (const descendent of evOrder(nonVR, depth, order, filter, hardSample)) {
-    log('-trying', elements[descendent].name)
+    log(
+      '-trying',
+      elements[descendent].name,
+      commonMode.map((c) => c.mode || '.').join('')
+    )
 
     if (leaves[descendent]) {
       log('-is leaf', parentConstrained ? 'parent-constrained' : 'SKIP')
@@ -122,16 +126,24 @@ export function sampleElementIstance(
       mode,
     } = getInheritedElement(descendent, elements, cache)
 
+    const childCommonMode = [...commonMode]
+
     let failed = false
     if (fixedParams && mode) {
-      for (let i = 0; i < Math.max(commonMode.length, mode.length); i++) {
-        const common = commonMode[i],
+      for (let i = 0; i < Math.max(childCommonMode.length, mode.length); i++) {
+        const common = childCommonMode[i],
           ncommon = satisfiesMode(common.mode, mode[i])
         if (ncommon === undefined) {
           failed = true
           break
         }
-        if (ncommon) common.mode = ncommon
+        if (mode[i] === '*') childCommonMode[i] = { mode: '*' }
+        else if (ncommon) {
+          if (ncommon.match(/[A-Z]/)) {
+            childCommonMode[i] = { mode: ncommon }
+            common.mode = ncommon.toLowerCase()
+          } else common.mode = ncommon
+        }
       }
     }
     if (failed) {
@@ -155,12 +167,9 @@ export function sampleElementIstance(
     }
 
     const constraints: t.Params = _.pickBy(
-        { ...params, ...(fixedParams ?? {}) },
-        (_, v) => constraint.includes(v)
-      ),
-      childCommonMode = commonMode.map((c, i) =>
-        mode?.[i] && mode[i] === '*' ? { mode: '*' } : c
-      )
+      { ...params, ...(fixedParams ?? {}) },
+      (_, v) => constraint.includes(v)
+    )
     for (const param of _.sortBy(Object.keys(params), (pname) =>
       constraints[pname] ? 0 : Math.random()
     )) {
