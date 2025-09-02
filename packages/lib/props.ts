@@ -236,3 +236,11 @@ export function computeDescs(
 
   return descs
 }
+
+export function isRelation(element: t.Element) {
+  return (
+    !!element.virtual &&
+    Object.keys(element.params ?? {}).length === 2 &&
+    Object.keys(element.props).length === 0
+  )
+}

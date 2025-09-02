@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
-import { cache, css, cx } from '@emotion/css'
+import { css, cx } from '@emotion/css'
 
 import * as t from '@hsrs/lib/types'
 import * as styles from '../styles'
@@ -14,7 +14,7 @@ import { Icon } from '../components/icon'
 import { computeElementInstance, computeElementMode } from '@hsrs/lib/expr'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
-import { computeDescs } from '@hsrs/lib/props'
+import { computeDescs, isRelation } from '@hsrs/lib/props'
 
 interface ElementEditorProps {
   id: string
@@ -66,10 +66,7 @@ export function ElementEditor(props: ElementEditorProps) {
 
   const [searching, setSearching] = useState(false)
 
-  const canShowRelation =
-    element.virtual &&
-    Object.keys(element.params ?? {}).length === 2 &&
-    Object.keys(element.props).length === 0
+  const canShowRelation = isRelation(element)
 
   const descs = computeDescs(props.id, elements)
 

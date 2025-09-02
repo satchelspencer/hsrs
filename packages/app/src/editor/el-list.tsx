@@ -10,7 +10,12 @@ import { Button } from '../components/button'
 import { Selection } from '../redux/ui'
 import { Element } from '@hsrs/lib/types'
 import CodeInput from '../components/code'
-import { getElementOrder, getLearnOrder } from '@hsrs/lib/props'
+import {
+  getElementOrder,
+  getInheritedElement,
+  getLearnOrder,
+  isRelation,
+} from '@hsrs/lib/props'
 import { getCache } from '@hsrs/lib/cache'
 import { useElVarList } from './element'
 
@@ -29,9 +34,14 @@ export function ElementsList(props: ElementsListProps) {
     ),
     elementIds = showVirtual ? allElementIds : nonVirtualElementIds,
     deck = r.useSelector((s) => s.deck),
+    parentElement = props.parentId && getInheritedElement(props.parentId, deck.elements),
+    relation = parentElement && isRelation(parentElement),
     sortedIds = useMemo(
-      () => _.sortBy(elementIds, (id) => getLearnOrder(id, deck, '0.0').order),
-      [elementIds]
+      () =>
+        relation
+          ? elementIds
+          : _.sortBy(elementIds, (id) => getLearnOrder(id, deck, '0.0').order),
+      [elementIds, relation]
     ),
     nextSelection = r.useSelector((s) =>
       r.selectors.selectSelectionByIndex(s, props.index + 1)
@@ -222,15 +232,41 @@ function ElListActions(props: ElListActionsProps) {
     vars = useElVarList({ rootId }),
     folderVars = useElVarList({ rootId, filter: (e) => !!e.virtual })
 
+  const parentElement = props.parentId && getInheritedElement(props.parentId, elements),
+    relation = parentElement && isRelation(parentElement)
+
   const handleAdd = (virtual: boolean, name: string, copy?: string) => {
+    const params: Element['params'] = {}
+
+    if (relation && !virtual && !copy && name.split(' ').length > 1) {
+      const inp = name.split(' '),
+        parentParams = parentElement.params ?? {},
+        root = cache.tree.roots[props.parentId!]
+
+      if (!root) throw 'no root'
+
+      for (const paramName of _.sortBy(_.keys(parentParams))) {
+        const parentValue = parentParams[paramName],
+          inpName = inp.shift()
+
+        if (!inpName) throw 'not enough inputs'
+        const inpEl = cache.names[root][inpName]
+
+        if (!cache.tree.ancestors[inpEl].includes(parentValue)) throw 'mismatched inpits'
+
+        params[paramName] = inpEl
+      }
+    }
+
     const id = uid(),
       element: Partial<Element> = {
         ...(copy ? elements[copy] : {}),
         parents: props.parentId ? [props.parentId] : [],
-        name: copy ? elements[copy].name + '-copy' : name,
+        name: copy ? elements[copy].name + '-copy' : _.kebabCase(name),
         virtual: props.parentId ? undefined : true,
       }
     if (virtual) element.virtual = true
+    if (_.keys(params).length) element.params = params
     dispatch(r.actions.createElement({ id, element }))
     dispatch(
       r.actions.setSelection({
