@@ -345,9 +345,10 @@ export async function applySessionUpdate(deck: t.Deck, update: t.UpdatePayload) 
     log('add', deck.elements[update.add.element].name)
     const insertIndex = Math.max(
       findStackIndex(session, (s, c) => !s && !!c.new, true),
-      findStackIndex(session, (s) => s && s.stability < 1, true)
+      findStackIndex(session, (s) => s && s.stability < 1, true),
+      1
     )
-    session.stack.splice(insertIndex + 1, 0, update.add)
+    session.stack.splice(insertIndex, 0, update.add)
 
     /* remove already seen, to keep stack length roughly the same, just with harder cards */
     const toRemove = findStackIndex(session, (s, c) => !s && !c.new, true)
@@ -587,6 +588,17 @@ export function getNew(
   return res.map((c) => ({ ...c, new: true }))
 }
 
+const DAY_HR_OFFSET = 4
+
+export function getDay(time: number, tz: string) {
+  const timeTz = DateTime.fromSeconds(time).setZone(tz).minus({ hours: DAY_HR_OFFSET })
+  return {
+    seconds: timeTz.toSeconds(),
+    endOfDay: timeTz.endOf('day').plus({ hours: DAY_HR_OFFSET }).toSeconds(),
+    startOfDay: timeTz.startOf('day').plus({ hours: DAY_HR_OFFSET }).toSeconds(),
+  }
+}
+
 function getDue(
   deck: t.Deck,
   limit: number,
@@ -599,10 +611,7 @@ function getDue(
   const dues = getCardDueDates(deck, cache),
     dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    nowTz = DateTime.fromSeconds(getTime()).setZone(tz).minus({ hours: 4 }),
-    nowSeconds = nowTz.toSeconds(),
-    endOfDay = nowTz.endOf('day').plus({ hours: 4 }).toSeconds(),
-    startOfDay = nowTz.startOf('day').plus({ hours: 4 }).toSeconds(),
+    { startOfDay, endOfDay, seconds } = getDay(getTime(), tz),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
         const { element, property } = id2Card(cid)
@@ -623,7 +632,7 @@ function getDue(
             lastOpenMissAgo =
               state.lastMiss &&
               state.lastSeen! - state.lastMiss < 60 * 30 &&
-              nowSeconds - state.lastMiss > 60 * 30
+              seconds - state.lastMiss > 60 * 30
                 ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
                 : Infinity
           return Math.min(lastOpenMissAgo, dueIn)
