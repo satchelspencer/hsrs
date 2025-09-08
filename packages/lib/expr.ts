@@ -216,7 +216,10 @@ export function moveit(string: string) {
     string = string.substring(0, dest.index) + dest.content + string.substring(dest.index)
   }
 
-  string = string.replace(/\(([^)]+)([><])\)/g, '').replace(/\|/g, '')
+  string = string
+    .replace(/\(([^)]+)([><])\)/g, '')
+    .replace(/\|/g, '')
+    .replaceAll('@', '')
 
   return string
 }
