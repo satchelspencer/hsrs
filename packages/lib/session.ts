@@ -787,15 +787,14 @@ export function sampleAndAdd(
             cr = getRetr(card, seenAgo),
             retrDiff = cr - childTarget,
             retrFactor = logistic(retrDiff), //prefer cards close to target retr
-            depthFactor = logistic(-(cache.nvds[elId] ?? 0)), //prefer cards with more possible params
+            depthFactor = cache.nvds[elId] ? 1 / cache.nvds[elId] : 0.1, //prefer cards with more possible params
             seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
 
           return retrFactor * depthFactor * seenFactor + jitter
         },
         undefined,
         (elId) => {
-          if (!minDepth && (used[elId] ?? 0) > Math.pow(cache.pdepths[elId], 2))
-            return false //prevent reuse, except if upsampling
+          if (!minDepth && !cache.pdepths[elId] && used[elId]) return false //prevent reuse, except if upsampling
           const card = deck.cards[card2Id({ element: elId, property })]
           if (!cache.hasProps[elId] || elId === element) return true
           else {

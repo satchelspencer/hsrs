@@ -45,7 +45,6 @@ export function sampleElementIstance(
 
     for (const parent of evOrder(
       [...pset],
-      0,
       cache.hasProps[id] ? (elid) => 1 / cache.depths[elid] : order, //most shallow first
       cache.hasProps[id]
         ? (elid) =>
@@ -108,7 +107,7 @@ export function sampleElementIstance(
 
   const nonVR = getNonVirtualDescendents(id, elements, cache)
 
-  for (const descendent of evOrder(nonVR, depth, order, filter, hardSample)) {
+  for (const descendent of evOrder(nonVR, order, filter, hardSample)) {
     log(
       '-trying',
       elements[descendent].name,
@@ -210,7 +209,6 @@ export function sampleElementIstance(
 
 function* evOrder(
   els: string[],
-  depth: number,
   order?: (elId: string) => number,
   filter?: (elId: string) => boolean,
   hardSample?: boolean
@@ -236,7 +234,7 @@ function* evOrder(
       index++
     }
     if (hardSample) index = 0
-    if (Math.random() > 0.99) normed.splice(index, 1)
+    normed.splice(index, 1)
     const [descendent] = ordered.splice(index, 1)
     if (!descendent) continue
     yield descendent
