@@ -37,11 +37,11 @@ export function renderRuby(text: string, ruby: string) {
       res += `${prec}<ruby>${tcc}<rt>${rcc}</rt></ruby>${postc}<wbr/>`
     }
   }
-  return res
+  return res.replaceAll('@', '')
 }
 
 export function cleanRuby<T>(text: T, breaks?: boolean): T {
   return typeof text === 'string'
-    ? (text.replaceAll(RUBY_DELIM, breaks ? '<wbr/>' : '') as T)
+    ? (text.replaceAll(RUBY_DELIM, breaks ? '<wbr/>' : '').replaceAll('@', '') as T)
     : text
 }

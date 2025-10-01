@@ -151,7 +151,7 @@ export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
   return cards
 }
 
-export function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
+function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
   const cards: t.Card[] = [],
     { props } = getInheritedElement(id, elements)
 
