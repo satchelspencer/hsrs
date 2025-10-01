@@ -99,16 +99,21 @@ export function findAliases(
               const sim = getSimilarity(fv, target)
               return memo + sim.length / fv.length - fv.indexOf(sim) / fv.length
             }, 0) / split.length,
-          oinstanceCardId = card2Id({ element: oinstance.element, property: propName })
+          oinstanceCardId = card2Id({ element: oinstance.element, property: propName }),
+          hasProps = cache.hasProps[oinstance.element]
 
         if (
           matchingInstances[key] ||
           !value.length ||
-          (!cards[oinstanceCardId] && cache.hasProps[oinstance.element])
+          (!cards[oinstanceCardId] && hasProps)
         )
           continue
         if (sim >= 0.5) matchingInstances[key] = { ...oinstance, s: sim, v: value }
-        if (isEqualAtProp(iv, tv, propName, propNames) && targetMode === omode) {
+        if (
+          hasProps &&
+          isEqualAtProp(iv, tv, propName, propNames) &&
+          targetMode === omode
+        ) {
           const matchId = propNames.map((n) => iv[n]).join('.') //just cause its readable
           if (!sampleTestedInstances[matchId]) {
             log('possible ', () => tv, ' = ', iv)
