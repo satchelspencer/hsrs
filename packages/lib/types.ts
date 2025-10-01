@@ -3,6 +3,7 @@ export interface Element {
   parents: string[]
   props: Props
   params?: Params
+  cpmap?: ChildParamsMap
   virtual?: true
   constraint?: string
   mode?: string
@@ -14,6 +15,10 @@ export interface Element {
 export type Params = IdMap<string>
 
 export type Props = IdMap<string | null>
+
+export type ChildParamsMap = { [childName: string]: ParamsMap }
+
+export type ParamsMap = { [paramName: string]: string }
 
 export type PropsInstance = { [paramName: string]: PropsInstance | Props[string] }
 

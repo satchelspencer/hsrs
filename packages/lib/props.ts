@@ -34,11 +34,13 @@ export function getElementParamsAndProps(
 export function getInheritedElement(
   elementId: string,
   elements: t.IdMap<t.Element>,
-  cache: t.DeckCache = getCache(elements)
+  cache: t.DeckCache = getCache(elements),
+  cmap?: t.ParamsMap
 ): t.Element {
   const element = { ...elements[elementId] },
     inheritedProps: t.Props = {},
-    inheritedParams: t.Params = {}
+    inheritedParams: t.Params = {},
+    inheritedcpmap: t.ChildParamsMap = {}
   let inheritedConstraint: string = '',
     inheritedMode: string = '',
     inheritedRetention: string = ''
@@ -59,6 +61,17 @@ export function getInheritedElement(
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
     if (element.retention) inheritedRetention = element.retention
+    if (element.cpmap) {
+      for (const parent in element.cpmap) {
+        for (const child in element.cpmap[parent]) {
+          const src = element.cpmap[parent][child]
+          if (src) {
+            inheritedcpmap[parent] ??= {}
+            inheritedcpmap[parent][child] = src
+          }
+        }
+      }
+    }
   }
 
   element.props = inheritedProps
@@ -67,7 +80,34 @@ export function getInheritedElement(
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
   element.order = getElementOrder(elementId, elements)
+  element.cpmap = inheritedcpmap
+  if (cmap) applyCMap(element, cmap)
   return element
+}
+
+export function applyCMap(element: t.Element, cmap: t.ParamsMap) {
+  for (const src in cmap) {
+    const dest = cmap[src]
+    for (const pname in element.props) {
+      const pval = element.props[pname]
+      if (pval) element.props[pname] = pval.replaceAll(src + '.', dest + '.')
+    }
+    if (element.constraint) element.constraint = element.constraint.replaceAll(src, dest)
+    if (element.params?.[src]) {
+      element.params[dest] = element.params[src]
+      delete element.params[src]
+    }
+    if (element.cpmap) {
+      for (const pname in element.cpmap) {
+        const pcmap = element.cpmap[pname]
+        if (pcmap[src]) {
+          pcmap[dest] = pcmap[src]
+          delete pcmap[src]
+        }
+      }
+    }
+  }
+  //if (Object.keys(cmap).length) console.log('mapp', element)
 }
 
 export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>) {
@@ -153,11 +193,13 @@ export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
 
 function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
   const cards: t.Card[] = [],
-    { props } = getInheritedElement(id, elements)
+    element = getInheritedElement(id, elements)
 
-  for (const propId in props) {
+  if (isFrag(element)) return []
+
+  for (const propId in element.props) {
     if (propId[0] === '_') continue //skip meta props
-    const prop = props[propId]
+    const prop = element.props[propId]
     if (prop) cards.push({ element: id, property: propId })
   }
   return cards
@@ -243,4 +285,8 @@ export function isRelation(element: t.Element) {
     Object.keys(element.params ?? {}).length === 2 &&
     Object.keys(element.props).length === 0
   )
+}
+
+export function isFrag(element: t.Element) {
+  return element.name[0] === '$'
 }

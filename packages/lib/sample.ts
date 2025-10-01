@@ -25,6 +25,7 @@ export function sampleElementIstance(
   hardSample?: boolean, //
   leaves?: { [id: string]: boolean },
   parentConstrained?: boolean,
+  pmap?: t.ParamsMap,
   depth = 1
 ): t.ElementInstance {
   const log = logger(3, 'sample', new Array(Math.abs(depth)).join('   '))
@@ -123,7 +124,8 @@ export function sampleElementIstance(
       params = {},
       constraint = '',
       mode,
-    } = getInheritedElement(descendent, elements, cache)
+      cpmap,
+    } = getInheritedElement(descendent, elements, cache, pmap)
 
     const childCommonMode = [...commonMode]
 
@@ -173,7 +175,8 @@ export function sampleElementIstance(
       constraints[pname] ? 0 : Math.random()
     )) {
       try {
-        const isConstrained = !!fixedParams?.[param]
+        const isConstrained = !!fixedParams?.[param],
+          pinstmap = { ...pmap, ...(cpmap?.[param] ?? {}) }
         log('-param', param, isConstrained ? '**constrained' : 'nc')
         const pinst = sampleElementIstance(
           params[param],
@@ -187,11 +190,20 @@ export function sampleElementIstance(
           hardSample,
           leaves,
           isConstrained,
+          pinstmap,
           depth + 1
         )
         walkParamsDeep({ [param]: pinst }, (childParam, el) => {
-          if (constraint.includes(childParam)) constraints[childParam] = el.element
+          const mappedParam = pinstmap[childParam] ?? childParam
+          if (constraint.includes(mappedParam)) constraints[mappedParam] = el.element
         })
+        for (const src in pinstmap) {
+          const dest = pinstmap[src]
+          if (pinst.params?.[dest]) {
+            pinst.params[src] = pinst.params[dest]
+            delete pinst.params[dest]
+          }
+        }
         inst.params![param] = pinst
       } catch (e) {
         failed = true //catching allows full search but impacts perf

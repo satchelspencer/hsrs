@@ -70,6 +70,8 @@ export function ElementEditor(props: ElementEditorProps) {
 
   const descs = computeDescs(props.id, elements)
 
+  const hasParams = !!Object.keys(elementParams).length
+
   return (
     <div className={editorWrapperOuter}>
       <div className={editorWrapper(!!element.virtual)}>
@@ -141,17 +143,6 @@ export function ElementEditor(props: ElementEditorProps) {
                       handleChange({ ...element, name: elname ?? '' })
                   }}
                 />
-                <div className={hWrapper} style={{ minWidth: 42 }}>
-                  R
-                  <CodeInput
-                    placeholder={elementRetention ?? '+0'}
-                    value={element.retention}
-                    throttle
-                    varColor="#467588"
-                    onChange={(retention) => handleChange({ ...element, retention })}
-                    onClear={() => handleChange(_.omit(element, 'retention'))}
-                  />
-                </div>
                 <div className={hWrapper} style={{ minWidth: 36 }}>
                   O
                   <CodeInput
@@ -261,8 +252,7 @@ export function ElementEditor(props: ElementEditorProps) {
                 }
               />,
             ],
-
-            !!Object.keys(elementParams).length && [
+            hasParams && [
               'Constrain',
               elementConstraint === undefined ? (
                 <Button onClick={() => handleChange({ ...element, constraint: '' })}>
@@ -276,6 +266,22 @@ export function ElementEditor(props: ElementEditorProps) {
                   placeholder={elementConstraint || 'Enter parameters...'}
                   onChange={(constraint) => handleChange({ ...element, constraint })}
                   onClear={() => handleChange(_.omit(element, 'constraint'))}
+                />
+              ),
+              false,
+            ],
+            hasParams && [
+              'Map',
+              element.cpmap === undefined ? (
+                <Button onClick={() => handleChange({ ...element, cpmap: {} })}>
+                  <Icon name="plus" />
+                  add
+                </Button>
+              ) : (
+                <CPMapEditor
+                  value={element.cpmap}
+                  onChange={(cpmap) => handleChange({ ...element, cpmap })}
+                  onClear={() => handleChange(_.omit(element, 'cpmap'))}
                 />
               ),
               false,
@@ -632,3 +638,50 @@ function ElementParamsEditor(props: ElementParamsEditorProps) {
 const paramInnerWrapper = cx(css`
   display: flex;
 `)
+
+interface CPMapEditorProps {
+  value: t.ChildParamsMap | undefined
+  onChange: (value: t.ChildParamsMap | undefined) => void
+  onClear?: () => void
+}
+
+function CPMapEditor(props: CPMapEditorProps) {
+  return (
+    <CodeInput
+      value={serializeCPMap(props.value)}
+      onClear={props.onClear}
+      placeholder={'Enter mapping...'}
+      onChange={(str) => {
+        props.onChange(str === undefined ? undefined : parseCPMap(str))
+      }}
+      throttle
+    />
+  )
+}
+
+function parseCPMap(maps?: string) {
+  const res: t.ChildParamsMap = {}
+  for (const map of (maps ?? '').split(' ')) {
+    const [dest, src] = map.split('='),
+      [parent, child] = dest.split('.')
+    if (parent && child && src) {
+      res[parent] ??= {}
+      res[parent][child] = src
+    }
+  }
+  return res
+}
+
+function serializeCPMap(cpmap?: t.ChildParamsMap): string | undefined {
+  if (!cpmap) return
+  const parts: string[] = []
+  for (const parent in cpmap) {
+    for (const child in cpmap[parent]) {
+      const src = cpmap[parent][child]
+      if (src) {
+        parts.push(`${parent}.${child}=${src}`)
+      }
+    }
+  }
+  return parts.length ? parts.join(' ') : undefined
+}

@@ -3,6 +3,7 @@ import * as t from './types'
 import _ from 'lodash'
 import { current, isDraft } from 'immer'
 import { logger } from './log'
+import { isFrag } from './props'
 
 function undraft<T>(v: T): T {
   return isDraft(v) ? current(v) : v
@@ -121,7 +122,8 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   for (const id in elements) {
     const element = elements[id],
-      root = cache.tree.roots[id] ?? '$'
+      root = cache.tree.roots[id] ?? '$',
+      frag = isFrag(element)
 
     cache.names[root] ??= {}
     cache.names[root][element.name] = id
@@ -130,6 +132,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
       const ancestor = elements[aid]
       if (
         !cache.hasProps[id] &&
+        !frag &&
         Object.keys(ancestor.props).find((c) => !!ancestor.props[c])
       )
         cache.hasProps[id] = true
