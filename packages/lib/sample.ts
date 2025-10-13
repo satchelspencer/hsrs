@@ -141,7 +141,7 @@ export function sampleElementIstance(
         if (mode[i] === '*') childCommonMode[i] = { mode: '*' }
         else if (ncommon) {
           if (ncommon.match(/[A-Z]/)) {
-            childCommonMode[i] = { mode: ncommon }
+            childCommonMode[i] = { mode: mode[i] ?? '' }
             common.mode = ncommon.toLowerCase()
           } else common.mode = ncommon
         }
@@ -171,15 +171,19 @@ export function sampleElementIstance(
       { ...params, ...(fixedParams ?? {}) },
       (_, v) => constraint.includes(v)
     )
-    for (const param of _.sortBy(Object.keys(params), (pname) =>
-      constraints[pname] ? 0 : Math.random()
-    )) {
+    for (const param of _.shuffle(Object.keys(params))) {
       try {
         const isConstrained = !!fixedParams?.[param],
           pinstmap = { ...pmap, ...(cpmap?.[param] ?? {}) }
         log('-param', param, isConstrained ? '**constrained' : 'nc')
+
+        const elId = constraints[param]
+          ? satisfies(params[param], constraints[param], cache)
+          : params[param]
+        if (!elId) throw 'constraint fail'
+
         const pinst = sampleElementIstance(
-          params[param],
+          elId,
           elements,
           cache,
           constraints,

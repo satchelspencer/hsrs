@@ -58,7 +58,7 @@ export function createLearningSession(
           return `${s.new ? '****' : '    '} ${s.property} ${
             deck.elements[s.element].name
           } - ${cleanRuby(computeElementInstance(s, deck.elements).jp)} - ${
-            Math.floor(cache.pdepths[s.element] * 10) / 10
+            cache.pdepths[s.element]
           }`
         })
         .join('\n'),
