@@ -130,7 +130,7 @@ export function sampleElementIstance(
     const childCommonMode = [...commonMode]
 
     let failed = false
-    if (fixedParams && mode) {
+    if (mode) {
       for (let i = 0; i < Math.max(childCommonMode.length, mode.length); i++) {
         const common = childCommonMode[i],
           ncommon = satisfiesMode(common.mode, mode[i])
