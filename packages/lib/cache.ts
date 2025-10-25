@@ -1,4 +1,4 @@
-import { logistic } from './schedule'
+import { logistic, softClamp } from './schedule'
 import * as t from './types'
 import _ from 'lodash'
 import { current, isDraft } from 'immer'
@@ -151,13 +151,14 @@ export function getCache(relements: t.IdMap<t.Element>) {
     }
   }
 
-  const paramLens: { [id: string]: number } = {},
+  const paramCounts: { [id: string]: number } = {},
     paramNVDCounts: { [id: string]: number } = {}
 
   for (const id in elements) {
     cache.paramTree.parents[id] ??= []
     cache.depthTree.parents[id] ??= []
-    cache.depthTree.parents[id].push(...elements[id].parents.slice())
+    cache.depthTree.parents[id].push(...elements[id].parents.slice()) //depth tree has edges for both parent/child and param relationships
+
     if (elements[id].virtual) continue
     const ps: { [name: string]: true } = {},
       ancestors = cache.tree.ancestors[id]
@@ -168,11 +169,12 @@ export function getCache(relements: t.IdMap<t.Element>) {
           cache.paramTree.parents[pvalue] ??= []
           cache.paramTree.parents[pvalue].push(id)
           ps[pname] = true
-          if (cache.hasProps[pvalue]) {
+          if (pname[0] !== '_' && !elements[aid]?.constraint?.includes(pname)) {
             cache.depthTree.parents[pvalue] ??= []
             cache.depthTree.parents[pvalue].push(id)
             cache.depths[id] = (cache.depths[id] ?? 0) + 1
             paramNVDCounts[id] = (paramNVDCounts[id] ?? 0) + cache.tree.leaves[pvalue]
+            paramCounts[id] = (paramCounts[id] ?? 0) + 1
           }
         }
       }
@@ -183,27 +185,36 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   getAncestors(elements, cache.paramTree)
 
-  const paramNVDTotals: { [id: string]: number } = { ...paramNVDCounts }
+  const paramNVDTotals: { [id: string]: number } = { ...paramNVDCounts },
+    childLens: { [id: string]: number } = {},
+    paramLens: { [id: string]: number } = {}
 
   for (const id of cache.depthTree.topo) {
     for (const aid of cache.depthTree.parents[id]) {
-      if (!cache.hasProps[id]) continue
       const currentDepth = cache.depths[aid] ?? 0,
-        nextDepth = cache.depths[id] ?? 0
+        nextDepth = cache.depths[id] ?? 0,
+        currentNVD = paramNVDTotals[aid] ?? 0,
+        nextNVD = paramNVDTotals[id] ?? 0
 
       if (elements[aid].virtual) {
-        const currentLen = paramLens[aid] ?? 0,
-          nextLen = paramLens[id] ?? 1,
+        //in folder avg depths and nvds over children
+        const currentLen = childLens[aid] ?? 0,
+          nextLen = childLens[id] ?? 1,
           finalLen = currentLen + nextLen
 
         cache.depths[aid] = (currentLen * currentDepth + nextLen * nextDepth) / finalLen
-        paramLens[aid] = finalLen
+        paramNVDTotals[aid] = (currentLen * currentNVD + nextLen * nextNVD) / finalLen
+        childLens[aid] = finalLen
       } else {
-        cache.depths[aid] = currentDepth + nextDepth
-        paramLens[aid] = 1
-      }
+        //in deep leaf avg nvds and sum depths
+        const currentParam = paramLens[aid] ?? 1,
+          finalParam = currentParam + 1
 
-      paramNVDTotals[aid] = (paramNVDTotals[aid] ?? 0) + (paramNVDTotals[id] ?? 0)
+        cache.depths[aid] = currentDepth + nextDepth
+        paramNVDTotals[aid] = (currentParam * currentNVD + nextNVD) / finalParam
+        childLens[aid] = 1
+        paramLens[aid] = finalParam
+      }
     }
   }
 
@@ -211,7 +222,12 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
   for (const id in elements) {
     cache.pdepths[id] = cache.depths[id]
-    cache.depths[id] *= (logistic((paramNVDTotals[id] ?? 0) / 50) - 0.5) * 2
+    //penalize depth
+    cache.depths[id] = Math.min(
+      cache.depths[id] * ((logistic((paramNVDTotals[id] ?? 0) / 50) - 0.5) * 2), //for low nvd counts
+      Math.max(cache.depths[id] - Math.sqrt(cache.depths[id] - (paramCounts[id] ?? 0)), 0) //for "thin" trees
+    )
+    cache.depths[id] = softClamp(cache.depths[id], 3, 0)
   }
   log(cache, new Date().getTime() - t)
 

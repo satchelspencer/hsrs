@@ -89,23 +89,21 @@ export function nextState(
         (1 - probability) * memoryState.difficulty +
         probability * nextMemoryState.difficulty
 
-    const maxStability = 365,
-      maxLinear = 365 / 2,
-      asymStability =
-        stabilityInterp < maxLinear
-          ? stabilityInterp
-          : maxLinear +
-            (maxStability - maxLinear) *
-              (1 -
-                Math.exp(
-                  -(1 / (maxStability - maxLinear)) * (stabilityInterp - maxLinear)
-                ))
+    const asymStability = softClamp(stabilityInterp, 365, 0.5)
 
     return {
       stability: roundf(Math.max(asymStability, getLearnTargetStability(w) / 4)),
       difficulty: roundf(difficultyInterp),
     }
   }
+}
+
+export function softClamp(n: number, max: number, ratio: number) {
+  const maxLinear = max * ratio
+  return n < maxLinear
+    ? n
+    : maxLinear +
+        (max - maxLinear) * (1 - Math.exp(-(1 / (max - maxLinear)) * (n - maxLinear)))
 }
 
 export function getRetr(state: t.MemoryState, secondsElapsed: number) {
