@@ -11,7 +11,16 @@ export default defineConfig({
       formats: ['cjs'],
     },
     rollupOptions: {
-      external: ['commander', 'fs', 'path', 'json-stable-stringify', 'lodash'],
+      external: [
+        'commander',
+        'fs',
+        'path',
+        'json-stable-stringify',
+        'lodash',
+        'JSONStream',
+        'chartjs-node-canvas',
+        'chart.js',
+      ],
       output: {
         banner: '#!/usr/bin/env node',
         exports: 'auto',

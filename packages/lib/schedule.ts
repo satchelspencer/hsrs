@@ -134,7 +134,7 @@ export function applyHistoryToCards(
   for (const learning of history) {
     if (flattenCard(learning).find((l) => !deck.elements[id2Card(l.cardId).element]))
       continue
-    const diff = getLearningCardDiff(cards, learning, deck)
+    const { diff } = getLearningCardDiff(cards, learning, deck)
     Object.assign(cards, diff)
   }
 }
@@ -143,7 +143,7 @@ export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
   deck: t.Deck
-): t.CardStates {
+) {
   const stateChanges: t.CardStates = {},
     flearnings = flattenCard(learning),
     cache = getCache(deck.elements),
@@ -190,7 +190,7 @@ export function getLearningCardDiff(
     )
   }
 
-  return stateChanges
+  return { diff: stateChanges, prob: totalSuccessProb }
 }
 
 export function flattenCard(learning: t.CardLearning): t.CardLearning[] {

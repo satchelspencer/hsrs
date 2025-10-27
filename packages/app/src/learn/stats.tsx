@@ -62,7 +62,7 @@ export function SessionStats() {
     applySessionHistoryToCards(lastCards, lastHistory)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
-      const diff = getLearningCardDiff(deck.cards, learning, deck)
+      const { diff } = getLearningCardDiff(deck.cards, learning, deck)
       for (const key in diff) {
         const eretention = offsetRetention(
             retention,
