@@ -2,7 +2,7 @@
   "name": "@hsrs/lib",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "dependencies": {
     "@types/jexl": "^2.3.4",
     "@types/lodash": "^4.17.12",
