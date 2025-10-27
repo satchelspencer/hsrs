@@ -31,6 +31,7 @@ read more about [how it works](./docs/overview.md)
 - technical docs
   - [overview](./docs/overview.md)
   - [plugins](./docs/plugins.md)
+  - [benchmark](./docs/benchmark.md)
 
 ## run locally
 
