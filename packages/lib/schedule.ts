@@ -143,7 +143,9 @@ export function getLearningCardDiff(
   cards: t.CardStates,
   learning: t.CardLearning,
   deck: t.Deck
-) {
+): { diff: t.CardStates; prob: number } {
+  if (learning.score === 0) return { diff: {}, prob: 0 }
+
   const stateChanges: t.CardStates = {},
     flearnings = flattenCard(learning),
     cache = getCache(deck.elements),
