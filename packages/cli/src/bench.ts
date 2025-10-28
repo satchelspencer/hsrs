@@ -44,8 +44,8 @@ export async function benchmark(deckPath: string, historyPath: string, dest: str
           if (
             cache.depths[element] > 0 &&
             state[d.cardId] &&
-            (!prevSeen || d.time - prevSeen > 3600 * 24) &&
-            prob < 0.995
+            prevSeen &&
+            d.time - prevSeen > 3600 * 24
           ) {
             const bin = Math.floor(prob * 200) / 200 + ''
             bins[bin] ??= { pass: 0, fail: 0 }
@@ -85,12 +85,11 @@ async function renderChart(
     }),
     filtered = normed.filter((v) => {
       const bin = parseFloat(v[0])
-      return bin >= 0.9 && bin < 0.999
+      return bin >= 0.9 && bin < 0.995
     }),
-    total = _.sumBy(filtered, (v) => v[2]),
+    total = _.sumBy(normed, (v) => v[2]),
     rmse = Math.sqrt(
-      _.sumBy(filtered, (v) => v[2] * Math.pow(v[1] - parseFloat(v[0]) + 0.025, 2)) /
-        total
+      _.sumBy(normed, (v) => v[2] * Math.pow(v[1] - parseFloat(v[0]) + 0.025, 2)) / total
     )
 
   const canvas = new ChartJSNodeCanvas({
