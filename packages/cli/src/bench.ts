@@ -15,7 +15,12 @@ import { id2Card } from '@hsrs/lib/session'
 type BinState = { pass: number; fail: number }
 type BinRes = BinState & { acc: number }
 
-export async function benchmark(deckPath: string, historyPath: string, dest: string) {
+export async function benchmark(
+  deckPath: string,
+  historyPath: string,
+  dest: string,
+  shallow?: boolean
+) {
   const histories = getHistoryFiles(historyPath),
     deck: t.Deck = {
       ...deckVersionable.create(JSON.parse(fs.readFileSync(deckPath, 'utf-8'))),
@@ -39,15 +44,18 @@ export async function benchmark(deckPath: string, historyPath: string, dest: str
         .on('data', (d: t.CardLearning) => {
           const { element } = id2Card(d.cardId),
             { diff, prob } = getLearningCardDiff(state, d, deck),
-            prevSeen = state[d.cardId]?.lastRoot
+            prevSeen = state[d.cardId]?.lastRoot,
+            bin = Math.floor(prob * 200) / 200 + ''
           Object.assign(state, diff)
+
           if (
-            cache.depths[element] > 0 &&
+            bin !== '1' &&
+            prob &&
+            (shallow ? cache.depths[element] === 0 : cache.depths[element] > 0) &&
             state[d.cardId] &&
             prevSeen &&
             d.time - prevSeen > 3600 * 24
           ) {
-            const bin = Math.floor(prob * 200) / 200 + ''
             bins[bin] ??= { pass: 0, fail: 0 }
             bins[bin][d.score > 1 ? 'pass' : 'fail']++
           }
@@ -62,7 +70,7 @@ export async function benchmark(deckPath: string, historyPath: string, dest: str
     acc: b.pass / (b.pass + b.fail),
   }))
 
-  await renderChart(result, i, dest)
+  await renderChart(result, dest)
 }
 
 function getHistoryFiles(historyPath: string): string[] {
@@ -72,25 +80,27 @@ function getHistoryFiles(historyPath: string): string[] {
   else return [historyPath]
 }
 
-async function renderChart(
-  result: { [retr: number]: BinRes },
-  totalR: number,
-  dest: string
-) {
+async function renderChart(result: { [retr: number]: BinRes }, dest: string) {
   const normed: [string, number, number][] = _.sortBy(Object.keys(result), (v) =>
       parseFloat(v)
     ).map((v) => {
       const res = result[v]
       return [v, res.acc, res.pass + res.fail]
     }),
-    filtered = normed.filter((v) => {
-      const bin = parseFloat(v[0])
-      return bin >= 0.9 && bin < 0.995
-    }),
     total = _.sumBy(normed, (v) => v[2]),
     rmse = Math.sqrt(
-      _.sumBy(normed, (v) => v[2] * Math.pow(v[1] - parseFloat(v[0]) + 0.025, 2)) / total
+      _.sumBy(normed, (v) => v[2] * Math.pow(v[1] - parseFloat(v[0]), 2)) / total
     )
+
+  const filtered: [string, number, number][] = [],
+    pec = total * 0.95
+  let acc = 0
+  for (let i = normed.length - 1; i >= 0; i--) {
+    const v = normed[i]
+    acc += v[2]
+    if (acc > pec) break
+    filtered.unshift(v)
+  }
 
   const canvas = new ChartJSNodeCanvas({
     width: 500,
@@ -135,9 +145,7 @@ async function renderChart(
         plugins: {
           title: {
             display: true,
-            text: `Weigthed RMSE ${rmse.toFixed(4)} from ${Math.floor(
-              totalR / 1000
-            )}k reviews (${Math.floor(total / 1000)}k deep)`,
+            text: `Weigthed RMSE ${rmse.toFixed(4)}`,
           },
           legend: { position: 'top', labels: { boxHeight: 4, boxWidth: 10 } },
         },
@@ -155,7 +163,7 @@ async function renderChart(
           y1: {
             min: _.min(filtered.map((c) => Math.min(c[1], parseFloat(c[0])))),
             max: 1,
-            title: { display: true, text: 'Actual R' },
+            title: { display: true, text: 'R' },
           },
         },
       },

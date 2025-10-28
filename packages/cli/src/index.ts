@@ -26,8 +26,9 @@ program
   .description(
     'Run hsrs benchmark on <historyPath> using <deckPath> saved to <outputPath.png>'
   )
-  .action((historyPath, deckPath, outputPath) =>
-    benchmark(deckPath, historyPath, outputPath)
+  .option('--shallow', 'Only consider shallow elements')
+  .action((historyPath, deckPath, outputPath, options) =>
+    benchmark(deckPath, historyPath, outputPath, options.shallow)
   )
 
 program.parseAsync(process.argv).catch((e) => {

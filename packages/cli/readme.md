@@ -10,7 +10,7 @@ _cli with various tools for working with hsrs decks and revlogs._
 
 - `import <destDir> <srcDeck>` Import a deck from <srcDeck> (deck JSON) into directory structure at <destDir>
 - `export <srcDir> <destDeck>` Export a deck from directory structure at <srcDir> to <destDeck> (deck JSON)
-- `bench <historyPath> <deckPath> <outputPath>` Run hsrs benchmark on <historyPath> using <deckPath> saved to <outputPath.png>
+- `bench <historyPath> <deckPath> <outputPath>` Run hsrs benchmark on <historyPath> using <deckPath> saved to <outputPath.png>. `--shallow` to Only consider shallow elements.
 
 ## development
 
