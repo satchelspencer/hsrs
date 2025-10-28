@@ -25,8 +25,20 @@ of the 463k total reviews, only 72k are on deep cards. this is due to users havi
 
 the probability distribution is also _incredibly_ biased due to hsrs' very high target retention for deep cards (so you see them more frequently) and essentially never reviewing late. there's _barely_ any data below r=0.9 and it's very noisy.
 
-![rmse](./img/rmse.png)
+![rmse](./img/deep.png)
 
-the rmse is similar to fsrs' own [score](https://github.com/open-spaced-repetition/srs-benchmark?tab=readme-ov-file#without-same-day-reviews). however, i am concerned that it is _lower_ error than fsrs since i would expect deep cards to be fundamentally more difficult to estimate as their content isn't fixed. 
+although not an apples-to-apples comparison due to the vastly different datasets, it is somewhat strange that the error 0.0349 is lower than in fsrs' own official [benchmark](https://github.com/open-spaced-repetition/srs-benchmark?tab=readme-ov-file#without-same-day-reviews) since i would expect deep cards to be fundamentally more difficult to estimate as their content isn't fixed.
 
-this benchmark will still be useful for measuring comparative improvements in future versions of hsrs, especially once hsrs supports optimizing its own hyperparameters!
+to make sure that this is a reasonable error, lets benchmark vanilla fsrs on _only the shallow cards_ from the same dataset.
+
+![rmse](./img/shallow.png)
+
+indeed the error is _even_ lower at 0.0181, so the underlying data is particularly easy for fsrs compared with the dataset used in the fsrs benchmark.
+
+_so, what if we use vanilla fsrs on the deep cards? i.e discard all the sub-card scheduling information. do we even need hsrs to schedule this type of card?_
+
+![rmse](./img/discard.png)
+
+as expected, fsrs drastically over-estimates recall on deep cards. this supports the key underlying assumption of hsrs: that the components of a deeply nested card provide valuable scheduling information!
+
+while it's still very early, this benchmark will still be useful for measuring comparative improvements in future versions of hsrs, especially once hsrs supports optimizing its own hyperparameters!
