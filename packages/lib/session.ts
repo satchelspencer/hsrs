@@ -562,6 +562,7 @@ export function getNew(
       deep = cache.depths[card.element]
 
     if ((deepFail || fails > 100) && priorityDeep && deep) continue
+    if (!priorityDeep && deep) continue
 
     if ((!propsFilter.length || propsFilter.includes(card.property)) && !deck.cards[id]) {
       const added = sampleAndAdd(
