@@ -520,9 +520,11 @@ export function getNew(
     if (order && order > maxOrder) maxOrder = order.substring(0, 3)
   }
 
-  const allCards = getAllCards(deck.elements),
-    seenCards = Object.keys(deck.cards)
-  let seenDeep = seenCards.filter((c) => cache.depths[id2Card(c).element]).length,
+  const allCards = getAllCards(deck.elements).filter(
+      (card) => !propsFilter.length || propsFilter.includes(card.property)
+    ),
+    seenCards = allCards.filter((c) => deck.cards[card2Id(c)])
+  let seenDeep = seenCards.filter((c) => cache.depths[c.element]).length,
     seenTotal = seenCards.length,
     allDeep = allCards.filter((c) => cache.depths[c.element]).length,
     allTotal = allCards.length,
