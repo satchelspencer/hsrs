@@ -30,7 +30,7 @@ export function sampleElementIstance(
 ): t.ElementInstance {
   const log = logger(3, 'sample', new Array(Math.abs(depth)).join('   '))
 
-  if (minDepth && depth <= 1 && (cache.depths[id] < minDepth || !cache.hasProps[id])) {
+  if (minDepth && depth <= 1 && (!cache.depths[id] || !cache.hasProps[id])) {
     const pset = new Set<string>(),
       ownAncestors = cache.tree.ancestors[id]
 
