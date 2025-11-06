@@ -59,7 +59,7 @@ export function SessionStats() {
       now = getTime(),
       cache = getCache(deck.elements)
 
-    applySessionHistoryToCards(lastCards, lastHistory)
+    applySessionHistoryToCards(lastCards, lastHistory, session.stack)
 
     if (deck.cards[cardId] && !lastCards[cardId]) {
       const { diff } = getLearningCardDiff(deck.cards, learning, deck)
@@ -88,7 +88,8 @@ export function SessionStats() {
         })
       }
     } else {
-      const nextState = nextSessionState(lastCards[cardId], score)
+      const isNew = !!session.stack.find((c) => card2Id(c) === cardId)?.new,
+        nextState = nextSessionState(lastCards[cardId], score, isNew)
       nextStats.push({
         cardId,
         gradf: Math.min(nextState.stability, 1),

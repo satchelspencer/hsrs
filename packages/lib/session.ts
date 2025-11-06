@@ -143,21 +143,27 @@ function distributeNewUnseenCards(session: Partial<t.LearningSession>) {
   return session.stack
 }
 
-const initSessionStabs = [0.25, 0.5, 1, 2],
-  sessionIncs = [
+const newInitSessionStabs = [0.25, 0.5, 1, 2],
+  seenInitSessionStabs = [0.5, Math.pow(0.5, 1 / 2), 1, 2],
+  newSessionIncs = [
     Math.pow(0.5, 1 / 1), //half in one step
     Math.pow(0.5, 1 / 2), //half in two steps
     Math.pow(2, 1 / 2), //double in two steps
     Math.pow(2, 1 / 1), //double in one step
-  ]
+  ],
+  seenSessionIncs = [0.5, 1, 2, 2]
+
 export function nextSessionState(
   state: t.CardState | undefined,
-  grade: number
+  grade: number,
+  isNew: boolean
 ): t.CardState {
+  const incs = isNew ? newSessionIncs : seenSessionIncs,
+    stabs = isNew ? newInitSessionStabs : seenInitSessionStabs
   return {
     stability: Math.max(
-      state ? state.stability * sessionIncs[grade - 1] : initSessionStabs[grade - 1],
-      initSessionStabs[0]
+      state ? state.stability * incs[grade - 1] : stabs[grade - 1],
+      stabs[0]
     ),
     difficulty: 0,
     lastMiss: grade > 2 ? state?.lastMiss : getTime(),
@@ -166,13 +172,15 @@ export function nextSessionState(
 
 export function applySessionHistoryToCards(
   cards: t.LearningSession['states'],
-  history: t.SessionCardLearning[]
+  history: t.SessionCardLearning[],
+  stack: t.CardInstance[] //stack needed to tell what cards are new or not
 ) {
   for (const learning of history) {
     cards[learning.cardId] ??= {}
     cards[learning.cardId][learning.instanceId] = nextSessionState(
       cards[learning.cardId][learning.instanceId],
-      learning.vscore ?? learning.score
+      learning.vscore ?? learning.score,
+      !!stack.find((s) => card2Id(s) === learning.cardId)?.new
     )
   }
 }
@@ -220,7 +228,11 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
     instanceId,
   })
 
-  const cardState = nextSessionState(session.states[cardId]?.[instanceId], virtualGrade)
+  const cardState = nextSessionState(
+    session.states[cardId]?.[instanceId],
+    virtualGrade,
+    !!currentCard.new
+  )
   session.states[cardId] ??= {}
   session.states[cardId][instanceId] = cardState
 
@@ -242,8 +254,8 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
     canSpace = session.stack.length >= 20,
     learningIndex = Math.min(
       canSpace //if not graduated reinsert 'proprtional' to stability
-        ? (currentCard.new ? 0 : 2) +
-            Math.pow(cardState.stability, 2) * (sessionIncs[2] * gradDistance) +
+        ? (currentCard.new ? 1 : 2) +
+            Math.pow(cardState.stability, 2) * (newSessionIncs[2] * gradDistance) +
             jitter
         : Math.floor(cardState.stability * Math.max(7, session.stack.length / 2)) +
             jitter,
@@ -296,7 +308,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   }
 }
 
-const MISS_THRESH = initSessionStabs[1] //0.5
+const MISS_THRESH = newInitSessionStabs[1] //0.5
 
 function findStackIndex(
   session: Partial<t.LearningSession>,
@@ -386,7 +398,7 @@ export function estimateReviewsRemaining(session: Partial<t.LearningSession>) {
       let changedState = state,
         i = 0
       while (changedState.stability < 1 && i < 10) {
-        changedState = nextSessionState(changedState, 3)
+        changedState = nextSessionState(changedState, 3, !!card.new)
         i++
       }
       return i
@@ -480,7 +492,7 @@ export function undoGrade(session: t.LearningSession): t.LearningSession {
   session.stack.unshift(cardInstance)
 
   session.states = {}
-  applySessionHistoryToCards(session.states, session.history)
+  applySessionHistoryToCards(session.states, session.history, session.stack)
 
   return session
 }
