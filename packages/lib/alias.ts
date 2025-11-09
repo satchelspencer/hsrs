@@ -44,9 +44,11 @@ export function findAliases(
   for (let i = 0; i < 4; i++) {
     if (new Date().getTime() - startTime > 2000) break
     for (const elId in elements) {
+      const el = elements[elId]
       if (
-        elements[elId].virtual ||
-        (filter && !filter.includes(cache.tree.roots[elId] ?? ''))
+        el.virtual ||
+        (filter && !filter.includes(cache.tree.roots[elId] ?? '')) ||
+        el.nolearn?.includes(propName)
       )
         continue
       const {

@@ -1,6 +1,6 @@
 import { getCache } from './cache'
 import { DateTime } from 'luxon'
-import { getAllCards, getInheritedElement, getLearnOrder } from './props'
+import { getAllCards, getInheritedElement, getLearnOrder, isFrag } from './props'
 import {
   defaultParams,
   defaultretention,
@@ -151,7 +151,7 @@ const newInitSessionStabs = [0.25, 0.5, 1, 2],
     Math.pow(2, 1 / 2), //double in two steps
     Math.pow(2, 1 / 1), //double in one step
   ],
-  seenSessionIncs = [0.5, 1, 2, 2]
+  seenSessionIncs = [0.5, 1, Math.pow(2, 1 / 2), 2]
 
 export function nextSessionState(
   state: t.CardState | undefined,
@@ -629,11 +629,14 @@ function getDue(
     { startOfDay, endOfDay, seconds } = getDay(getTime(), tz),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
-        const { element, property } = id2Card(cid)
+        const { element, property } = id2Card(cid),
+          el = deck.elements[element]
         return (
           cache.hasProps[element] &&
-          !deck.elements[element].virtual &&
-          (!propsFilter.length || propsFilter.includes(property))
+          !el.virtual &&
+          !isFrag(el) &&
+          (!propsFilter.length || propsFilter.includes(property)) &&
+          !el.nolearn?.includes(property)
         )
       }),
       [

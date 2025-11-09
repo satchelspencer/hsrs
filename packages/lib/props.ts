@@ -42,6 +42,7 @@ export function getInheritedElement(
     inheritedParams: t.Params = {},
     inheritedcpmap: t.ChildParamsMap = {}
   let inheritedConstraint: string = '',
+    inheritedNolearn: string = '',
     inheritedMode: string = '',
     inheritedRetention: string = ''
 
@@ -58,6 +59,7 @@ export function getInheritedElement(
       if (element.params[propId]) inheritedParams[propId] = element.params[propId]
     }
     if (element.constraint) inheritedConstraint = element.constraint
+    if (element.nolearn) inheritedNolearn = element.nolearn
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
     if (element.retention) inheritedRetention = element.retention
@@ -77,10 +79,11 @@ export function getInheritedElement(
   element.props = inheritedProps
   if (Object.keys(inheritedParams).length) element.params = inheritedParams
   if (inheritedConstraint) element.constraint = inheritedConstraint
+  if (inheritedNolearn) element.nolearn = inheritedNolearn
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
   element.order = getElementOrder(elementId, elements)
-  element.cpmap = inheritedcpmap
+  if (Object.keys(inheritedcpmap).length) element.cpmap = inheritedcpmap
   if (cmap) applyCMap(element, cmap)
   return element
 }
@@ -198,7 +201,7 @@ function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
   if (isFrag(element)) return []
 
   for (const propId in element.props) {
-    if (propId[0] === '_') continue //skip meta props
+    if (propId[0] === '_' || element.nolearn?.includes(propId)) continue //skip meta props
     const prop = element.props[propId]
     if (prop) cards.push({ element: id, property: propId })
   }

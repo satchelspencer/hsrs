@@ -6,6 +6,7 @@ export interface Element {
   cpmap?: ChildParamsMap
   virtual?: true
   constraint?: string
+  nolearn?: string
   mode?: string
   order?: string
   retention?: string

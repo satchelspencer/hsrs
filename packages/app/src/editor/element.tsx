@@ -32,8 +32,9 @@ export function ElementEditor(props: ElementEditorProps) {
       constraint: elementConstraint,
       mode: elementMode,
       order: elementOrder,
-      retention: elementRetention,
+      nolearn: elementNolearn,
       desc: elementDesc,
+      cpmap: elementCpMap,
     } = r.useSelector((state) => r.selectors.selectInheritedElementById(state, props.id)),
     elementPropVariables = r.useSelector((state) =>
       r.selectors.selectElementPropVariables(state, props.id)
@@ -222,6 +223,24 @@ export function ElementEditor(props: ElementEditorProps) {
               />,
             ],
             [
+              'No-learn',
+              elementNolearn === undefined ? (
+                <Button onClick={() => handleChange({ ...element, nolearn: '' })}>
+                  <Icon name="plus" />
+                  add
+                </Button>
+              ) : (
+                <CodeInput
+                  varColor="#884646"
+                  value={element.nolearn}
+                  placeholder={elementNolearn || 'Enter properties...'}
+                  onChange={(nolearn) => handleChange({ ...element, nolearn })}
+                  onClear={() => handleChange(_.omit(element, 'nolearn'))}
+                />
+              ),
+              false,
+            ],
+            [
               <div className={exampleHead}>
                 <span>Params</span>
                 <span style={{ opacity: 0.5 }}>
@@ -272,7 +291,7 @@ export function ElementEditor(props: ElementEditorProps) {
             ],
             hasParams && [
               'Map',
-              element.cpmap === undefined ? (
+              elementCpMap === undefined ? (
                 <Button onClick={() => handleChange({ ...element, cpmap: {} })}>
                   <Icon name="plus" />
                   add
@@ -280,6 +299,7 @@ export function ElementEditor(props: ElementEditorProps) {
               ) : (
                 <CPMapEditor
                   value={element.cpmap}
+                  placeholder={elementCpMap}
                   onChange={(cpmap) => handleChange({ ...element, cpmap })}
                   onClear={() => handleChange(_.omit(element, 'cpmap'))}
                 />
@@ -641,6 +661,7 @@ const paramInnerWrapper = cx(css`
 
 interface CPMapEditorProps {
   value: t.ChildParamsMap | undefined
+  placeholder?: t.ChildParamsMap
   onChange: (value: t.ChildParamsMap | undefined) => void
   onClear?: () => void
 }
@@ -650,7 +671,9 @@ function CPMapEditor(props: CPMapEditorProps) {
     <CodeInput
       value={serializeCPMap(props.value)}
       onClear={props.onClear}
-      placeholder={'Enter mapping...'}
+      placeholder={
+        props.placeholder ? serializeCPMap(props.placeholder) : 'Enter mapping...'
+      }
       onChange={(str) => {
         props.onChange(str === undefined ? undefined : parseCPMap(str))
       }}
