@@ -131,6 +131,10 @@ hsrs uses lexical ordering categories like `1.1` or `3.1.2` for deciding when ne
 
 elements inherit data from their parents that will be used as the default if they're not defined on the element itself. this applies to properties, parameters, modes, constraints, and order. since elements may have multiple parents, they are merged in the order that the parents are listed on the element.
 
+### advanced
+
+even more element settings can be found [here](./elements.md).
+
 ## card creation
 
 ### sampling
