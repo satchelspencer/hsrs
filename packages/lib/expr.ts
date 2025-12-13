@@ -191,7 +191,11 @@ export function computeElementMode(
   for (const paramName in instace.params) {
     const param = instace.params[paramName]
     if (param)
-      mode = satisfiesMode(mode, computeElementMode(param, elements, cache)) ?? mode
+      mode =
+        satisfiesMode(
+          mode,
+          computeElementMode(param, elements, cache)?.replaceAll('*', '-')
+        ) ?? mode
   }
 
   return mode?.match(/^([-*]+)?$/i) ? undefined : mode?.toLowerCase()
