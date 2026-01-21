@@ -626,17 +626,25 @@ function getDue(
   const dues = getCardDueDates(deck, cache),
     dueCards: t.CardInstance[] = [],
     nextCards: t.CardInstance[] = [],
-    { startOfDay, endOfDay, seconds } = getDay(getTime(), tz),
+    now = getTime(),
+    { startOfDay, endOfDay, seconds } = getDay(now, tz),
     cardsIds = _.orderBy(
       Object.keys(deck.cards).filter((cid) => {
         const { element, property } = id2Card(cid),
-          el = deck.elements[element]
+          el = deck.elements[element],
+          rootCard = deck.cards[cid],
+          earlyReview =
+            rootCard?.lastSeen &&
+            !cache.depths[element] &&
+            rootCard.lastSeen != rootCard.lastRoot &&
+            now - rootCard.lastSeen < (rootCard.stability * 24 * 3600) / 2
         return (
           cache.hasProps[element] &&
           !el.virtual &&
           !isFrag(el) &&
           (!propsFilter.length || propsFilter.includes(property)) &&
-          !el.nolearn?.includes(property)
+          !el.nolearn?.includes(property) &&
+          !earlyReview
         )
       }),
       [
