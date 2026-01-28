@@ -40,10 +40,11 @@ export function createLearningSession(
       propsFilter,
       tz,
       cache,
-      minDepth
+      minDepth,
+      t
     ),
     newCards = allowNew
-      ? cardShuffle(getNew(deck, newCount, filter, propsFilter, cache, !!minDepth))
+      ? cardShuffle(getNew(deck, newCount, filter, propsFilter, cache, !!minDepth, t))
       : [],
     previewCards = _.take(nextCards, size - dueCards.length - newCards.length), //don't use ncfactor here for better padding
     stack = distributeNewUnseenCards({
@@ -516,7 +517,8 @@ export function getNew(
   filter: string[],
   propsFilter: string[],
   cache: t.DeckCache,
-  preferDeep?: boolean
+  preferDeep?: boolean,
+  startTime?: number
 ): t.CardInstance[] {
   const log = logger(2, 'session')
 
@@ -585,7 +587,8 @@ export function getNew(
         cache,
         undefined,
         undefined,
-        preferDeep
+        preferDeep,
+        startTime
       )
       if (deep) {
         const cat = order.order.substring(0, 3)
@@ -621,7 +624,8 @@ function getDue(
   propsFilter: string[],
   tz: string,
   cache: t.DeckCache,
-  minDepth?: number
+  minDepth?: number,
+  startTime?: number
 ) {
   const dues = getCardDueDates(deck, cache),
     dueCards: t.CardInstance[] = [],
@@ -719,7 +723,8 @@ function getDue(
       cache,
       used,
       thisMinDepth,
-      !!thisMinDepth
+      !!thisMinDepth,
+      startTime
     )
     if (!added && isDue) sampleFailures++
     if (added && isSameDay) sameDays++
@@ -764,6 +769,8 @@ function getDue(
 }
 
 const SAMPLE_TRIES = 10,
+  SOFT_TIMEOUT = 3000,
+  HARD_TIMEOUT = 7000,
   jitterScale = 1
 
 export function sampleAndAdd(
@@ -774,7 +781,8 @@ export function sampleAndAdd(
   cache: t.DeckCache,
   used: { [id: string]: number } = {},
   minDepth?: number,
-  preferDeep?: boolean
+  preferDeep?: boolean,
+  startTime?: number
 ) {
   const { element, property } = id2Card(cardId),
     now = getTime()
@@ -794,10 +802,14 @@ export function sampleAndAdd(
   if (filter.length && needsMatch && !hasMatch) return
 
   const target = deck.settings.retention ?? defaultretention,
-    childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1))
+    childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
+    tdelta = startTime ? new Date().getTime() - startTime : 0,
+    tries = tdelta > SOFT_TIMEOUT ? 1 : SAMPLE_TRIES
+
+  if (tdelta > HARD_TIMEOUT) return
 
   let i = 0
-  while (i < SAMPLE_TRIES) {
+  while (i < tries) {
     try {
       const instance = sampleElementIstance(
         element,
@@ -806,7 +818,7 @@ export function sampleAndAdd(
         undefined,
         (elId) => {
           const card = deck.cards[card2Id({ element: elId, property })],
-            jitter = Math.pow(Math.random() * (i / SAMPLE_TRIES), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
+            jitter = Math.pow(Math.random() * (i / tries), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
           if (!card) return jitter
 
           const seenAgo = now - (card.lastSeen ?? 0),
