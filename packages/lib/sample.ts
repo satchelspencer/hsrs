@@ -197,10 +197,15 @@ export function sampleElementIstance(
           pinstmap,
           depth + 1
         )
-        walkParamsDeep({ [param]: pinst }, (childParam, el) => {
-          const mappedParam = pinstmap[childParam] ?? childParam
-          if (constraint.includes(mappedParam)) constraints[mappedParam] = el.element
-        })
+        walkParamsDeep(
+          { [param]: pinst },
+          (childParam, el) => {
+            const mappedParam = pinstmap[childParam] ?? childParam
+            if (constraint.includes(mappedParam)) constraints[mappedParam] = el.element
+          },
+          elements,
+          cache
+        )
         for (const src in pinstmap) {
           const dest = pinstmap[src]
           if (pinst.params?.[dest]) {
@@ -286,14 +291,19 @@ export function* generateElementInstanceSamples(
 
 function walkParamsDeep(
   params: t.ParamsInstance | undefined,
-  cb: (paramName: string, el: t.ElementInstance) => void
+  cb: (paramName: string, el: t.ElementInstance) => void,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache
 ) {
   if (params) {
     for (const paramName in params) {
       const el = params[paramName]
       if (el) {
         cb(paramName, el)
-        if (el.params) walkParamsDeep(el.params, cb)
+        if (el.params) {
+          const { cpmap } = getInheritedElement(el.element, elements, cache)
+          if (!cpmap) walkParamsDeep(el.params, cb, elements, cache)
+        }
       }
     }
   }
