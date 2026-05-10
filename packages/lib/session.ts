@@ -632,43 +632,52 @@ function getDue(
     nextCards: t.CardInstance[] = [],
     now = getTime(),
     { startOfDay, endOfDay, seconds } = getDay(now, tz),
-    cardsIds = _.orderBy(
-      Object.keys(deck.cards).filter((cid) => {
-        const { element, property } = id2Card(cid),
-          el = deck.elements[element],
-          rootCard = deck.cards[cid],
-          earlyReview =
-            rootCard?.lastSeen &&
-            !cache.depths[element] &&
-            rootCard.lastSeen != rootCard.lastRoot &&
-            now - rootCard.lastSeen < (rootCard.stability * 24 * 3600) / 2
-        return (
-          cache.hasProps[element] &&
-          !el.virtual &&
-          !isFrag(el) &&
-          (!propsFilter.length || propsFilter.includes(property)) &&
-          !el.nolearn?.includes(property) &&
-          !earlyReview
-        )
-      }),
-      [
-        (cardId) => {
-          const due = dues[cardId]
-          return due && due < endOfDay ? 0 : 1
-        },
-        (cardId) => {
-          const state = deck.cards[cardId],
-            dueIn = (dues[cardId] ?? Infinity) - endOfDay,
-            lastOpenMissAgo =
-              state.lastMiss &&
-              state.lastSeen! - state.lastMiss < 60 * 30 &&
-              seconds - state.lastMiss > 60 * 30
-                ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
-                : Infinity
-          return Math.min(lastOpenMissAgo, dueIn)
-        },
-      ]
-    )
+    learnables = Object.keys(deck.cards).filter((cid) => {
+      const { element, property } = id2Card(cid),
+        el = deck.elements[element],
+        rootCard = deck.cards[cid],
+        earlyReview =
+          rootCard?.lastSeen &&
+          !cache.depths[element] &&
+          rootCard.lastSeen != rootCard.lastRoot &&
+          now - rootCard.lastSeen < (rootCard.stability * 24 * 3600) / 2
+      return (
+        cache.hasProps[element] &&
+        !el.virtual &&
+        !isFrag(el) &&
+        (!propsFilter.length || propsFilter.includes(property)) &&
+        !el.nolearn?.includes(property) &&
+        !earlyReview
+      )
+    }),
+    earliestDueCard = _.minBy(learnables, (l) =>
+      cache.depths[id2Card(l).element] ? Infinity : dues[l]
+    ),
+    earliestDue = earliestDueCard && dues[earliestDueCard],
+    maxDueGap = earliestDue ? Math.max(0, now - earliestDue) : 0,
+    cardsIds = _.orderBy(learnables, [
+      (cardId) => {
+        const due = dues[cardId]
+        return due && due < endOfDay ? 0 : 1
+      },
+      (cardId) => {
+        const state = deck.cards[cardId],
+          dueIn = (dues[cardId] ?? Infinity) - endOfDay,
+          lastOpenMissAgo =
+            state.lastMiss &&
+            state.lastSeen! - state.lastMiss < 60 * 30 &&
+            seconds - state.lastMiss > 60 * 30
+              ? (endOfDay - Math.max(state.lastMiss, state.firstSeen ?? 0)) / 8
+              : Infinity,
+          daysSinceFirstSeen = Math.max(
+            (endOfDay - (state.firstSeen ?? 0)) / (24 * 3600),
+            1
+          ),
+          compDueIn = -(maxDueGap / daysSinceFirstSeen) + dueIn
+
+        return Math.min(lastOpenMissAgo, compDueIn)
+      },
+    ])
 
   let doneCount = 0,
     newCount = 0,
