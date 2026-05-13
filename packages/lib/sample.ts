@@ -20,7 +20,7 @@ export function sampleElementIstance(
   fixedParams?: t.Params,
   order?: (elId: string) => number,
   commonMode?: { mode: string }[],
-  filter?: (elId: string) => boolean,
+  filter?: (elId: string, depth: number) => boolean,
   minDepth?: number,
   hardSample?: boolean, //
   leaves?: { [id: string]: boolean },
@@ -50,7 +50,7 @@ export function sampleElementIstance(
       cache.hasProps[id]
         ? (elid) =>
             cache.pdepths[elid] > cache.pdepths[id] + 1.5 && //force upsampling w/ siblings
-            (filter ? filter(elid) : true)
+            (filter ? filter(elid, depth) : true)
         : filter
     )) {
       const pel = getInheritedElement(parent, elements, cache),
@@ -108,7 +108,7 @@ export function sampleElementIstance(
 
   const nonVR = getNonVirtualDescendents(id, elements, cache)
 
-  for (const descendent of evOrder(nonVR, order, filter, hardSample)) {
+  for (const descendent of evOrder(nonVR, order, filter, hardSample, depth)) {
     log(
       '-trying',
       elements[descendent].name,
@@ -231,10 +231,11 @@ export function sampleElementIstance(
 function* evOrder(
   els: string[],
   order?: (elId: string) => number,
-  filter?: (elId: string) => boolean,
-  hardSample?: boolean
+  filter?: (elId: string, depth: number) => boolean,
+  hardSample?: boolean,
+  depth?: number
 ) {
-  const fels = filter ? els.filter(filter) : els,
+  const fels = filter ? els.filter((e) => filter(e, depth ?? 0)) : els,
     ordered = order ? _.sortBy(fels, order) : _.shuffle(fels)
 
   const orders = _.sortBy(fels.map((v) => order?.(v) ?? 1)),

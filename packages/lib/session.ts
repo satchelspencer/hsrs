@@ -524,6 +524,8 @@ export function getNew(
 
   let maxOrder = '0'
   for (const cardId in deck.cards) {
+    const el = deck.elements[id2Card(cardId).element]
+    if (!el || isFrag(el) || el.virtual) continue
     const { order } = getLearnOrder(
       id2Card(cardId).element,
       deck,
@@ -840,10 +842,10 @@ export function sampleAndAdd(
           return retrFactor * depthFactor * seenFactor + jitter
         },
         undefined,
-        (elId) => {
+        (elId, depth) => {
           if (!minDepth && !cache.pdepths[elId] && used[elId]) return false //prevent reuse, except if upsampling
           const card = deck.cards[card2Id({ element: elId, property })]
-          if (!cache.hasProps[elId] || elId === element) return true
+          if (!cache.hasProps[elId] || (elId === element && depth === 1)) return true
           else {
             const targetStability =
               getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
