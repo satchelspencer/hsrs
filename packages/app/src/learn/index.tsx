@@ -9,6 +9,7 @@ import { createLearningSession } from '@hsrs/lib/session'
 import { Icon } from '../components/icon'
 import { ElListPicker } from '../editor/element'
 import { Card } from './card'
+import { getCache } from '@hsrs/lib/cache'
 
 export function Learn() {
   const session = r.useSelector((s) => s.deck.session),
@@ -18,6 +19,23 @@ export function Learn() {
   const { allowNew, newSessionSize, filter, propsFilter, minDepth } = r.useSelector(
     (s) => s.deck.settings
   )
+
+  const cache = useMemo(() => getCache(deck.elements), [deck.elements])
+
+  const rootIds = useMemo(
+    () => _.uniq(_.compact(Object.values(cache.tree.roots))),
+    [cache]
+  )
+
+  const { currentRoot, subFilter } = useMemo(() => {
+    if (!filter?.length) return { currentRoot: undefined, subFilter: [] as string[] }
+
+    if (filter.length === 1 && rootIds.includes(filter[0]))
+      return { currentRoot: filter[0], subFilter: [] as string[] }
+
+    const root = cache.tree.roots[filter[0]]
+    return { currentRoot: root, subFilter: filter }
+  }, [filter, cache, rootIds])
 
   const actualSessionSize = Math.pow(2, newSessionSize) * 30,
     {
@@ -69,20 +87,51 @@ export function Learn() {
                 { label: 'S', value: 1 },
                 { label: 'M', value: 2 },
                 { label: 'L', value: 3 },
-                { label: 'XL', value: 4 },
               ]}
               buttonClassName={sizeButton}
             />
-            &nbsp; &nbsp;
-            <div style={{ minWidth: 150 }}>
-              <ElListPicker
-                multiline={false}
-                placeholder="All decks..."
-                value={filter ?? []}
-                onChange={(value) =>
-                  dispatch(r.actions.setDeckSettings({ filter: value }))
-                }
-              />
+            <div className={separator} />
+            <div className={desc}>
+              <div className={selectWrapper}>
+                <select
+                  className={selectStyle}
+                  value={currentRoot ?? ''}
+                  onChange={(e) =>
+                    dispatch(
+                      r.actions.setDeckSettings({
+                        filter: e.target.value ? [e.target.value] : [],
+                      })
+                    )
+                  }
+                >
+                  <option value="">All</option>
+                  {rootIds.map((id) => (
+                    <option key={id} value={id}>
+                      {deck.elements[id]?.name.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+                <Icon size={1} name="caret-down" />
+              </div>
+              &nbsp; &nbsp;
+              {currentRoot && (
+                <div style={{ width: 100 }}>
+                  <ElListPicker
+                    filter={(e) => !!e.virtual}
+                    multiline={false}
+                    rootId={currentRoot}
+                    placeholder={'All cards...'}
+                    value={subFilter}
+                    onChange={(value) =>
+                      dispatch(
+                        r.actions.setDeckSettings({
+                          filter: value.length ? value : [currentRoot],
+                        })
+                      )
+                    }
+                  />
+                </div>
+              )}
             </div>
           </div>
           <div className={desc} style={{ opacity: 0.7 }}>
@@ -113,18 +162,16 @@ export function Learn() {
   )
 }
 
-const dprogress = cx(
-  css`
-    display: flex;
-    width: 350px;
-    max-width: 100vw;
-    margin: 5px;
-    height: 12px;
-    border-radius: 12px;
-    background: ${styles.color(0.95)};
-    overflow: hidden;
-  `
-)
+const dprogress = cx(css`
+  display: flex;
+  width: 350px;
+  max-width: 100vw;
+  margin: 5px;
+  height: 12px;
+  border-radius: 12px;
+  background: ${styles.color(0.95)};
+  overflow: hidden;
+`)
 
 const fadeInOut = css`
   animation: fadeInOut 2s infinite ease-in-out;
@@ -158,20 +205,55 @@ const dprogressItem = (done: number, border?: boolean) =>
     ${done < 1 && border && `border-right: 2px solid #678eb97a;`}
   `)
 
-const sizeButton = cx(
-  css`
-    width: 25px;
-    height: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `
-)
+const sizeButton = cx(css`
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`)
 
 const desc = cx(css`
   font-size: 0.9em;
   display: flex;
   align-items: center;
+`)
+
+const separator = cx(css`
+  width: 1px;
+  height: 16px;
+  background: ${styles.color(0.85)};
+  margin: 0 10px;
+`)
+
+const selectWrapper = cx(css`
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: ${styles.color.active({ l: 0.6, s: 0.2 })};
+  & > svg {
+    position: absolute;
+    right: 6px;
+    pointer-events: none;
+  }
+`)
+
+const selectStyle = cx(css`
+  appearance: none;
+  border: none;
+  background: ${styles.color(0.95)};
+  color: ${styles.color.active({ l: 0.6, s: 0.2 })};
+  font-size: inherit;
+  height: 25px;
+  padding: 0 24px 0 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  &:hover {
+    color: ${styles.color.active(0.6)};
+  }
+  &:focus {
+    outline: none;
+  }
 `)
 
 const mainAction = cx(css`
