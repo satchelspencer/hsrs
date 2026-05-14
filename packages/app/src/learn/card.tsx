@@ -83,15 +83,39 @@ export function Card() {
     else if (sc === 'undo') undoGrade()
   }
 
-  const pluginRef = useRef<HTMLIFrameElement>(null),
-    [pluginLoaded, setPluginLoaded] = useState(false)
+  const allPluginUrls = useMemo(
+    () => [...new Set(Object.values(settings.plugins))],
+    [settings.plugins]
+  )
+
+  const pluginRefs = useRef<Record<string, HTMLIFrameElement | null>>({}),
+    [pluginLoaded, setPluginLoaded] = useState<Record<string, boolean>>({}),
+    [pluginVisible, setPluginVisible] = useState<string | null>(null)
+
+  const prevPluginUrl = useRef(pluginUrl)
+  useEffect(() => {
+    const prev = prevPluginUrl.current
+    prevPluginUrl.current = pluginUrl
+    if (prev && prev !== pluginUrl) {
+      const prevRef = pluginRefs.current[prev]
+      if (prevRef?.contentWindow)
+        prevRef.contentWindow.postMessage(
+          { type: 'state', state: { revealed: false, id: '' } },
+          prev
+        )
+    }
+    setPluginVisible(null)
+  }, [pluginUrl])
 
   useEffect(() => {
-    setPluginLoaded(false)
-
     const handleMessage = (e: MessageEvent<any>) => {
       if (e.data.type === 'shortcut') handleShortCut.current(e.data.name)
-      if (e.data.type === 'ready') setPluginLoaded(true)
+      if (e.data.type === 'ready') {
+        for (const [url, el] of Object.entries(pluginRefs.current)) {
+          if (el?.contentWindow === e.source)
+            setPluginLoaded((prev) => ({ ...prev, [url]: true }))
+        }
+      }
     }
     window.addEventListener('message', handleMessage)
 
@@ -103,11 +127,12 @@ export function Card() {
       window.removeEventListener('message', handleMessage)
       cleanupShortcuts()
     }
-  }, [pluginRef.current])
+  }, [])
 
   useEffect(() => {
-    if (pluginRef.current?.contentWindow && pluginUrl && pluginLoaded) {
-      pluginRef.current.contentWindow.postMessage(
+    const activeRef = pluginUrl ? pluginRefs.current[pluginUrl] : null
+    if (activeRef?.contentWindow && pluginUrl && pluginLoaded[pluginUrl]) {
+      activeRef.contentWindow.postMessage(
         {
           type: 'state',
           state: {
@@ -123,8 +148,9 @@ export function Card() {
         },
         pluginUrl
       )
+      requestAnimationFrame(() => setPluginVisible(pluginUrl))
     }
-  }, [shownValue, settings.vars, revealed, pluginLoaded, aliases])
+  }, [shownValue, settings.vars, revealed, pluginLoaded, aliases, pluginUrl])
 
   return (
     <>
@@ -155,14 +181,19 @@ export function Card() {
       ) : value ? (
         <div className={cardWrapper}>
           <div className={cardBody}>
-            {plugin ? (
+            {allPluginUrls.map((url) => (
               <iframe
+                key={url}
                 allow="autoplay"
                 className={frame}
-                ref={pluginRef}
-                src={pluginUrl}
+                style={{ display: pluginVisible === url ? 'block' : 'none' }}
+                ref={(el) => {
+                  pluginRefs.current[url] = el
+                }}
+                src={url}
               />
-            ) : (
+            ))}
+            {!plugin &&
               Object.keys(shownValue ?? {}).map((id) => {
                 const value = shownValue?.[id]
                 return (
@@ -174,8 +205,7 @@ export function Card() {
                     </div>
                   )
                 )
-              })
-            )}
+              })}
             <div className={sessionActions}>
               <Icon onClick={() => dispatch(r.actions.endSession())} name="close" />
             </div>
