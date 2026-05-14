@@ -5,11 +5,12 @@
   "license": "GPL-3.0-only",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/plugins/*"
   ],
   "scripts": {
-    "dev": "concurrently -p name --names \"hsrs,tts\" \"yarn workspace @hsrs/app dev\" \"yarn workspace @hsrs/tts dev\"",
-    "build": "yarn workspace @hsrs/app build && yarn workspace @hsrs/tts build",
+    "dev": "concurrently -p name --names \"hsrs,tts\" \"yarn workspace @hsrs/app dev\" \"yarn workspace hsrs-tts-plugin dev\"",
+    "build": "yarn workspace @hsrs/app build && yarn workspace hsrs-tts-plugin build",
     "tsc": "tsc --noEmit",
     "test": "vitest"
   },

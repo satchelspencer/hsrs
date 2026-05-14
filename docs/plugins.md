@@ -1,16 +1,19 @@
 # plugins
 
-hsrs plugins allow custom ways of viewing/interacting with card content. currently only [text to speech](../packages/tts/) is actively maintained, but this guide can help you write your own! plugins **could be used** for things like:
+hsrs plugins allow custom ways of viewing/interacting with card content. officially supported plugins live in [packages/plugins/](../packages/plugins/):
+
+- [tts](../packages/plugins/tts/) text-to-speech for listening cards
+
+this guide can help you write your own! plugins **could be used** for things like:
 
 - typing responses with auto-grading
 - multiple choice cards
-- learning kanji by practicing drawing them
 - displaying media like images/video
 - horrific gamification
 
 ### overview
 
-plugins are simply web pages that get embedded inside the hsrs client and pass messages back and forth. you can use the framework agnostic package [hsrs-plugin](#https://github.com/satchelspencer/hsrs-plugin) to handle the finer details and get some nice typings.
+plugins are simply web pages that get embedded inside the hsrs client and pass messages back and forth. you can use the framework agnostic package [hsrs-plugin](../packages/plugins/core/) to handle the finer details and get some nice typings (also available on npm as `hsrs-plugin`).
 
 as of now, plugins are limited only to managing the display and interaction with a card, and don't support changing card scheduling, or user settings, or ui outside of learning. they also don't currently support overriding the grading/reveal ui but i'm open to this possibility.
 
@@ -42,4 +45,4 @@ the state callback receives a `CardState` with the following props:
 - `vars` variables set by the user in their settings, useful for plugin config options
 - `mode` the computed [mode](./overview.md#modes) of the card
 
-check [the types](https://github.com/satchelspencer/hsrs-plugin/blob/main/src/types.ts) for more detail
+check [the types](../packages/plugins/core/src/types.ts) for more detail

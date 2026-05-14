@@ -22,7 +22,7 @@ export const aliasDelim = RUBY_DELIM + '‚ '
 type PropMap = { [name: string]: string }
 
 function getKeys(value: PropMap, vars: PropMap) {
-  const keys = Object.keys(value),
+  const keys = Object.keys(value).sort((a, b) => (a < b ? 1 : -1)),
     ttsKey = vars['tts'] && keys.find((k) => eqk(vars['tts'], k)),
     txtKey = vars['txt'] && keys.find((k) => eqk(vars['txt'], k))
 

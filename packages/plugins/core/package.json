@@ -1,0 +1,24 @@
+{
+  "name": "hsrs-plugin",
+  "version": "0.1.3",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "url": "https://github.com/satchelspencer/hsrs",
+    "directory": "packages/plugins/core"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  }
+}
