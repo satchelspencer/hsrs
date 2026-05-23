@@ -16,7 +16,10 @@ this client has the exact same learning functionality as [grsly](https://grsly.c
 2.  open the hsrs client at https://elldev.com/hsrs/
 3.  open the settings page
 4.  click the **upload** button next to import and select the deck `deck-jp.json`
-5.  under **plugins** add a new one for `jp` with the url `https://elldev.com/hsrs-tts/?lang=ja-JP&voice=ja-JP-Standard-C&tts=tl&txt=jp&modes=polite-casual.male-female.subbordinate-rude.spoken-written`
+5.  under **plugins** add the following:
+    - `jp`: `https://elldev.com/hsrs-tts/?lang=ja-JP&voice=ja-JP-Standard-C&tts=tl&txt=jp&modes=polite-casual.male-female.subbordinate-rude.spoken-written`
+    - `*-glyphs`: `https://elldev.com/hsrs-glyph/?test=recall&strokes=_st&glyph=jp`
+    - `*-radicals`: `https://elldev.com/hsrs-glyph/?test=copy&strokes=_st&glyph=jp`
 
 ## google tts setup _(optional)_
 

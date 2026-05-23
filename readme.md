@@ -8,6 +8,7 @@ _a hierarchical spaced-repetition system for learning structurally related mater
 
 - [hsrs web app](https://elldev.com/hsrs/): core ui for learning and deck browse / edit
 - [tts plugin](https://elldev.com/hsrs-tts/): text-to-speech plugin for listening cards
+- [glyph plugin](https://elldev.com/hsrs-glyph/): character writing practice
 - [grsly](https://grsly.com/): consumer implementation for en-jp
 
 ## motivation
@@ -39,3 +40,4 @@ read more about [how it works](./docs/overview.md)
 - `yarn run dev`
 - http://localhost:8177/: the main client
 - http://localhost:8178/: the tts plugin
+- http://localhost:8179/: the glyph plugin

@@ -3,6 +3,7 @@
 hsrs plugins allow custom ways of viewing/interacting with card content. officially supported plugins live in [packages/plugins/](../packages/plugins/):
 
 - [tts](../packages/plugins/tts/) text-to-speech for listening cards
+- [glyph](../packages/plugins/glyph/) practice for writing characters
 
 this guide can help you write your own! plugins **could be used** for things like:
 
@@ -22,7 +23,7 @@ as of now, plugins are limited only to managing the display and interaction with
 ```typescript
 import { hsrsPlugin, CardState } from 'hsrs-plugin'
 
-const destroy = hsrsPlugin(
+const plugin = hsrsPlugin(
   { allowedOrigins: ['https://example.com'] }, //optional, if not-cross origin
   (state: CardState) => {
     console.log('Received state:', state)
@@ -30,8 +31,12 @@ const destroy = hsrsPlugin(
   }
 )
 
+// mark an element as an active area to clip tap shortcuts
+const cleanupArea = plugin.setActiveArea(someElement)
+cleanupArea() // remove the active area watch
+
 // later, if you need to clean up
-destroy()
+plugin.destroy()
 ```
 
 the state callback receives a `CardState` with the following props:
@@ -46,3 +51,7 @@ the state callback receives a `CardState` with the following props:
 - `mode` the computed [mode](./overview.md#modes) of the card
 
 check [the types](../packages/plugins/core/src/types.ts) for more detail
+
+### plugin matching
+
+plugins are matched to cards by ancestor element name. plugin keys support wildcards i.e `*-glyphs`. exact matches take priority over wildcards, and close ancestors take priority over distant ones.

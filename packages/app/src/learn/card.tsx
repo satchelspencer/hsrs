@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { css, cx } from '@emotion/css'
 import _ from 'lodash'
 import { Shortcut, keyboardShortcuts } from 'hsrs-plugin'
+import type { OutgoingMessage } from 'hsrs-plugin'
 
 import * as styles from '../styles'
 import * as r from '../redux'
@@ -15,6 +16,16 @@ import * as t from '@hsrs/lib/types'
 import { getCache } from '@hsrs/lib/cache'
 import { cleanRuby } from '@hsrs/lib/ruby'
 import { SessionStats } from './stats'
+
+function matchPlugin(name: string, plugins: Record<string, string>): string | undefined {
+  if (plugins[name]) return plugins[name]
+  for (const key of Object.keys(plugins)) {
+    if (key.includes('*')) {
+      const re = new RegExp('^' + key.replace(/\*/g, '.*') + '$')
+      if (re.test(name)) return plugins[key]
+    }
+  }
+}
 
 export function Card() {
   const session = r.useSelector((s) => s.deck.session),
@@ -35,8 +46,8 @@ export function Card() {
       card &&
       (cache.tree.ancestors[card.element] ?? [])
         .map((e) => elements[e].name)
-        .find((e) => settings.plugins[e]),
-    pluginUrl = plugin && settings.plugins[plugin]
+        .find((e) => matchPlugin(e, settings.plugins)),
+    pluginUrl = plugin && matchPlugin(plugin, settings.plugins)
 
   const { filter } = r.useSelector((s) => s.deck.settings)
 
@@ -105,11 +116,16 @@ export function Card() {
         )
     }
     setPluginVisible(null)
+    setActiveArea(null)
   }, [pluginUrl])
 
+  const [activeArea, setActiveArea] = useState<Rect>(null),
+    tapAreaRefs = useRef<(HTMLDivElement | null)[]>([null, null])
+
   useEffect(() => {
-    const handleMessage = (e: MessageEvent<any>) => {
+    const handleMessage = (e: MessageEvent<OutgoingMessage>) => {
       if (e.data.type === 'shortcut') handleShortCut.current(e.data.name)
+      if (e.data.type === 'activeArea') setActiveArea(e.data.rect)
       if (e.data.type === 'ready') {
         for (const [url, el] of Object.entries(pluginRefs.current)) {
           if (el?.contentWindow === e.source)
@@ -266,14 +282,27 @@ export function Card() {
               )}
             </div>
           </div>
-          <div
-            className={tapArea(false)}
-            onClick={() => (revealed ? setGrade(1) : undoGrade())}
-          />
-          <div
-            className={tapArea(true)}
-            onClick={() => (revealed ? setGrade(3) : setRevealed(true))}
-          />
+          {[false, true].map((right, i) => (
+            <div
+              key={+right}
+              ref={(el) => {
+                tapAreaRefs.current[i] = el
+              }}
+              className={tapArea(right)}
+              style={excludeArea(
+                activeArea,
+                pluginUrl ? pluginRefs.current[pluginUrl] : null,
+                tapAreaRefs.current[i]
+              )}
+              onClick={() =>
+                revealed
+                  ? setGrade(right ? 3 : 1)
+                  : right
+                    ? setRevealed(true)
+                    : undoGrade()
+              }
+            />
+          ))}
         </div>
       ) : null}
     </>
@@ -295,6 +324,29 @@ const tapArea = (right: boolean) => css`
     display: none;
   }
 `
+
+type Rect = Extract<OutgoingMessage, { type: 'activeArea' }>['rect']
+
+function excludeArea(
+  area: Rect,
+  container: HTMLElement | null,
+  element: HTMLElement | null
+): React.CSSProperties | undefined {
+  if (!area || !container || !element) return undefined
+
+  const fr = container.getBoundingClientRect(),
+    tr = element.getBoundingClientRect(),
+    left = fr.left + area.x - tr.left,
+    top = fr.top + area.y - tr.top,
+    right = left + area.width,
+    bottom = top + area.height
+
+  return {
+    clipPath:
+      `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0,` +
+      ` ${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px, ${left}px ${top}px)`,
+  }
+}
 
 const gradeHint = css`
   font-size: 0.7em;
@@ -346,10 +398,10 @@ const sessionActions = cx(css`
 
 const frame = cx(
   css`
-    width: 100%;
-    height: 100%;
-    border: none;
-  `
+  width: 100%;
+  height: 100%;
+  border: none;
+`
 )
 
 const cardWrapper = cx(

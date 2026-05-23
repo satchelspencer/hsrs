@@ -11,4 +11,5 @@ packages/*
 !packages/plugins
 packages/plugins/*
 !packages/plugins/core
+!packages/plugins/glyph
 !packages/plugins/tts

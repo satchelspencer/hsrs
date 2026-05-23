@@ -9,8 +9,8 @@
     "packages/plugins/*"
   ],
   "scripts": {
-    "dev": "concurrently -p name --names \"hsrs,tts\" \"yarn workspace @hsrs/app dev\" \"yarn workspace hsrs-tts-plugin dev\"",
-    "build": "yarn workspace @hsrs/app build && yarn workspace hsrs-tts-plugin build",
+    "dev": "concurrently -p name --names \"hsrs,tts,glyph\" \"yarn workspace @hsrs/app dev\" \"yarn workspace hsrs-tts-plugin dev\" \"yarn workspace hsrs-glyph-plugin dev\"",
+    "build": "yarn workspace @hsrs/app build && yarn workspace hsrs-tts-plugin build && yarn workspace hsrs-glyph-plugin build",
     "tsc": "tsc --noEmit",
     "test": "vitest"
   },

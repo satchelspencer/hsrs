@@ -293,7 +293,7 @@ function App() {
     mode: '',
   })
 
-  useEffect(() => hsrsPlugin({}, setState), [])
+  useEffect(() => hsrsPlugin({}, setState).cleanup, [])
 
   const urlVars = useMemo(() => {
       const vars: { [key: string]: string } = {}

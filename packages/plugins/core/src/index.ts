@@ -1,15 +1,21 @@
 import { CardState, InitOptions } from './types'
 import { keyboardShortcuts } from './keys'
 
-export type { CardState } from './types'
+export type { CardState, OutgoingMessage } from './types'
 export { keyboardShortcuts } from './keys'
 export type { Shortcut } from './keys'
+
+export interface HsrsPlugin {
+  cleanup: () => void
+  setActiveArea: (el: Element | null) => () => void
+}
 
 export function hsrsPlugin(
   options: InitOptions,
   onState: (state: CardState) => void
-): () => void {
+): HsrsPlugin {
   const { allowedOrigins } = options
+  const targetOrigin = allowedOrigins?.[0] || '*'
 
   const handleMessage = (event: MessageEvent) => {
     if (allowedOrigins && !allowedOrigins.includes(event.origin)) return
@@ -20,19 +26,45 @@ export function hsrsPlugin(
   }
 
   const cleanupShortcuts = keyboardShortcuts((shortCut) => {
-    const msg = { type: 'shortcut', name: shortCut }
-    const targetOrigin = allowedOrigins?.[0] || '*'
-    window.parent.postMessage(msg, targetOrigin)
+    window.parent.postMessage({ type: 'shortcut', name: shortCut }, targetOrigin)
   })
 
   window.addEventListener('message', handleMessage)
+  window.parent.postMessage({ type: 'ready' }, targetOrigin)
 
-  const msg = { type: 'ready' }
-  const targetOrigin = allowedOrigins?.[0] || '*'
-  window.parent.postMessage(msg, targetOrigin)
+  return {
+    cleanup: () => {
+      window.removeEventListener('message', handleMessage)
+      cleanupShortcuts()
+    },
+    setActiveArea: (el: Element | null) => {
+      const post = (
+        rect: { x: number; y: number; width: number; height: number } | null
+      ) => window.parent.postMessage({ type: 'activeArea', rect }, targetOrigin)
 
-  return () => {
-    window.removeEventListener('message', handleMessage)
-    cleanupShortcuts()
+      if (!el) {
+        post(null)
+        return () => {}
+      }
+
+      let last = ''
+      const update = () => {
+        const r = el.getBoundingClientRect(),
+          key = `${r.x},${r.y},${r.width},${r.height}`
+        if (key !== last) {
+          last = key
+          post({ x: r.x, y: r.y, width: r.width, height: r.height })
+        }
+      }
+
+      const observer = new ResizeObserver(update)
+      observer.observe(el)
+      update()
+
+      return () => {
+        observer.disconnect()
+        post(null)
+      }
+    },
   }
 }

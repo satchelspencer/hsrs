@@ -27,9 +27,19 @@ export interface ReadyMessage {
   type: 'ready'
 }
 
+export interface ActiveAreaMessage {
+  type: 'activeArea'
+  rect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  } | null
+}
+
 export interface InitOptions {
   allowedOrigins?: string[]
 }
 
 export type IncomingMessage = StateUpdateMessage
-export type OutgoingMessage = ReadyMessage | ShortcutMessage
+export type OutgoingMessage = ReadyMessage | ShortcutMessage | ActiveAreaMessage
