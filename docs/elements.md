@@ -20,4 +20,4 @@ you can make an entire element non-learnable by prefixing its id with `$`. these
 
 ### special params
 
-parameters normally increase the depth heuristic for a given element, but you can exclude params from counting in the element depth by prefixing them with an `_`. this lets you add special params for constraint purposes without artificially increasing the depth and impacting scheduling.
+parameters normally increase the depth heuristic for a given element, but you can exclude params from counting in the element depth by prefixing them with an `_`. this lets you add special params for constraint purposes without artificially increasing the depth and impacting scheduling. `_`-prefixed params also allow duplicate leaves across siblings.

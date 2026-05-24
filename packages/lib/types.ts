@@ -10,6 +10,7 @@ export interface Element {
   mode?: string
   order?: string
   retention?: string
+  aliasb?: true
   desc?: string
 }
 
@@ -132,6 +133,7 @@ export type DeckCache = {
   hasParams: { [elId: string]: boolean }
   nvds: { [elId: string]: number }
   names: { [rootId: string]: { [name: string]: string } }
+  aliasRoots: { [elId: string]: string | undefined }
 }
 
 export type HourlyStats = {

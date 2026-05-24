@@ -49,15 +49,13 @@ export function Card() {
         .find((e) => matchPlugin(e, settings.plugins)),
     pluginUrl = plugin && matchPlugin(plugin, settings.plugins)
 
-  const { filter } = r.useSelector((s) => s.deck.settings)
-
   const [aliases, setAliases] = useState<t.PropsInstance[]>([])
   const reqId = useRef(0)
   useEffect(() => {
     setAliases([])
     if (card) {
       const nid = ++reqId.current
-      findAliasesAync(card, card?.property, deck, filter).then((aliases) => {
+      findAliasesAync(card, card?.property, deck).then((aliases) => {
         if (nid === reqId.current)
           setAliases(aliases.map((d) => computeElementInstance(d, elements)))
       })

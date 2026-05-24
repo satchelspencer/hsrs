@@ -9,6 +9,7 @@ import React, {
 import { CardState } from 'hsrs-plugin'
 import { decodeStrokes } from './codec'
 import { strokeMatches, Point } from './matcher'
+import { cleanRuby } from '@hsrs/lib/ruby'
 
 export interface GlyphVars extends Record<string, string> {
   strokes: string
@@ -131,7 +132,7 @@ export const GlyphCard = forwardRef<GlyphHandle, GlyphProps>(
             </svg>
           )}
           {state.shownKeys.map((k) => {
-            const v = state.value[k]
+            const v = cleanRuby(state.value[k])
             const display =
               state.test === 'recall' && state.targetChar
                 ? v.replaceAll(state.targetChar, '_')

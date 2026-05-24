@@ -165,7 +165,7 @@ export function ElementEditor(props: ElementEditorProps) {
                     onChange={() =>
                       handleChange(
                         element.virtual
-                          ? _.omit(element, 'virtual')
+                          ? _.omit(element, 'virtual', 'aliasb')
                           : { ...element, virtual: true }
                       )
                     }
@@ -322,6 +322,21 @@ export function ElementEditor(props: ElementEditorProps) {
                   onClear={() => handleChange(_.omit(element, 'mode'))}
                 />
               ),
+              false,
+            ],
+            !!element.virtual && [
+              'Alias root',
+              <input
+                type="checkbox"
+                checked={!!element.aliasb}
+                onChange={() =>
+                  handleChange(
+                    element.aliasb
+                      ? _.omit(element, 'aliasb')
+                      : { ...element, aliasb: true }
+                  )
+                }
+              />,
               false,
             ],
             !!example && [

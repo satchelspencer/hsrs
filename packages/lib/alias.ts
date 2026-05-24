@@ -26,8 +26,7 @@ export function findAliases(
   propName: string,
   elements: t.IdMap<t.Element>,
   cards: t.CardStates,
-  cache: t.DeckCache,
-  filter?: string[]
+  cache: t.DeckCache
 ) {
   const log = logger(2, 'alias'),
     tv = computeElementInstance(instance, elements, cache),
@@ -35,7 +34,9 @@ export function findAliases(
     matchingInstances: { [iid: string]: MetaInstance } = {},
     exactInstances: { [iid: string]: t.ElementInstance } = {},
     sampleTestedInstances: { [iid: string]: boolean } = {},
-    targetMode = computeElementMode(instance, elements, cache) ?? ''
+    targetMode = computeElementMode(instance, elements, cache) ?? '',
+    instanceRoot = cache.tree.roots[instance.element],
+    aliasRoot = cache.aliasRoots[instance.element]
 
   log(target)
 
@@ -44,11 +45,13 @@ export function findAliases(
   for (let i = 0; i < 4; i++) {
     if (new Date().getTime() - startTime > 2000) break
     for (const elId in elements) {
-      const el = elements[elId]
+      const el = elements[elId],
+        elAliasRoot = cache.aliasRoots[elId]
       if (
+        cache.tree.roots[elId] !== instanceRoot ||
         el.virtual ||
-        (filter && !filter.includes(cache.tree.roots[elId] ?? '')) ||
-        el.nolearn?.includes(propName)
+        el.nolearn?.includes(propName) ||
+        (aliasRoot && elAliasRoot && aliasRoot !== elAliasRoot)
       )
         continue
       const {
@@ -139,7 +142,8 @@ export function findAliases(
 
                 log(' - resampled ', () => propNames.map((n) => computed[n]).join(', '))
                 if (isEqualAtProp(computed, tv, propName, propNames)) {
-                  exactInstances[matchId] = inst
+                  const sampledMatchId = propNames.map((n) => computed[n]).join('.')
+                  exactInstances[sampledMatchId] = inst
                   log(' - exact*****')
                   break
                 }

@@ -192,7 +192,7 @@ export function sampleElementIstance(
           filter,
           minDepth,
           hardSample,
-          leaves,
+          param[0] === '_' ? { ...leaves } : leaves,
           isConstrained,
           pinstmap,
           depth + 1

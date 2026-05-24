@@ -110,6 +110,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     nvds: {},
     pdepths: {},
     names: {},
+    aliasRoots: {},
   }
 
   for (const id in elements) {
@@ -127,6 +128,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
     cache.names[root] ??= {}
     cache.names[root][element.name] = id
+    cache.aliasRoots[id] = cache.tree.ancestors[id].find((aid) => elements[aid]?.aliasb)
 
     for (const aid of cache.tree.ancestors[id]) {
       const ancestor = elements[aid]
