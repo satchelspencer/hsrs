@@ -1,11 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from 'react'
+import React, { useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { CardState } from 'hsrs-plugin'
 import { decodeStrokes } from './codec'
 import { strokeMatches, Point } from './matcher'
@@ -14,8 +7,11 @@ import { cleanRuby } from '@hsrs/lib/ruby'
 export interface GlyphVars extends Record<string, string> {
   strokes: string
   glyph: string
-  test: 'copy' | 'recall'
+  target: string
+  start: string
+  length: string
   canvas: string
+  hide: string
 }
 
 export interface GlyphProps extends CardState {
@@ -30,22 +26,34 @@ export function useGlyphState(props: GlyphProps) {
   const vars = props.vars as Partial<GlyphVars>,
     canvas = Number(vars.canvas) || 109,
     strokesProp = vars.strokes || '_st',
-    glyphProp = vars.glyph || 'jp',
-    test = vars.test || 'copy',
+    glyphProp = vars.glyph || 'gl',
+    targetProp = vars.target || glyphProp,
+    startProp = vars.start || '_rs',
+    lengthProp = vars.length || '_sl',
+    hideProps = vars.hide || '',
     value = props.value || {},
     encoded = (value[strokesProp] as string) || '',
-    targetChar = (value[glyphProp] as string) || '',
-    expectedPaths = useMemo(() => decodeStrokes(encoded).strokes, [encoded])
+    targetChar = (value[targetProp] as string) || '',
+    allPaths = useMemo(() => decodeStrokes(encoded).strokes, [encoded])
 
-  const [completed, setCompleted] = useState(0),
+  const rs = Math.max(1, Number(value[startProp]) || 1),
+    sl = Number(value[lengthProp]) || allPaths.length,
+    startIdx = rs - 1,
+    endIdx = Math.min(allPaths.length, startIdx + sl),
+    expectedPaths = allPaths.slice(startIdx, endIdx),
+    guides = [...allPaths.slice(0, startIdx), ...allPaths.slice(endIdx)]
+
+  const [cardId, setCardId] = useState(props.id),
+    [completed, setCompleted] = useState(0),
     [attempts, setAttempts] = useState(0),
     [drawing, setDrawing] = useState<Point[] | null>(null)
 
-  useEffect(() => {
+  if (cardId !== props.id) {
+    setCardId(props.id)
     setCompleted(0)
     setAttempts(0)
     setDrawing(null)
-  }, [props.id])
+  }
 
   const numCompleted = completed,
     allDone = numCompleted >= expectedPaths.length
@@ -86,17 +94,21 @@ export function useGlyphState(props: GlyphProps) {
 
   const shownKeys = Object.keys(value).filter(
     (k) =>
+      (props.revealed || !hideProps.includes(k)) &&
       k !== strokesProp &&
-      (test !== 'copy' || k !== glyphProp) &&
+      k !== startProp &&
+      k !== lengthProp &&
+      k !== glyphProp &&
+      k !== targetProp &&
       typeof value[k] === 'string' &&
       value[k]
   )
 
   return {
     canvas,
-    test,
     targetChar,
     expectedPaths,
+    guides,
     numCompleted,
     allDone,
     attempts,
@@ -108,105 +120,85 @@ export function useGlyphState(props: GlyphProps) {
   }
 }
 
-export const GlyphCard = forwardRef<GlyphHandle, GlyphProps>(
-  function GlyphCard(props, ref) {
-    const state = useGlyphState(props),
-      half = state.canvas / 2
+export const GlyphCard = forwardRef<GlyphHandle, GlyphProps>(function GlyphCard(
+  props,
+  ref
+) {
+  const state = useGlyphState(props),
+    half = state.canvas / 2
 
-    useImperativeHandle(ref, () => ({ svg: state.svgRef.current }), [
-      state.svgRef.current,
-    ])
+  useImperativeHandle(ref, () => ({ svg: state.svgRef.current }), [state.svgRef.current])
 
-    return (
-      <div style={pageStyle}>
-        <style>{`@keyframes flash { from { opacity: 0.7 } to { opacity: 0 } }`}</style>
-        <div style={promptStyle}>
-          {state.test === 'copy' && state.expectedPaths.length > 0 && (
-            <svg
-              viewBox={`0 0 ${state.canvas} ${state.canvas}`}
-              style={{ width: '10vh', height: '10vh' }}
-            >
-              {state.expectedPaths.map((d, i) => (
-                <path key={i} d={d} stroke="#000" {...strokeStyle} />
-              ))}
-            </svg>
-          )}
-          {state.shownKeys.map((k) => {
-            const v = cleanRuby(state.value[k])
-            const display =
-              state.test === 'recall' && state.targetChar
-                ? v.replaceAll(state.targetChar, '_')
-                : v
-            return display !== '_' ? (
-              <div key={k} style={{ opacity: 0.7 }}>
-                {display}
-              </div>
-            ) : null
-          })}
-        </div>
-        <svg
-          ref={state.svgRef}
-          viewBox={`0 0 ${state.canvas} ${state.canvas}`}
-          style={canvasStyle}
-          {...state.events}
-        >
-          <line x1={half} y1={0} x2={half} y2={state.canvas} {...guideStyle} />
-          <line x1={0} y1={half} x2={state.canvas} y2={half} {...guideStyle} />
-          {state.revealed &&
-            state.expectedPaths.map((_, j) => {
-              const i = state.expectedPaths.length - 1 - j
-              const d = state.expectedPaths[i]
-              const remaining = i - state.numCompleted
-              if (remaining < 0) return null
-              const t =
-                remaining /
-                Math.max(1, state.expectedPaths.length - state.numCompleted - 1)
-              const gray = Math.round(
-                (GUIDE_START + Math.pow(t, GUIDE_EXP) * (GUIDE_END - GUIDE_START)) * 255
-              )
-              const hex = gray.toString(16).padStart(2, '0')
-              return (
-                <path
-                  key={`guide-${i}`}
-                  d={d}
-                  stroke={`#${hex}${hex}${hex}`}
-                  {...strokeStyle}
-                  style={{ transition: 'stroke 0.3s' }}
-                />
-              )
-            })}
-          {state.expectedPaths.slice(0, state.numCompleted).map((d, i) => (
-            <path key={i} d={d} stroke="#000" {...strokeStyle} />
-          ))}
-          {state.attempts > 0 && state.expectedPaths[state.numCompleted] && (
-            <path
-              key={state.attempts}
-              d={state.expectedPaths[state.numCompleted]}
-              stroke="#d33"
-              {...strokeStyle}
-              style={{ animation: 'flash 0.6s forwards' }}
-            />
-          )}
-          {state.drawing && state.drawing.length > 1 && (
-            <polyline
-              points={state.drawing.map((p) => `${p.x},${p.y}`).join(' ')}
-              stroke="#3a7"
-              {...strokeStyle}
-            />
-          )}
-        </svg>
-        <div style={{ opacity: 0.6, fontSize: '0.9em' }}>
-          {state.allDone
-            ? 'complete'
-            : `stroke ${state.numCompleted + 1} / ${state.expectedPaths.length}` +
-              (state.attempts > 0
-                ? ` — ${state.attempts} miss${state.attempts > 1 ? 'es' : ''}`
-                : '')}
-        </div>
+  return (
+    <div style={pageStyle}>
+      <style>{`@keyframes flash { from { opacity: 0.7 } to { opacity: 0 } }`}</style>
+      <div style={promptStyle}>
+        {state.shownKeys.map((k) => {
+          const v = cleanRuby(state.value[k])
+          const display = state.targetChar ? v.replaceAll(state.targetChar, '_') : v
+          return display !== '_' ? (
+            <div key={k} style={{ opacity: 0.7 }}>
+              {display}
+            </div>
+          ) : null
+        })}
       </div>
-    )
-  }
-)
+      <svg
+        ref={state.svgRef}
+        viewBox={`0 0 ${state.canvas} ${state.canvas}`}
+        style={canvasStyle}
+        {...state.events}
+      >
+        <line x1={half} y1={0} x2={half} y2={state.canvas} {...guideStyle} />
+        <line x1={0} y1={half} x2={state.canvas} y2={half} {...guideStyle} />
+        {state.guides.map((d, i) => (
+          <path key={`guide-${i}`} d={d} stroke="#000" {...strokeStyle} />
+        ))}
+        {state.revealed &&
+          state.expectedPaths.map((_, j) => {
+            const i = state.expectedPaths.length - 1 - j
+            const d = state.expectedPaths[i]
+            const remaining = i - state.numCompleted
+            if (remaining < 0) return null
+            const t =
+              remaining / Math.max(1, state.expectedPaths.length - state.numCompleted - 1)
+            const gray = Math.round(
+              (GUIDE_START + Math.pow(t, GUIDE_EXP) * (GUIDE_END - GUIDE_START)) * 255
+            )
+            const hex = gray.toString(16).padStart(2, '0')
+            return (
+              <path
+                key={`guide-${i}`}
+                d={d}
+                stroke={`#${hex}${hex}${hex}`}
+                {...strokeStyle}
+                style={{ transition: 'stroke 0.3s' }}
+              />
+            )
+          })}
+        {state.expectedPaths.slice(0, state.numCompleted).map((d, i) => (
+          <path key={i} d={d} stroke="#000" {...strokeStyle} />
+        ))}
+        {state.attempts > 0 && state.expectedPaths[state.numCompleted] && (
+          <path
+            key={state.attempts}
+            d={state.expectedPaths[state.numCompleted]}
+            stroke="#d33"
+            {...strokeStyle}
+            style={{ animation: 'flash 0.6s forwards' }}
+          />
+        )}
+        {state.drawing && state.drawing.length > 1 && (
+          <polyline
+            points={state.drawing.map((p) => `${p.x},${p.y}`).join(' ')}
+            stroke="#3a7"
+            {...strokeStyle}
+          />
+        )}
+      </svg>
+    </div>
+  )
+})
 
 function toCanvas(
   svg: SVGSVGElement | null,
@@ -263,8 +255,8 @@ const strokeStyle: React.SVGAttributes<SVGElement> = {
 }
 
 const canvasStyle: React.CSSProperties = {
-  width: 'min(70vh, 70vw)',
-  height: 'min(70vh, 70vw)',
+  width: 'min(70vh, 70vw, 500px)',
+  height: 'min(70vh, 70vw, 500px)',
   border: '2px solid #ccc',
   borderRadius: 6,
   background: '#fff',

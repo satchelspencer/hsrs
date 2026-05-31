@@ -215,7 +215,7 @@ export function sampleElementIstance(
         }
         inst.params![param] = pinst
       } catch (e) {
-        failed = true //catching allows full search but impacts perf
+        if (!param.endsWith('_') || depth === 1) failed = true
       }
     }
     if (failed) continue

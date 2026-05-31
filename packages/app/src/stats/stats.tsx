@@ -7,7 +7,7 @@ import * as t from '@hsrs/lib/types'
 
 import { commonChartOptions, groupByTimescale, StatsOptions } from './util'
 import { getAllCards, getInheritedElement } from '@hsrs/lib/props'
-import { card2Id, id2Card } from '@hsrs/lib/session'
+import { card2Id, matchesFilter } from '@hsrs/lib/session'
 import { getCache } from '@hsrs/lib/cache'
 import {
   defaultretention,
@@ -175,14 +175,18 @@ export function StabilityDist({ deck, options, hue }: DeckStatProps) {
   )
 }
 
-export function SeenPercentage({ deck }: DeckStatProps) {
+export function SeenPercentage({
+  deck,
+  filter = [],
+  propsFilter = [],
+}: DeckStatProps & FilterProps) {
   const data = useMemo(() => {
-    const allCards = getAllCards(deck.elements),
+    const allCards = getFilteredCards(deck, filter, propsFilter),
       totalCards = allCards.length,
       seenCount = allCards.filter((c) => !!deck.cards[card2Id(c)]).length,
       percentage = totalCards > 0 ? ((seenCount / totalCards) * 100).toFixed(2) : '0.00'
     return { seenCount, totalCards: totalCards, percentage }
-  }, [deck])
+  }, [deck, filter, propsFilter])
 
   return (
     <div>
@@ -192,13 +196,29 @@ export function SeenPercentage({ deck }: DeckStatProps) {
   )
 }
 
+type FilterProps = { filter?: string[]; propsFilter?: string[] }
+
+function getFilteredCards(deck: t.Deck, filter: string[], propsFilter: string[]) {
+  const cache = getCache(deck.elements)
+  return getAllCards(deck.elements).filter(
+    (c) =>
+      matchesFilter(c.element, filter, cache) &&
+      (!propsFilter.length || propsFilter.includes(c.property))
+  )
+}
+
 const THRESHOLDS = [0, 1, 7, 28] as const,
   LABELS = ['<1 d', '1-7 d', '7-28 d', '≥28 d']
 
-export function ProgressDist({ deck, hue = 240 }: DeckStatProps) {
+export function ProgressDist({
+  deck,
+  hue = 240,
+  filter = [],
+  propsFilter = [],
+}: DeckStatProps & FilterProps) {
   const data = useMemo(() => {
     const cache = getCache(deck.elements),
-      allCards = getAllCards(deck.elements),
+      allCards = getFilteredCards(deck, filter, propsFilter),
       baseRet = deck.settings.retention ?? defaultretention,
       seenMap: { [order: string]: number[] } = {},
       remainingMap: { [order: string]: number } = {}
@@ -241,7 +261,7 @@ export function ProgressDist({ deck, hue = 240 }: DeckStatProps) {
     })
 
     return { labels, datasets }
-  }, [deck])
+  }, [deck, filter, propsFilter])
 
   const bucketCount = THRESHOLDS.length
 

@@ -135,7 +135,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
       if (
         !cache.hasProps[id] &&
         !frag &&
-        Object.keys(ancestor.props).find((c) => !!ancestor.props[c])
+        Object.keys(ancestor.props).find((c) => c[0] !== '_' && !!ancestor.props[c])
       )
         cache.hasProps[id] = true
       if (

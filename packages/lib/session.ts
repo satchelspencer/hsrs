@@ -537,7 +537,9 @@ export function getNew(
   }
 
   const allCards = getAllCards(deck.elements).filter(
-      (card) => !propsFilter.length || propsFilter.includes(card.property)
+      (card) =>
+        (!propsFilter.length || propsFilter.includes(card.property)) &&
+        matchesFilter(card.element, filter, cache)
     ),
     seenCards = allCards.filter((c) => deck.cards[card2Id(c)])
   let seenDeep = seenCards.filter((c) => cache.depths[c.element]).length,
@@ -784,6 +786,26 @@ const SAMPLE_TRIES = 10,
   HARD_TIMEOUT = 7000,
   jitterScale = 1
 
+//null means no match false means explicitly excluded
+export function matchesFilter(
+  element: string,
+  filter: string[],
+  cache: t.DeckCache
+): boolean | null {
+  let hasMatch = false,
+    needsMatch = false
+  for (const f of filter) {
+    const inv = f[0] === '!',
+      elId = inv ? f.substring(1) : f,
+      elMatch = elId === element || cache.tree.firstAncestors[element]?.includes(elId)
+    if (inv && elMatch) return false
+    else if (elMatch) hasMatch = true
+    if (!inv) needsMatch = true
+  }
+  if (filter.length && needsMatch && !hasMatch) return null
+  return true
+}
+
 export function sampleAndAdd(
   res: t.CardInstance[],
   cardId: string,
@@ -800,17 +822,7 @@ export function sampleAndAdd(
 
   if (!deck.elements[element]) return
 
-  let hasMatch = false,
-    needsMatch = false
-  for (const f of filter) {
-    const inv = f[0] === '!',
-      elId = inv ? f.substring(1) : f,
-      elMatch = elId === element || cache.tree.firstAncestors[element]?.includes(elId)
-    if (inv && elMatch) return
-    else if (elMatch) hasMatch = true
-    if (!inv) needsMatch = true
-  }
-  if (filter.length && needsMatch && !hasMatch) return
+  if (!matchesFilter(element, filter, cache)) return
 
   const target = deck.settings.retention ?? defaultretention,
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
@@ -843,9 +855,14 @@ export function sampleAndAdd(
         },
         undefined,
         (elId, depth) => {
-          if (!minDepth && !cache.pdepths[elId] && used[elId]) return false //prevent reuse, except if upsampling
+          if (depth >= 1 && used[elId]) return false //prevent reuse, except if upsampling
           const card = deck.cards[card2Id({ element: elId, property })]
-          if (!cache.hasProps[elId] || (elId === element && depth === 1)) return true
+          if (
+            !cache.hasProps[elId] ||
+            (elId === element && depth === 1) ||
+            matchesFilter(elId, filter, cache) === false //excluded els can be used as children
+          )
+            return true
           else {
             const targetStability =
               getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
