@@ -1,7 +1,13 @@
 import * as t from './types'
 import _ from 'lodash'
 import { getNewAsync } from './async'
-import { card2Id, getEstReviews, getMinGraduatedIndex, getNewCardFactor } from './session'
+import {
+  card2Id,
+  getEstReviews,
+  getInstanceEls,
+  getMinGraduatedIndex,
+  getNewCardFactor,
+} from './session'
 import { logger } from './log'
 import { getTime } from './schedule'
 
@@ -48,6 +54,10 @@ export async function getSessionUpdate(
     }
 
     pending = now
+    const used = new Set<string>()
+    for (const card of session.stack) {
+      for (const elId of getInstanceEls(card)) used.add(elId)
+    }
     const [newCard] = await getNewAsync(
       {
         ...deck,
@@ -61,7 +71,8 @@ export async function getSessionUpdate(
       1,
       session.filter,
       session.propsFilter,
-      !!deck.settings.minDepth
+      !!deck.settings.minDepth,
+      used
     )
     pending = undefined
     if (newCard) return { add: newCard, commit }

@@ -45,6 +45,7 @@ interface GetNewMessage extends WorkerMessageBase<t.CardInstance[]> {
   propsFilter: string[]
   cache: t.DeckCache
   preferDeep?: boolean
+  used?: Set<string>
 }
 
 interface PingMessage extends WorkerMessageBase<true> {
@@ -173,7 +174,8 @@ export function getNewAsync(
   limit: number,
   filter: string[],
   propsFilter: string[],
-  preferDeep?: boolean
+  preferDeep?: boolean,
+  used?: Set<string>
 ) {
   const message: GetNewMessage = {
     type: 'getNew',
@@ -183,6 +185,7 @@ export function getNewAsync(
     propsFilter,
     cache: getCache(deck.elements),
     preferDeep,
+    used,
   }
   return callWorker(message)
 }

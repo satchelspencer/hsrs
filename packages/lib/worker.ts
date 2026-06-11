@@ -37,7 +37,9 @@ function handleMessage(
       message.filter,
       message.propsFilter,
       message.cache,
-      message.preferDeep
+      message.preferDeep,
+      undefined,
+      message.used
     )
   }
   throw 'unhandled message'

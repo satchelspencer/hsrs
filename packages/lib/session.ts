@@ -518,7 +518,8 @@ export function getNew(
   propsFilter: string[],
   cache: t.DeckCache,
   preferDeep?: boolean,
-  startTime?: number
+  startTime?: number,
+  used = new Set<string>()
 ): t.CardInstance[] {
   const log = logger(2, 'session')
 
@@ -589,7 +590,7 @@ export function getNew(
         deck,
         filter,
         cache,
-        undefined,
+        used,
         undefined,
         preferDeep,
         startTime
@@ -629,7 +630,8 @@ function getDue(
   tz: string,
   cache: t.DeckCache,
   minDepth?: number,
-  startTime?: number
+  startTime?: number,
+  used = new Set<string>()
 ) {
   const dues = getCardDueDates(deck, cache),
     dueCards: t.CardInstance[] = [],
@@ -704,10 +706,9 @@ function getDue(
     sampleFailures = 0,
     nextDones = 0
 
-  const used = {},
-    chunkOrdered = _.chunk(cardsIds, limit).flatMap((c) =>
-      _.sortBy(c, (c) => -cache.depths[id2Card(c).element])
-    )
+  const chunkOrdered = _.chunk(cardsIds, limit).flatMap((c) =>
+    _.sortBy(c, (c) => -cache.depths[id2Card(c).element])
+  )
 
   while (dueCards.length + nextCards.length < limit && chunkOrdered.length) {
     const cardId = chunkOrdered.shift()!,
@@ -812,7 +813,7 @@ export function sampleAndAdd(
   deck: t.Deck,
   filter: string[],
   cache: t.DeckCache,
-  used: { [id: string]: number } = {},
+  used: Set<string> = new Set(),
   minDepth?: number,
   preferDeep?: boolean,
   startTime?: number
@@ -855,7 +856,7 @@ export function sampleAndAdd(
         },
         undefined,
         (elId, depth) => {
-          if (depth >= 1 && used[elId]) return false //prevent reuse, except if upsampling
+          if (depth >= 1 && used.has(elId)) return false //prevent reuse, except if upsampling
           const card = deck.cards[card2Id({ element: elId, property })]
           if (
             !cache.hasProps[elId] ||
@@ -874,7 +875,7 @@ export function sampleAndAdd(
         },
         minDepth
       )
-      for (const x of getInstanceEls(instance)) used[x] = (used[x] ?? 0) + 1
+      for (const x of getInstanceEls(instance)) used.add(x)
       res.push({ ...instance, property })
       return true
     } catch {}
