@@ -27,11 +27,12 @@ interface MapEditorProps<T extends t.IdMap<any>> {
 }
 
 export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
+  const value = props.value ?? {}
   const hasOwnAdder = props.defaultValue !== undefined,
     items = _.orderBy(
       [
-        ...Object.keys(props.fixed ?? {}).filter((k) => !(k in props.value)),
-        ...Object.keys(props.value),
+        ...Object.keys(props.fixed ?? {}).filter((k) => !(k in value)),
+        ...Object.keys(value),
       ],
       [(v) => (v[0] === '_' ? 1 : 0), (v) => v]
     )
@@ -45,14 +46,14 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
             <div className={propName}>{propId}</div>,
             props.renderInput({
               key: propId,
-              value: props.value[propId],
-              onChange: (value) => {
-                const dupe = { ...props.value } as any
-                dupe[propId] = value ?? ''
+              value: value[propId],
+              onChange: (newValue) => {
+                const dupe = { ...value } as any
+                dupe[propId] = newValue ?? ''
                 props.onChange(dupe)
               },
               onDelete: () => {
-                const dupe = { ...props.value }
+                const dupe = { ...value }
                 delete dupe[propId]
                 props.onChange(dupe)
               },
@@ -64,7 +65,7 @@ export function MapEditor<T extends t.IdMap<any>>(props: MapEditorProps<T>) {
       {hasOwnAdder && (
         <MapAdder
           onAdd={(newName: string) => {
-            props.onChange({ ...props.value, [newName]: props.defaultValue })
+            props.onChange({ ...value, [newName]: props.defaultValue })
           }}
           placeholder={props.placeholder}
         />
