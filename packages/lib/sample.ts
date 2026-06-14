@@ -272,7 +272,7 @@ export function* generateElementInstanceSamples(
     dupes = 0,
     lastValue: t.ElementInstance | undefined = undefined
 
-  while (fails < 100) {
+  while (fails < 1000) {
     try {
       const val = sampleElementIstance(id, elements, cache)
       fails = 0
