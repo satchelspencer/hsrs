@@ -858,7 +858,8 @@ export function sampleAndAdd(
         (elId, depth) => {
           const card = deck.cards[card2Id({ element: elId, property })],
             isNew = !card && depth === 1
-          if (depth >= 1 && used.has(elId) && !isNew) return false //prevent reuse, except if upsampling
+          if (depth >= 1 && used.has(elId) && !isNew && !cache.hasParams[elId])
+            return false //prevent reuse, except if upsampling
           if (
             !cache.hasProps[elId] ||
             (elId === element && depth === 1) ||
