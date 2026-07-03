@@ -11,6 +11,7 @@ import { applyHistoryToCards } from '@hsrs/lib/schedule'
 import { db, learning2db } from './db'
 import { computeParams } from './fsrs'
 import { getSessionUpdate } from '@hsrs/lib/update'
+import { getCache } from '@hsrs/lib/cache'
 
 const deckInit: t.Deck = {
   elements: {},
@@ -80,7 +81,19 @@ export const deck = createSlice({
       state.settings = { ...deckInit.settings, ...state.settings, ...action.payload }
     },
     importElements: (state, action: PayloadAction<t.DeckExport>) => {
-      state.elements = { ...state.elements, ...action.payload.elements }
+      const incomingCache = getCache(action.payload.elements),
+        cache = getCache(state.elements),
+        incomingRoots = new Set<string>()
+
+      for (const elid in action.payload.elements) {
+        const root = incomingCache.tree.roots[elid]
+        if (root) incomingRoots.add(root)
+      }
+
+      state.elements = {
+        ..._.omitBy(state.elements, (_e, id) => incomingRoots.has(cache.tree.roots[id]!)),
+        ...action.payload.elements,
+      }
     },
   },
   extraReducers: (builder) => {
