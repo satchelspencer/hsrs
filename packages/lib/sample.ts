@@ -17,7 +17,7 @@ export function sampleElementIstance(
   id: string,
   elements: t.IdMap<t.Element>,
   cache: t.DeckCache,
-  fixedParams?: t.Params,
+  fixedParams?: t.ParamsInstance,
   order?: (elId: string) => number,
   commonMode?: { mode: string }[],
   filter?: (elId: string, depth: number) => boolean,
@@ -62,8 +62,8 @@ export function sampleElementIstance(
 
       if (pnames.length !== 1) continue //must be exactly 1 or non-uniq leaves possible
 
-      const fp: t.Params = { ...fixedParams }
-      for (const pname of pnames) fp[pname] = id
+      const fp: t.ParamsInstance = { ...fixedParams }
+      for (const pname of pnames) fp[pname] = { element: id }
 
       try {
         return sampleElementIstance(
@@ -97,7 +97,7 @@ export function sampleElementIstance(
   log('sampling', () => [
     rootElement.name,
     Object.keys(fixedParams ?? {})
-      .map((k) => `${k}=${elements[fixedParams![k]].name}`)
+      .map((k) => `${k}=${elements[fixedParams![k]!.element].name}`)
       .join(','),
     'leaves',
     Object.keys(leaves)
@@ -152,13 +152,21 @@ export function sampleElementIstance(
       continue
     }
 
+    let paramsCopied = false
     for (const fparam in fixedParams) {
       if (!params[fparam]) continue
-      const common = satisfies(fixedParams[fparam], params[fparam], cache)
+      const common = satisfies(fixedParams[fparam]!.element, params[fparam], cache)
       if (!common) {
         log('-fixed fail', fparam, elements[params[fparam]].name)
         failed = true
-      } else params[fparam] = common
+      } else {
+        /* copy on write, params may be the shared inherited element's */
+        if (!paramsCopied) {
+          params = { ...params }
+          paramsCopied = true
+        }
+        params[fparam] = common
+      }
     }
     if (failed) continue
 
@@ -167,10 +175,11 @@ export function sampleElementIstance(
       params: {},
     }
 
-    const constraints: t.Params = _.pickBy(
-      { ...params, ...(fixedParams ?? {}) },
-      (_, v) => constraint.includes(v)
-    )
+    const constraints: t.ParamsInstance = {}
+    for (const pname in params)
+      if (constraint.includes(pname)) constraints[pname] = { element: params[pname] }
+    for (const pname in fixedParams)
+      if (constraint.includes(pname)) constraints[pname] = fixedParams[pname]
     for (const param of _.shuffle(Object.keys(params))) {
       try {
         const isConstrained = !!fixedParams?.[param],
@@ -178,15 +187,18 @@ export function sampleElementIstance(
         log('-param', param, isConstrained ? '**constrained' : 'nc')
 
         const elId = constraints[param]
-          ? satisfies(params[param], constraints[param], cache)
+          ? satisfies(params[param], constraints[param]!.element, cache)
           : params[param]
         if (!elId) throw 'constraint fail'
 
+        const pin = constraints[param] ?? fixedParams?.[param]
         const pinst = sampleElementIstance(
           elId,
           elements,
           cache,
-          constraints,
+          pin?.element === elId && !_.isEmpty(pin.params)
+            ? { ...constraints, ...pin.params }
+            : constraints,
           order,
           childCommonMode,
           filter,
@@ -201,7 +213,7 @@ export function sampleElementIstance(
           { [param]: pinst },
           (childParam, el) => {
             const mappedParam = pinstmap[childParam] ?? childParam
-            if (constraint.includes(mappedParam)) constraints[mappedParam] = el.element
+            if (constraint.includes(mappedParam)) constraints[mappedParam] = el
           },
           elements,
           cache
