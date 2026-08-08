@@ -109,10 +109,18 @@ export function Reviews(props: TimeStatProps) {
   )
 }
 
-export function StabilityDist({ deck, options, hue }: DeckStatProps) {
+export function StabilityDist({
+  deck,
+  options,
+  hue,
+  filter = [],
+  propsFilter = [],
+}: DeckStatProps & FilterProps) {
   const data = useMemo(() => {
     const cache = getCache(deck.elements),
-      allCards = getAllCards(deck.elements).filter((c) => !!deck.cards[card2Id(c)]),
+      allCards = getFilteredCards(deck, filter, propsFilter).filter(
+        (c) => !!deck.cards[card2Id(c)]
+      ),
       baseRetr = deck.settings.retention ?? defaultretention,
       stabilityValues = allCards.map((card) => {
         const ret = offsetRetention(
@@ -145,7 +153,7 @@ export function StabilityDist({ deck, options, hue }: DeckStatProps) {
       ),
       data: bins,
     }
-  }, [])
+  }, [deck, filter, propsFilter, options.maxGroups, hue])
 
   const total = data.data.length,
     backgroundColors = data.data.map(
