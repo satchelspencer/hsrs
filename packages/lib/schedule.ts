@@ -126,6 +126,10 @@ export function getTime() {
   return mockTime ?? Math.floor(new Date().getTime() / 1000)
 }
 
+export function hasMockTime() {
+  return mockTime !== undefined
+}
+
 export function applyHistoryToCards(
   cards: t.CardStates,
   history: t.CardLearning[],
@@ -233,10 +237,15 @@ export function getELRetrOffset(
   cache?: t.DeckCache
 ) {
   cache ??= getCache(elements)
+
+  const cached = cache.memo.retrOffsets.get(element)
+  if (cached !== undefined) return cached
+
   const el = getInheritedElement(element, elements, cache),
     offset =
       // (3 * cache.depths[element]) / (cache.depths[element] + 0.5) +
       3 * Math.log1p(cache.depths[element]) + parseFloat(el.retention ?? '0') || 0
+  cache.memo.retrOffsets.set(element, offset)
   return offset
 }
 

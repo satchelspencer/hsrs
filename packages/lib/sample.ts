@@ -3,6 +3,7 @@ import * as t from './types'
 
 import { getCache } from './cache'
 import { logger } from './log'
+import { random, shuffle } from './rand'
 import {
   getInheritedElement,
   getNonVirtualDescendents,
@@ -28,7 +29,7 @@ export function sampleElementIstance(
   pmap?: t.ParamsMap,
   depth = 1
 ): t.ElementInstance {
-  const log = logger(3, 'sample', new Array(Math.abs(depth)).join('   '))
+  const log = logger(3, 'sample', () => new Array(Math.abs(depth)).join('   '))
 
   if (minDepth && depth <= 1 && (!cache.depths[id] || !cache.hasProps[id])) {
     const pset = new Set<string>(),
@@ -37,10 +38,7 @@ export function sampleElementIstance(
     for (const aid of ownAncestors)
       for (const pp of cache.paramTree.parents[aid] ?? []) pset.add(pp)
 
-    log(
-      'need upsample',
-      elements[id].name,
-      'parents:',
+    log('need upsample', elements[id].name, 'parents:', () =>
       [...pset].map((c) => elements[c].name)
     )
 
@@ -109,18 +107,17 @@ export function sampleElementIstance(
   const nonVR = getNonVirtualDescendents(id, elements, cache)
 
   for (const descendent of evOrder(nonVR, order, filter, hardSample, depth)) {
-    log(
-      '-trying',
+    log('-trying', () => [
       elements[descendent].name,
-      commonMode.map((c) => c.mode || '.').join('')
-    )
+      commonMode!.map((c) => c.mode || '.').join(''),
+    ])
 
     if (leaves[descendent]) {
       log('-is leaf', parentConstrained ? 'parent-constrained' : 'SKIP')
       if (!parentConstrained) continue
     }
 
-    const {
+    let {
       params = {},
       constraint = '',
       mode,
@@ -180,7 +177,7 @@ export function sampleElementIstance(
       if (constraint.includes(pname)) constraints[pname] = { element: params[pname] }
     for (const pname in fixedParams)
       if (constraint.includes(pname)) constraints[pname] = fixedParams[pname]
-    for (const param of _.shuffle(Object.keys(params))) {
+    for (const param of shuffle(Object.keys(params))) {
       try {
         const isConstrained = !!fixedParams?.[param],
           pinstmap = { ...pmap, ...(cpmap?.[param] ?? {}) }
@@ -248,7 +245,7 @@ function* evOrder(
   depth?: number
 ) {
   const fels = filter ? els.filter((e) => filter(e, depth ?? 0)) : els,
-    ordered = order ? _.sortBy(fels, order) : _.shuffle(fels)
+    ordered = order ? _.sortBy(fels, order) : shuffle(fels)
 
   const orders = _.sortBy(fels.map((v) => order?.(v) ?? 1)),
     minOrder = orders[0] ?? Infinity,
@@ -257,8 +254,9 @@ function* evOrder(
 
   let i = 0
   while (normed.length && i++ < 1000) {
-    const sum = _.sumBy(normed),
-      sample = Math.random() * sum
+    let sum = 0
+    for (const v of normed) sum += v
+    const sample = random() * sum
 
     let accum = 0,
       index = 0

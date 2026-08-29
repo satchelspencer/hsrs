@@ -8,6 +8,7 @@ import {
   getLearnTargetStability,
   getRetr,
   getTime,
+  hasMockTime,
   logistic,
 } from './schedule'
 import * as t from './types'
@@ -16,6 +17,7 @@ import { computeElementInstance, computeElementMode } from './expr'
 import { cleanRuby } from './ruby'
 import { logger } from './log'
 import { sampleElementIstance } from './sample'
+import { random, shuffle } from './rand'
 import { uid } from './uid'
 import { getInstanceId } from './alias'
 
@@ -97,11 +99,11 @@ export function createLearningSession(
 }
 
 function cardShuffle(vals: t.CardInstance[]) {
-  const byId = _.groupBy(_.shuffle(vals), (c) => getInstanceId(c)),
+  const byId = _.groupBy(shuffle(vals), (c) => getInstanceId(c)),
     res: t.CardInstance[] = []
 
   while (Object.keys(byId).length) {
-    for (const bucketId of _.shuffle(Object.keys(byId))) {
+    for (const bucketId of shuffle(Object.keys(byId))) {
       const value = byId[bucketId]?.pop()
       if (value) res.push(value)
       else delete byId[bucketId]
@@ -237,8 +239,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
   session.states[cardId] ??= {}
   session.states[cardId][instanceId] = cardState
 
-  const jitter =
-      cardState.stability <= MISS_THRESH ? 0 : Math.floor(Math.random() * 3 - 1),
+  const jitter = cardState.stability <= MISS_THRESH ? 0 : Math.floor(random() * 3 - 1),
     graduated = cardState.stability >= 1,
     minGraduatedIndex = getMinGraduatedIndex(session),
     midPoint = Math.floor(session.stack.length / 2),
@@ -248,7 +249,7 @@ export function gradeCard(deck: t.Deck, rgrade: number, took: number) {
         : Math.max(
             1 +
               minGraduatedIndex +
-              Math.floor(Math.random() * (session.stack.length - minGraduatedIndex)),
+              Math.floor(random() * (session.stack.length - minGraduatedIndex)),
             midPoint
           ),
     gradDistance = deck.cards[cardId] ? 20 : 30,
@@ -537,7 +538,7 @@ export function getNew(
     if (order && order > maxOrder) maxOrder = order.substring(0, 3)
   }
 
-  const allCards = getAllCards(deck.elements).filter(
+  const allCards = getAllCards(deck.elements, cache).filter(
       (card) =>
         (!propsFilter.length || propsFilter.includes(card.property)) &&
         matchesFilter(card.element, filter, cache)
@@ -555,7 +556,7 @@ export function getNew(
 
   const res: t.CardInstance[] = [],
     cards = _.orderBy(
-      getAllCards(deck.elements)
+      getAllCards(deck.elements, cache)
         .filter((c) => !deck.cards[card2Id(c)])
         .map(
           (c) =>
@@ -573,14 +574,14 @@ export function getNew(
   //need to check if priority deep exceeds maxOrder...
 
   let lastSucessOrder: string | null = null,
-    deepFail = false,
+    crossCatFails = 0,
     fails = 0
   while (res.length < limit / newCardFactor && cards.length) {
     const [card, order] = cards.shift()!,
       id = card2Id(card),
       deep = cache.depths[card.element]
 
-    if ((deepFail || fails > 100) && priorityDeep && deep) continue
+    if ((crossCatFails > 10 || fails > 100) && priorityDeep && deep) continue
     if (!priorityDeep && deep) continue
 
     if ((!propsFilter.length || propsFilter.includes(card.property)) && !deck.cards[id]) {
@@ -600,9 +601,10 @@ export function getNew(
         if (added === true) {
           lastSucessOrder = cat
           fails = 0
+          crossCatFails = 0
         } else if (added === false) {
           fails++
-          if (lastSucessOrder && cat !== lastSucessOrder) deepFail = true
+          if (lastSucessOrder && cat !== lastSucessOrder) crossCatFails++
         }
       }
     }
@@ -827,10 +829,13 @@ export function sampleAndAdd(
 
   const target = deck.settings.retention ?? defaultretention,
     childTarget = Math.pow(target, 1 / Math.max(Math.pow(cache.depths[element], 8), 1)),
-    tdelta = startTime ? new Date().getTime() - startTime : 0,
+    tdelta = startTime && !hasMockTime() ? new Date().getTime() - startTime : 0,
     tries = tdelta > SOFT_TIMEOUT ? 1 : SAMPLE_TRIES
 
   if (tdelta > HARD_TIMEOUT) return
+
+  const orderMemo = new Map<string, number>(),
+    filterMemo = new Map<string, boolean>()
 
   let i = 0
   while (i < tries) {
@@ -841,39 +846,55 @@ export function sampleAndAdd(
         cache,
         undefined,
         (elId) => {
-          const card = deck.cards[card2Id({ element: elId, property })],
-            jitter = Math.pow(Math.random() * (i / tries), 2) * jitterScale //jitter increases over time to allow compromise on difficult samples
-          if (!card) return jitter
+          const jitter = Math.pow(random() * (i / tries), 2) * jitterScale
 
-          const seenAgo = now - (card.lastSeen ?? 0),
-            cr = getRetr(card, seenAgo),
-            retrDiff = cr - childTarget,
-            retrFactor = logistic(retrDiff), //prefer cards close to target retr
-            depthFactor = cache.nvds[elId] ? 1 / cache.nvds[elId] : 0.1, //prefer cards with more possible params
-            seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
+          let base = orderMemo.get(elId)
+          if (base === undefined) {
+            const card = deck.cards[elId + ':' + property]
+            if (!card) base = 0
+            else {
+              const seenAgo = now - (card.lastSeen ?? 0),
+                cr = getRetr(card, seenAgo),
+                retrDiff = cr - childTarget,
+                retrFactor = logistic(retrDiff), //prefer cards close to target retr
+                depthFactor = cache.nvds[elId] ? 1 / cache.nvds[elId] : 0.1, //prefer cards with more possible params
+                seenFactor = cache.pdepths[elId] > 0 ? 1 : logistic(seenAgo / 3600 / 24) //prefer less recently seen
 
-          return retrFactor * depthFactor * seenFactor + jitter
+              base = retrFactor * depthFactor * seenFactor
+            }
+            orderMemo.set(elId, base)
+          }
+
+          return base + jitter
         },
         undefined,
         (elId, depth) => {
-          const card = deck.cards[card2Id({ element: elId, property })],
+          const key = depth === 0 ? elId + '|0' : depth === 1 ? elId + '|1' : elId,
+            cached = filterMemo.get(key)
+          if (cached !== undefined) return cached
+
+          const card = deck.cards[elId + ':' + property],
             isNew = !card && depth === 1
+
+          let result: boolean
           if (depth >= 1 && used.has(elId) && !isNew && !cache.hasParams[elId])
-            return false //prevent reuse, except if upsampling
-          if (
+            result = false //prevent reuse, except if upsampling
+          else if (
             !cache.hasProps[elId] ||
             (elId === element && depth === 1) ||
             matchesFilter(elId, filter, cache) === false //excluded els can be used as children
           )
-            return true
+            result = true
           else {
             const targetStability =
               getLearnTargetStability(deck.settings.fsrsParams ?? defaultParams) *
               (preferDeep
                 ? 1
                 : Math.pow(cache.depths[element] + cache.depths[elId], 1.5) + 1)
-            return card && card.stability > targetStability
+            result = !!card && card.stability > targetStability
           }
+          filterMemo.set(key, result)
+          return result
         },
         minDepth
       )

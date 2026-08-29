@@ -37,6 +37,20 @@ export function getInheritedElement(
   cache: t.DeckCache = getCache(elements),
   cmap?: t.ParamsMap
 ): t.Element {
+  let base = cache.memo.inherited.get(elementId)
+  if (!base) {
+    base = computeInheritedElement(elementId, elements, cache)
+    cache.memo.inherited.set(elementId, base)
+  }
+
+  return cmap ? applyCMap(base, cmap) : base
+}
+
+function computeInheritedElement(
+  elementId: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache
+): t.Element {
   const element = { ...elements[elementId] },
     inheritedProps: t.Props = {},
     inheritedParams: t.Params = {},
@@ -82,13 +96,20 @@ export function getInheritedElement(
   if (inheritedNolearn) element.nolearn = inheritedNolearn
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
-  element.order = getElementOrder(elementId, elements)
+  element.order = getElementOrder(elementId, elements, cache)
   if (Object.keys(inheritedcpmap).length) element.cpmap = inheritedcpmap
-  if (cmap) applyCMap(element, cmap)
   return element
 }
 
-export function applyCMap(element: t.Element, cmap: t.ParamsMap) {
+export function applyCMap(base: t.Element, cmap: t.ParamsMap): t.Element {
+  const element: t.Element = { ...base, props: { ...base.props } }
+  if (base.params) element.params = { ...base.params }
+  if (base.cpmap) {
+    const cpmap: t.ChildParamsMap = {}
+    for (const parent in base.cpmap) cpmap[parent] = { ...base.cpmap[parent] }
+    element.cpmap = cpmap
+  }
+
   for (const src in cmap) {
     const dest = cmap[src]
     for (const pname in element.props) {
@@ -110,10 +131,18 @@ export function applyCMap(element: t.Element, cmap: t.ParamsMap) {
       }
     }
   }
-  //if (Object.keys(cmap).length) console.log('mapp', element)
+
+  return element
 }
 
-export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>) {
+export function getElementOrder(
+  elementId: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
+) {
+  const cached = cache.memo.orders.get(elementId)
+  if (cached !== undefined) return cached
+
   let root = elementId
   const decs: string[] = []
   while (root) {
@@ -122,7 +151,9 @@ export function getElementOrder(elementId: string, elements: t.IdMap<t.Element>)
     if (el.order) decs.unshift(el.order)
     root = el.parents[0]
   }
-  return decs.join('.')
+  const order = decs.join('.')
+  cache.memo.orders.set(elementId, order)
+  return order
 }
 
 export function satisfies(a: string, b: string, cache: t.DeckCache) {
@@ -168,7 +199,11 @@ export function getNonVirtualDescendents(
   const thisEl = elements[id]
   if (!thisEl.virtual) return [id]
 
+  const cached = cache.memo.descendents.get(id)
+  if (cached) return cached
+
   const output: string[] = [],
+    seen = new Set<string>(),
     parents: string[] = [id]
 
   while (parents.length) {
@@ -177,26 +212,39 @@ export function getNonVirtualDescendents(
       const el = elements[elId]
       if (!el) continue
       else if (el.virtual) parents.push(elId)
-      else if (!output.includes(elId)) output.push(elId)
+      else if (!seen.has(elId)) {
+        seen.add(elId)
+        if (!el.nosample) output.push(elId)
+      }
     }
   }
 
+  cache.memo.descendents.set(id, output)
   return output
 }
 
-export function getAllCards(elements: t.IdMap<t.Element>): t.Card[] {
-  const cards: t.Card[] = []
+export function getAllCards(
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache = getCache(elements)
+): t.Card[] {
+  if (cache.memo.allCards) return cache.memo.allCards
 
+  const cards: t.Card[] = []
   for (const elId in elements) {
-    if (!elements[elId].virtual) cards.push(...getElementCards(elId, elements))
+    if (!elements[elId].virtual) cards.push(...getElementCards(elId, elements, cache))
   }
 
+  cache.memo.allCards = cards
   return cards
 }
 
-function getElementCards(id: string, elements: t.IdMap<t.Element>): t.Card[] {
+function getElementCards(
+  id: string,
+  elements: t.IdMap<t.Element>,
+  cache: t.DeckCache
+): t.Card[] {
   const cards: t.Card[] = [],
-    element = getInheritedElement(id, elements)
+    element = getInheritedElement(id, elements, cache)
 
   if (isFrag(element)) return []
 
@@ -245,11 +293,15 @@ export function getLearnOrder(
   priorityDeep?: boolean,
   cache = getCache(deck.elements)
 ) {
+  const key = `${element}|${maxOrder}|${priorityDeep}|${deck.settings.startOrder}`,
+    cached = cache.memo.learnOrders.get(key)
+  if (cached) return cached
+
   const startOrder =
       (maxOrder ?? '') > (deck.settings.startOrder ?? '')
         ? maxOrder
         : deck.settings.startOrder,
-    order = getElementOrder(element, deck.elements),
+    order = getElementOrder(element, deck.elements, cache),
     pre = !(priorityDeep && cache.depths[element]) && !!startOrder && order < startOrder,
     final = maxOrder
       ? element //use the base 36 id as the source of randomness
@@ -263,7 +315,9 @@ export function getLearnOrder(
   Object.assign(final, order.split('.'))
   if (pre) Object.assign(final, startOrder.split('.'))
 
-  return { order: final.join('.'), pre }
+  const res = { order: final.join('.'), pre }
+  cache.memo.learnOrders.set(key, res)
+  return res
 }
 
 export function computeDescs(

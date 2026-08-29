@@ -90,6 +90,20 @@ function initTreeCache(): t.TreeCache {
   }
 }
 
+export function clearCacheMemos(cache: t.DeckCache) {
+  cache.memo = initMemo()
+}
+
+function initMemo(): t.MemoCache {
+  return {
+    inherited: new Map(),
+    orders: new Map(),
+    learnOrders: new Map(),
+    descendents: new Map(),
+    retrOffsets: new Map(),
+  }
+}
+
 /* get structure and heuristics from elements for fast lookups
 tree, param-depth, leaves, name maps. */
 
@@ -111,6 +125,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     pdepths: {},
     names: {},
     aliasRoots: {},
+    memo: initMemo(),
   }
 
   for (const id in elements) {

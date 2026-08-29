@@ -1,3 +1,5 @@
+import { random } from './rand'
+
 export function uid() {
-  return Math.random().toString(36).substring(2)
+  return random().toString(36).substring(2)
 }

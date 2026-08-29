@@ -7,6 +7,7 @@ export interface Element {
   virtual?: true
   constraint?: string
   nolearn?: string
+  nosample?: true
   mode?: string
   order?: string
   retention?: string
@@ -134,6 +135,16 @@ export type DeckCache = {
   nvds: { [elId: string]: number }
   names: { [rootId: string]: { [name: string]: string } }
   aliasRoots: { [elId: string]: string | undefined }
+  memo: MemoCache
+}
+
+export type MemoCache = {
+  inherited: Map<string, Element>
+  orders: Map<string, string>
+  learnOrders: Map<string, { order: string; pre: boolean }>
+  descendents: Map<string, string[]>
+  retrOffsets: Map<string, number>
+  allCards?: Card[]
 }
 
 export type HourlyStats = {
