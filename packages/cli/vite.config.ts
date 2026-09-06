@@ -1,6 +1,17 @@
+import fs from 'fs'
+import path from 'path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  plugins: [
+    {
+      name: 'chmod-bin',
+      closeBundle() {
+        const out = path.resolve(__dirname, 'dist/cli.cjs')
+        if (fs.existsSync(out)) fs.chmodSync(out, 0o755)
+      },
+    },
+  ],
   build: {
     outDir: '../dist',
     emptyOutDir: true,

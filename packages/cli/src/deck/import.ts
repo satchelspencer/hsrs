@@ -4,7 +4,7 @@ import stringify from 'json-stable-stringify'
 import _ from 'lodash'
 import { getOutput } from './output'
 
-export function importDir(destDir: string, deckPath: string) {
+export async function importDir(destDir: string, deckPath: string) {
   if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true, force: true })
   fs.mkdirSync(destDir, { recursive: true })
 
@@ -45,6 +45,6 @@ export function importDir(destDir: string, deckPath: string) {
     )
   }
 
-  const output = getOutput(destDir)
+  const output = await getOutput(destDir)
   if (!_.isEqual(output, deck)) throw 'import failed to replicate'
 }
