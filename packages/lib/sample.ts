@@ -61,7 +61,7 @@ export function sampleElementIstance(
       if (pnames.length !== 1) continue //must be exactly 1 or non-uniq leaves possible
 
       const fp: t.ParamsInstance = { ...fixedParams }
-      for (const pname of pnames) fp[pname] = { element: id }
+      for (const pname of pnames) fp[pname] = { element: id, params: fixedParams }
 
       try {
         return sampleElementIstance(
