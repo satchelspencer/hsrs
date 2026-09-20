@@ -56,6 +56,7 @@ function computeInheritedElement(
     inheritedParams: t.Params = {},
     inheritedcpmap: t.ChildParamsMap = {}
   let inheritedConstraint: string = '',
+    inheritedNosample = false,
     inheritedNolearn: string = '',
     inheritedMode: string = '',
     inheritedRetention: string = ''
@@ -77,6 +78,7 @@ function computeInheritedElement(
     if (element.mode)
       inheritedMode = satisfiesMode(element.mode, inheritedMode) ?? element.mode
     if (element.retention) inheritedRetention = element.retention
+    if (element.nosample) inheritedNosample = true
     if (element.cpmap) {
       for (const parent in element.cpmap) {
         for (const child in element.cpmap[parent]) {
@@ -96,6 +98,7 @@ function computeInheritedElement(
   if (inheritedNolearn) element.nolearn = inheritedNolearn
   if (inheritedMode) element.mode = inheritedMode
   if (inheritedRetention) element.retention = inheritedRetention
+  if (inheritedNosample) element.nosample = true
   element.order = getElementOrder(elementId, elements, cache)
   if (Object.keys(inheritedcpmap).length) element.cpmap = inheritedcpmap
   return element
@@ -214,7 +217,7 @@ export function getNonVirtualDescendents(
       else if (el.virtual) parents.push(elId)
       else if (!seen.has(elId)) {
         seen.add(elId)
-        if (!el.nosample) output.push(elId)
+        if (!cache.nosample[elId]) output.push(elId)
       }
     }
   }

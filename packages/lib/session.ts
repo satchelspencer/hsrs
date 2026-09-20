@@ -881,7 +881,7 @@ export function sampleAndAdd(
             result = false //prevent reuse, except if upsampling
           else if (
             !cache.hasProps[elId] ||
-            (elId === element && depth === 1) ||
+            (elId === element && (depth === 1 || !!cache.nosample[element])) ||
             matchesFilter(elId, filter, cache) === false //excluded els can be used as children
           )
             result = true

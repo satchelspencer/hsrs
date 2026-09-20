@@ -50,6 +50,7 @@ export function findAliases(
       if (
         cache.tree.roots[elId] !== instanceRoot ||
         el.virtual ||
+        cache.nosample[elId] ||
         el.nolearn?.includes(propName) ||
         (aliasRoot && elAliasRoot && aliasRoot !== elAliasRoot)
       )

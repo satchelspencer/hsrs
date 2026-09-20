@@ -31,9 +31,13 @@ export function sampleElementIstance(
 ): t.ElementInstance {
   const log = logger(3, 'sample', () => new Array(Math.abs(depth)).join('   '))
 
-  if (minDepth && depth <= 1 && (!cache.depths[id] || !cache.hasProps[id])) {
+  const nosample = !!cache.nosample[id] && depth <= 1
+  if (
+    (minDepth && depth <= 1 && (!cache.depths[id] || !cache.hasProps[id])) ||
+    nosample
+  ) {
     const pset = new Set<string>(),
-      ownAncestors = cache.tree.ancestors[id]
+      ownAncestors = nosample ? [id] : cache.tree.ancestors[id] //nosample direct only
 
     for (const aid of ownAncestors)
       for (const pp of cache.paramTree.parents[aid] ?? []) pset.add(pp)
@@ -45,7 +49,7 @@ export function sampleElementIstance(
     for (const parent of evOrder(
       [...pset],
       cache.hasProps[id] ? (elid) => 1 / cache.depths[elid] : order, //most shallow first
-      cache.hasProps[id]
+      cache.hasProps[id] && !nosample
         ? (elid) =>
             cache.pdepths[elid] > cache.pdepths[id] + 1.5 && //force upsampling w/ siblings
             (filter ? filter(elid, depth) : true)
@@ -72,7 +76,7 @@ export function sampleElementIstance(
           order,
           commonMode,
           filter,
-          minDepth,
+          nosample ? minDepth || 1 : minDepth,
           hardSample,
           { ...leaves, [id]: true },
           parentConstrained
@@ -83,6 +87,7 @@ export function sampleElementIstance(
     }
 
     if (!cache.hasProps[id]) throw 'np upsample'
+    if (nosample) throw 'nosample'
   }
 
   const rootElement = getInheritedElement(id, elements, cache)

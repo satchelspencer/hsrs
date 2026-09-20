@@ -121,6 +121,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
     depths: {},
     hasProps: {},
     hasParams: {},
+    nosample: {},
     nvds: {},
     pdepths: {},
     names: {},
@@ -147,6 +148,7 @@ export function getCache(relements: t.IdMap<t.Element>) {
 
     for (const aid of cache.tree.ancestors[id]) {
       const ancestor = elements[aid]
+      if (ancestor.nosample) cache.nosample[id] = true
       if (
         !cache.hasProps[id] &&
         !frag &&

@@ -132,6 +132,7 @@ export type DeckCache = {
   pdepths: { [elId: string]: number }
   hasProps: { [elId: string]: boolean }
   hasParams: { [elId: string]: boolean }
+  nosample: { [elId: string]: boolean }
   nvds: { [elId: string]: number }
   names: { [rootId: string]: { [name: string]: string } }
   aliasRoots: { [elId: string]: string | undefined }
